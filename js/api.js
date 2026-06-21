@@ -67,8 +67,10 @@ class FineractAPI {
 
   /** POST /authentication with JSON body -> { base64EncodedAuthenticationKey } */
   async auth(username, password, opts = {}) {
+    const body = JSON.stringify({ username, password });
+    console.log('Auth request:', { username, password, body });
     const r = await this._req('POST', '/authentication',
-      { body: { username, password }, timeoutMs: opts.timeoutMs ?? CFG.autoConnectTimeoutMs });
+      { body, timeoutMs: opts.timeoutMs ?? CFG.autoConnectTimeoutMs });
     return r?.base64EncodedAuthenticationKey || '';
   }
 
