@@ -1,0 +1,56 @@
+/* FinCraft — CSS entry point. Imports token design system then components. */
+@import './tokens.css';
+@import './components.css';
+@import './login.css';
+
+/* ---- Inline client search dropdown ---- */
+.search-field { position: relative; }
+.search-dropdown {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
+  background: var(--bg-modal); border: 1px solid var(--border-1);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  max-height: 220px; overflow-y: auto;
+}
+.search-result-item:hover { background: var(--bg-hover); }
+
+/* ---- Switch toggle ---- */
+.switch { position: relative; display: inline-flex; width: 44px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; inset: 0; background: var(--border-2); border-radius: 999px;
+  transition: background .2s; cursor: pointer;
+}
+.slider::before {
+  content: ''; position: absolute; left: 3px; top: 3px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; transition: transform .2s;
+}
+.switch input:checked + .slider { background: var(--brand-teal); }
+.switch input:checked + .slider::before { transform: translateX(20px); }
+
+/* ---- Msg banner ---- */
+.msg-banner {
+  padding: 10px 14px; border-radius: var(--radius);
+  display: flex; align-items: flex-start; gap: 10px; font-size: 14px;
+}
+.msg-banner.b-info    { background: color-mix(in srgb, var(--brand-teal) 12%, transparent); border-left: 3px solid var(--brand-teal); }
+.msg-banner.b-danger  { background: color-mix(in srgb, var(--clr-danger) 12%, transparent); border-left: 3px solid var(--clr-danger); }
+.msg-banner.b-warn    { background: color-mix(in srgb, var(--clr-warn) 12%, transparent); border-left: 3px solid var(--clr-warn); }
+
+/* ---- Full width helper ---- */
+.w-full { width: 100%; }
+.mt-4 { margin-top: 16px; }
+.mb-4 { margin-bottom: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.mt-3 { margin-top: 12px; }
+
+/* ---- Tree nav ---- */
+.tree-node { padding: 8px 16px; border-bottom: 1px solid var(--border-1); cursor: pointer; }
+.tree-node.parent { font-weight: 600; background: var(--bg-hover); }
+.tree-node.parent.open::after { content: ' ▲'; font-size: 11px; }
+.tree-node.parent:not(.open)::after { content: ' ▼'; font-size: 11px; }
+.tree-children { display: none; }
+.tree-node.parent.open ~ .tree-children { display: block; }
+
+/* ---- Badge extras ---- */
+.b-teal { background: color-mix(in srgb, var(--brand-teal) 15%, transparent); color: var(--brand-teal); }

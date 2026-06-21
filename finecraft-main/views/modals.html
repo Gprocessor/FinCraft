@@ -1,0 +1,734 @@
+<!-- FinCraft modal partials — all forms have name= attrs and data-populate= hooks -->
+
+<!-- Quick Action -->
+<div id="quickModal" class="modal-overlay">
+  <div class="modal md">
+    <div class="modal-head"><h3 class="modal-title">Quick Actions</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="grid-3">
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="newClientModal" data-close-modal>
+          <i class="fa-solid fa-user-plus" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>New Client</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="newLoanModal" data-close-modal>
+          <i class="fa-solid fa-hand-holding-dollar" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>New Loan</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="newSavingsModal" data-close-modal>
+          <i class="fa-solid fa-piggy-bank" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>New Savings</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="repaymentModal" data-close-modal>
+          <i class="fa-solid fa-money-bill-transfer" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>Repayment</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="newTransferModal" data-close-modal>
+          <i class="fa-solid fa-right-left" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>Transfer</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="journalEntryModal" data-close-modal>
+          <i class="fa-solid fa-book" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>Journal Entry</b></div></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Client -->
+<div id="newClientModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">New Client</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="msg-banner b-info mb-4"><i class="fa-solid fa-circle-info"></i> Client will be <b>submitted for activation</b>. Go to Tasks or the client record to activate.</div>
+      <form class="form-grid" id="newClientForm">
+        <label><span class="form-label">First name *</span><input name="firstname" required class="form-control" autocomplete="off"/></label>
+        <label><span class="form-label">Last name *</span><input name="lastname" required class="form-control" autocomplete="off"/></label>
+        <label><span class="form-label">Mobile</span><input name="mobile" class="form-control" type="tel"/></label>
+        <label><span class="form-label">Date of birth</span><input name="dob" type="date" class="form-control"/></label>
+        <label><span class="form-label">External ID</span><input name="externalId" class="form-control"/></label>
+        <label><span class="form-label">Gender</span>
+          <select name="genderId" class="form-control" data-populate="gender"><option value="">— Not specified —</option></select></label>
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Loan officer</span>
+          <select name="staffId" class="form-control" data-populate="staff"></select></label>
+        <label class="flex items-center gap-2" style="align-items:center;padding-top:28px">
+          <input type="checkbox" name="isStaff"/> <span>Is a staff member</span></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-client"><i class="fa-solid fa-check"></i> Create Client</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Loan -->
+<div id="newLoanModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">New Loan Application</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newLoanForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="loanClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="loanClientId"/>
+            <div id="loanClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">Loan product *</span>
+          <select name="productId" class="form-control" data-populate="loanProducts" required></select></label>
+        <label><span class="form-label">Loan officer</span>
+          <select name="loanOfficerId" class="form-control" data-populate="staff"></select></label>
+        <label><span class="form-label">Principal *</span>
+          <input name="principal" type="number" min="0" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Term (months) *</span>
+          <input name="term" type="number" min="1" value="12" class="form-control" required/></label>
+        <label><span class="form-label">Interest rate p.a. (%)</span>
+          <input name="interestRate" type="number" min="0" step="0.01" value="18" class="form-control"/></label>
+        <label><span class="form-label">Disbursement date *</span>
+          <input name="expectedDisbursementDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Purpose</span>
+          <input name="purpose" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-loan"><i class="fa-solid fa-check"></i> Submit Application</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Savings -->
+<div id="newSavingsModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Savings Account</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newSavingsForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="savClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="savClientId"/>
+            <div id="savClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">Product *</span>
+          <select name="productId" class="form-control" data-populate="savingsProducts" required></select></label>
+        <label><span class="form-label">Submitted on</span>
+          <input name="submittedDate" type="date" class="form-control"/></label>
+        <label><span class="form-label">Field officer</span>
+          <select name="staffId" class="form-control" data-populate="staff"></select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-savings"><i class="fa-solid fa-check"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Fixed Deposit -->
+<div id="newFDModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Fixed Deposit</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newFDForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="fdClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="fdClientId"/>
+            <div id="fdClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">FD product *</span>
+          <select name="productId" class="form-control" data-populate="fdProducts" required></select></label>
+        <label><span class="form-label">Deposit amount *</span>
+          <input name="depositAmount" type="number" min="0" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Period (months) *</span>
+          <input name="depositPeriod" type="number" min="1" value="12" class="form-control" required/></label>
+        <label><span class="form-label">Submitted on</span>
+          <input name="submittedDate" type="date" class="form-control"/></label>
+        <label class="full"><span class="form-label">Maturity instruction</span>
+          <select name="maturityInstruction" class="form-control">
+            <option value="1">Withdraw</option>
+            <option value="2">Reinvest principal &amp; interest</option>
+            <option value="3">Reinvest principal only</option>
+          </select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-fd"><i class="fa-solid fa-check"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Recurring Deposit -->
+<div id="newRDModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Recurring Deposit</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newRDForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="rdClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="rdClientId"/>
+            <div id="rdClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">RD product *</span>
+          <select name="productId" class="form-control" data-populate="rdProducts" required></select></label>
+        <label><span class="form-label">Deposit amount / period *</span>
+          <input name="mandatoryRecommendedDepositAmount" type="number" min="0" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Period (months) *</span>
+          <input name="depositPeriod" type="number" min="1" value="12" class="form-control" required/></label>
+        <label><span class="form-label">Submitted on</span>
+          <input name="submittedDate" type="date" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-rd"><i class="fa-solid fa-check"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Share Account -->
+<div id="newShareModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Share Account</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newShareForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="shClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="shClientId"/>
+            <div id="shClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">Share product *</span>
+          <select name="productId" class="form-control" id="shareProductSel" required>
+            <option value="">Select product…</option></select></label>
+        <label><span class="form-label">Requested shares *</span>
+          <input name="requestedShares" type="number" min="1" class="form-control" required/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-share"><i class="fa-solid fa-check"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Repayment -->
+<div id="repaymentModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">Make Repayment</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="repaymentForm">
+        <label class="full"><span class="form-label">Loan account *</span>
+          <input name="loanId" id="rp-loanid" placeholder="Loan account ID" class="form-control"/></label>
+        <label><span class="form-label">Transaction date *</span>
+          <input name="transactionDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Amount *</span>
+          <input name="transactionAmount" type="number" min="0.01" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Payment type</span>
+          <select name="paymentTypeId" id="rp-paymenttype" class="form-control"><option value="">— Default —</option></select></label>
+        <label><span class="form-label">Receipt #</span>
+          <input name="receiptNumber" class="form-control"/></label>
+        <label class="full"><span class="form-label">Note</span>
+          <textarea name="note" class="form-control" rows="2"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-repayment"><i class="fa-solid fa-check"></i> Submit Repayment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Journal Entry -->
+<div id="journalEntryModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">New Journal Entry</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="journalEntryForm">
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Currency *</span>
+          <select name="currencyCode" class="form-control" id="je-currency-sel" required><option value="">Loading…</option></select></label>
+        <label><span class="form-label">Transaction date *</span>
+          <input name="transactionDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Reference</span>
+          <input name="reference" class="form-control"/></label>
+        <label class="full"><span class="form-label">Comments</span>
+          <textarea name="comments" class="form-control" rows="2"></textarea></label>
+        <!-- Debits -->
+        <div class="full">
+          <div class="flex justify-between mb-2">
+            <h4>Debits</h4>
+            <button type="button" class="btn-ghost btn-sm" id="add-debit-row"><i class="fa-solid fa-plus"></i> Add row</button>
+          </div>
+          <table class="tbl"><thead><tr><th>GL Account</th><th>Amount</th><th></th></tr></thead>
+            <tbody id="je-debits-body">
+              <tr>
+                <td><select class="form-control" data-je-account id="je-gl-accounts-d1"></select></td>
+                <td><input type="number" min="0" step="0.01" class="form-control" data-je-amount/></td>
+                <td><button type="button" class="btn-ghost btn-sm" onclick="this.closest('tr').remove()"><i class="fa-solid fa-trash"></i></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Credits -->
+        <div class="full">
+          <div class="flex justify-between mb-2">
+            <h4>Credits</h4>
+            <button type="button" class="btn-ghost btn-sm" id="add-credit-row"><i class="fa-solid fa-plus"></i> Add row</button>
+          </div>
+          <table class="tbl"><thead><tr><th>GL Account</th><th>Amount</th><th></th></tr></thead>
+            <tbody id="je-credits-body">
+              <tr>
+                <td><select class="form-control" data-je-account id="je-gl-accounts-c1"></select></td>
+                <td><input type="number" min="0" step="0.01" class="form-control" data-je-amount/></td>
+                <td><button type="button" class="btn-ghost btn-sm" onclick="this.closest('tr').remove()"><i class="fa-solid fa-trash"></i></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-journal"><i class="fa-solid fa-check"></i> Post Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Group -->
+<div id="newGroupModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Group</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newGroupForm">
+        <label class="full"><span class="form-label">Group name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Staff</span>
+          <select name="staffId" class="form-control" data-populate="staff"></select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-group"><i class="fa-solid fa-check"></i> Create Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- Savings Deposit / Withdrawal (opened from the savings account detail/list with data-account-id forwarded) -->
+<div id="savingsDepositModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title" id="sv-dep-title">Savings Transaction</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="savingsDepositForm">
+        <label><span class="form-label">Type *</span>
+          <select name="transactionType" class="form-control" required>
+            <option value="deposit">Deposit</option>
+            <option value="withdrawal">Withdrawal</option>
+          </select></label>
+        <label><span class="form-label">Amount *</span>
+          <input name="transactionAmount" type="number" min="0.01" step="0.01" required class="form-control"/></label>
+        <label><span class="form-label">Date</span>
+          <input name="transactionDate" type="date" class="form-control"/></label>
+        <label><span class="form-label">Payment Type</span>
+          <select name="paymentTypeId" id="sv-dep-paymenttype" class="form-control"><option value="">— Default —</option></select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-savings-deposit"><i class="fa-solid fa-check"></i> Post Transaction</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Payment Type -->
+<div id="newPaymentTypeModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Payment Type</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newPaymentTypeForm">
+        <label class="full"><span class="form-label">Name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label class="full"><span class="form-label">Description</span>
+          <input name="description" class="form-control"/></label>
+        <label><span class="form-label">Is Cash Payment?</span>
+          <select name="isCashPayment" class="form-control"><option value="true">Yes</option><option value="false">No</option></select></label>
+        <label><span class="form-label">Position</span>
+          <input name="position" type="number" min="0" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-paymenttype"><i class="fa-solid fa-check"></i> Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Charge -->
+<div id="newChargeModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Charge</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newChargeForm">
+        <label class="full"><span class="form-label">Name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Applies To *</span>
+          <select name="chargeAppliesTo" id="charge-appliesto" class="form-control" required></select></label>
+        <label><span class="form-label">Charge Time *</span>
+          <select name="chargeTimeType" id="charge-timetype" class="form-control" required></select></label>
+        <label><span class="form-label">Calculation Type *</span>
+          <select name="chargeCalculationType" id="charge-calctype" class="form-control" required></select></label>
+        <label><span class="form-label">Currency *</span>
+          <select name="currencyCode" id="charge-currency" class="form-control" required></select></label>
+        <label><span class="form-label">Amount *</span>
+          <input name="amount" type="number" step="0.01" min="0" required class="form-control"/></label>
+        <label><span class="form-label">Penalty?</span>
+          <select name="penalty" class="form-control"><option value="false">No</option><option value="true">Yes</option></select></label>
+        <label><span class="form-label">Active?</span>
+          <select name="active" class="form-control"><option value="true">Yes</option><option value="false">No</option></select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-charge"><i class="fa-solid fa-check"></i> Create Charge</button>
+    </div>
+  </div>
+</div>
+
+<!-- New User (staff/admin login, not self-service portal) -->
+<div id="newUserModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New User</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newUserForm">
+        <label><span class="form-label">Username *</span>
+          <input name="username" required class="form-control"/></label>
+        <label><span class="form-label">Email *</span>
+          <input name="email" type="email" required class="form-control"/></label>
+        <label><span class="form-label">First name *</span>
+          <input name="firstname" required class="form-control"/></label>
+        <label><span class="form-label">Last name *</span>
+          <input name="lastname" required class="form-control"/></label>
+        <label class="full"><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label class="full"><span class="form-label">Role(s) *</span>
+          <select name="roles" id="newuser-roles" class="form-control" multiple size="4" required></select></label>
+        <label class="full"><span class="form-check"><input type="checkbox" name="sendPasswordToEmail" id="nu-sendemail" checked/> Email the user a link to set their own password</span></label>
+        <label><span class="form-label">Password</span>
+          <input name="password" type="password" class="form-control" id="nu-pw" disabled/></label>
+        <label><span class="form-label">Confirm</span>
+          <input name="repeatPassword" type="password" class="form-control" id="nu-pw2" disabled/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-user"><i class="fa-solid fa-check"></i> Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Configuration Wizard — submits as ONE atomic Batch API transaction -->
+<div id="configWizardModal" class="modal-overlay">
+  <div class="modal md">
+    <div class="modal-head"><h3 class="modal-title">Organization Setup</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <p class="text-muted mb-4">These settings are submitted together as one atomic transaction — if anything fails, nothing is changed.</p>
+      <form id="configWizardForm">
+        <h4 class="mb-2">Working Days</h4>
+        <div class="flex gap-3 flex-wrap mb-4" id="cw-days">
+          ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `
+            <label class="form-check"><input type="checkbox" data-cw-day="${d}" ${['Mon','Tue','Wed','Thu','Fri'].includes(d) ? 'checked' : ''}/> ${d}</label>`).join('')}
+        </div>
+        <h4 class="mb-2">Enabled Currencies</h4>
+        <select id="cw-currencies" class="form-control" multiple size="6"><option value="">Loading…</option></select>
+        <div class="text-muted mt-2" style="font-size:12px">Ctrl/Cmd-click to select multiple.</div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-wizard"><i class="fa-solid fa-check"></i> Save All</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic Entity Detail (reused by Centers, Groups, etc.) -->
+<div id="entityDetailModal" class="modal-overlay">
+  <div class="modal md">
+    <div class="modal-head"><h3 class="modal-title" id="edm-title">Details</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body" id="edm-body"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div></div>
+    <div class="modal-foot" id="edm-foot"><button class="btn-ghost" data-close-modal>Close</button></div>
+  </div>
+</div>
+
+<!-- New Center -->
+<div id="newCenterModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Center</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newCenterForm">
+        <label class="full"><span class="form-label">Center name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Staff</span>
+          <select name="staffId" class="form-control" data-populate="staff"></select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-center"><i class="fa-solid fa-check"></i> Create Center</button>
+    </div>
+  </div>
+</div>
+
+<!-- GL Account -->
+<div id="glAccountModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New GL Account</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="glAccountForm">
+        <label><span class="form-label">Account name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">GL Code *</span>
+          <input name="glCode" required class="form-control" placeholder="e.g. 10100"/></label>
+        <label><span class="form-label">Type *</span>
+          <select name="type" class="form-control" required>
+            <option value="ASSET">Asset</option>
+            <option value="LIABILITY">Liability</option>
+            <option value="EQUITY">Equity</option>
+            <option value="INCOME">Income</option>
+            <option value="EXPENSE">Expense</option>
+          </select></label>
+        <label><span class="form-label">Usage *</span>
+          <select name="usage" class="form-control" required>
+            <option value="DETAIL">Detail</option>
+            <option value="HEADER">Header</option>
+          </select></label>
+        <label class="flex items-center gap-2" style="align-items:center;padding-top:28px">
+          <input type="checkbox" name="manualEntries" checked/> <span>Allow manual entries</span></label>
+        <label class="full"><span class="form-label">Description</span>
+          <textarea name="description" class="form-control" rows="2"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-gl"><i class="fa-solid fa-check"></i> Create GL Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Account Transfer -->
+<div id="newTransferModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Account Transfer</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newTransferForm">
+        <label><span class="form-label">From client ID *</span>
+          <input name="fromClientId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">From account ID *</span>
+          <input name="fromAccountId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">From account type</span>
+          <select name="fromAccountType" class="form-control">
+            <option value="2">Savings</option><option value="1">Loan</option></select></label>
+        <label><span class="form-label">To client ID *</span>
+          <input name="toClientId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">To account ID *</span>
+          <input name="toAccountId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">To account type</span>
+          <select name="toAccountType" class="form-control">
+            <option value="2">Savings</option><option value="1">Loan</option></select></label>
+        <label><span class="form-label">Amount *</span>
+          <input name="transferAmount" type="number" min="0.01" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Date *</span>
+          <input name="transferDate" type="date" class="form-control" required/></label>
+        <label class="full"><span class="form-label">Description</span>
+          <input name="transferDescription" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-transfer"><i class="fa-solid fa-check"></i> Transfer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Import -->
+<div id="bulkImportModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">Bulk Import</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label><span class="form-label">Entity</span>
+          <select name="entity" class="form-control">
+            <option value="clients">Clients</option>
+            <option value="loans">Loans</option>
+            <option value="savingsaccounts">Savings</option>
+            <option value="groups">Groups</option>
+            <option value="centers">Centers</option>
+          </select></label>
+        <label><span class="form-label">Office</span>
+          <select class="form-control" data-populate="offices"></select></label>
+      </div>
+      <label class="full mt-4">
+        <div class="card" style="border-style:dashed;text-align:center;padding:48px;cursor:pointer" onclick="this.nextElementSibling.click()">
+          <i class="fa-solid fa-cloud-arrow-up" style="font-size:36px;color:var(--brand-teal)"></i>
+          <div class="mt-3"><b>Drag &amp; drop file here</b> or click to browse</div>
+          <div class="text-muted">Accepted: .xlsx (max 10 MB)</div>
+        </div>
+        <input type="file" accept=".xlsx" style="display:none" id="bulkImportFile"/>
+      </label>
+      <div id="import-file-name" class="text-muted mt-2"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-import"><i class="fa-solid fa-upload"></i> Start Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Run Report -->
+<div id="runReportModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head">
+      <h3 class="modal-title">Run Report: <span id="run-report-name">—</span></h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label><span class="form-label">From date</span><input type="date" id="rep-from" class="form-control"/></label>
+        <label><span class="form-label">To date</span><input type="date" id="rep-to" class="form-control"/></label>
+        <label><span class="form-label">Office</span>
+          <select class="form-control" data-populate="offices"></select></label>
+        <label><span class="form-label">Output format</span>
+          <select class="form-control" id="rep-fmt">
+            <option value="JSON">JSON (Preview)</option>
+            <option value="XLS">Excel (Download)</option>
+            <option value="PDF">PDF (Download)</option>
+          </select></label>
+      </div>
+      <div id="rep-output" class="mt-4"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Close</button>
+      <button class="btn-primary" data-action="run-report"><i class="fa-solid fa-play"></i> Run Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ad-hoc Query -->
+<div id="adhocQueryModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">Ad-hoc Query</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <label class="full mb-4">
+        <span class="form-label">Report / Query name</span>
+        <input id="sqlQuery" class="form-control" placeholder="e.g. Active Loans by Office"/>
+      </label>
+      <div id="sqlResult" class="mt-4">
+        <div class="empty-state"><i class="fa-solid fa-terminal"></i><div>Enter a registered report name and click Run</div></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Close</button>
+      <button class="btn-primary" data-action="run-sql"><i class="fa-solid fa-play"></i> Run</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remittance Stepper -->
+<div id="remittanceModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">Send Remittance</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="stepper">
+        <div class="step active"><div class="n">1</div><div>Sender</div></div>
+        <div class="step"><div class="n">2</div><div>Beneficiary</div></div>
+        <div class="step"><div class="n">3</div><div>Transfer</div></div>
+        <div class="step"><div class="n">4</div><div>Confirm</div></div>
+      </div>
+      <div data-remit-pane="1">
+        <div class="form-grid">
+          <label><span class="form-label">Sender name</span><input class="form-control"/></label>
+          <label><span class="form-label">Sender phone</span><input class="form-control" type="tel"/></label>
+          <label><span class="form-label">ID type</span>
+            <select class="form-control"><option>National ID</option><option>Passport</option><option>Driver's Licence</option></select></label>
+          <label><span class="form-label">ID number</span><input class="form-control"/></label>
+        </div>
+      </div>
+      <div data-remit-pane="2" style="display:none">
+        <div class="form-grid">
+          <label><span class="form-label">Beneficiary name</span><input class="form-control"/></label>
+          <label><span class="form-label">Country</span>
+            <select class="form-control"><option>United Kingdom</option><option>Ghana</option><option>Kenya</option><option>South Africa</option></select></label>
+          <label class="full"><span class="form-label">Account / Wallet</span><input class="form-control"/></label>
+          <label class="full"><span class="form-label">Address</span><input class="form-control"/></label>
+        </div>
+      </div>
+      <div data-remit-pane="3" style="display:none">
+        <div class="form-grid">
+          <label><span class="form-label">Amount</span><input type="number" class="form-control"/></label>
+          <label><span class="form-label">Source currency</span>
+            <select class="form-control"><option>USD</option><option>NGN</option><option>EUR</option></select></label>
+          <label><span class="form-label">Destination currency</span>
+            <select class="form-control"><option>GBP</option><option>GHS</option><option>KES</option></select></label>
+          <label><span class="form-label">Purpose</span>
+            <select class="form-control"><option>Family support</option><option>Education</option><option>Business</option></select></label>
+        </div>
+      </div>
+      <div data-remit-pane="4" style="display:none">
+        <div class="card" style="margin:0;background:var(--bg-card-alt)">
+          <h4>Confirm transaction</h4>
+          <div class="text-muted mt-2">Review the details above, then click <b>Submit</b> to post the remittance via Fineract account transfer.</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-action="remit-back">Back</button>
+      <button class="btn-primary" data-action="remit-next">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Self-Service User -->
+<div id="selfServiceUserModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">Create Portal User</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="selfServiceUserForm">
+        <label class="full"><span class="form-label">Username *</span>
+          <input name="username" required class="form-control"/></label>
+        <label class="full"><span class="form-label">Email *</span>
+          <input name="email" type="email" required class="form-control"/></label>
+        <label><span class="form-label">Password *</span>
+          <input name="password" type="password" required class="form-control"/></label>
+        <label><span class="form-label">Confirm password</span>
+          <input name="passwordRepeat" type="password" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-ss-user"><i class="fa-solid fa-check"></i> Register</button>
+    </div>
+  </div>
+</div>

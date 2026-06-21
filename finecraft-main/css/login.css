@@ -1,0 +1,18 @@
+.login-wrap{position:relative;min-height:100vh;display:grid;place-items:center;padding:var(--s-4);overflow:hidden}
+.login-bg{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 18% 22%,rgba(0,201,177,.22),transparent 45%),radial-gradient(circle at 78% 76%,rgba(167,139,250,.18),transparent 50%),linear-gradient(135deg,#060a14 0%,#0a1628 100%)}
+.login-card{position:relative;z-index:1;width:100%;max-width:440px;background:var(--bg-card);border:1px solid var(--border-1);border-radius:var(--r-xl);padding:var(--s-7);box-shadow:var(--shadow-3)}
+.login-brand{text-align:center;margin-bottom:var(--s-5)}
+.login-brand .brand-mark{margin:0 auto var(--s-3);width:52px;height:52px;font-size:28px}
+.login-brand h1{font-family:var(--font-brand);font-size:30px;margin:0;background:linear-gradient(135deg,var(--brand-teal),var(--brand-teal-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.login-brand p{color:var(--text-2);font-size:13px;margin:6px 0 0}
+.conn-status{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:var(--s-4);background:var(--bg-card-alt);border:1px solid var(--border-1);border-left:3px solid var(--brand-teal);border-radius:var(--r-md);font-size:12px;color:var(--text-2)}
+.conn-status.ok{border-left-color:var(--c-success);color:var(--c-success)}
+.conn-status.fail{border-left-color:var(--c-warning);color:var(--c-warning)}
+.login-form{display:flex;flex-direction:column;gap:var(--s-3)}
+.login-form label{display:block;font-size:11px;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.login-form input{margin-top:6px;width:100%;background:var(--input-bg);border:1px solid var(--border-1);border-radius:var(--r-md);padding:10px 12px;color:var(--text-1);font-size:13px}
+.login-form input:focus{outline:none;border-color:var(--brand-teal);box-shadow:0 0 0 3px rgba(0,201,177,.16)}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-3)}
+.login-form .btn-primary{margin-top:var(--s-3);padding:12px}
+.login-form .btn-ghost{padding:10px}
+.login-foot{text-align:center;margin-top:var(--s-5);color:var(--text-3);font-size:11px}

@@ -1,0 +1,16 @@
+{
+  "name": "FinCraft",
+  "short_name": "FinCraft",
+  "start_url": "./",
+  "display": "standalone",
+  "theme_color": "#00c9b1",
+  "background_color": "#070d1b",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
