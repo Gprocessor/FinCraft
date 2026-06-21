@@ -1,4 +1,4 @@
-# FinCraft — Apache Fineract Web UI
+# FinCraft  Apache Fineract Web UI
 
 A modular, modern web frontend for [Apache Fineract](https://fineract.apache.org/) — the open-source microfinance platform.
 
