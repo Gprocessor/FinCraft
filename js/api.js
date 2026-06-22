@@ -65,12 +65,10 @@ class FineractAPI {
   _u(p, body,   opts) { return this._req('PUT',    p, { body,   ...opts }); }
   _d(p, body,   opts) { return this._req('DELETE', p, { body,   ...opts }); }
 
-  /** POST /authentication with JSON body -> { base64EncodedAuthenticationKey } */
+  /** POST /authentication?username=&password= -> { base64EncodedAuthenticationKey } */
   async auth(username, password, opts = {}) {
-    const body = JSON.stringify({ username, password });
-    console.log('Auth request:', { username, password, body });
     const r = await this._req('POST', '/authentication',
-      { body, timeoutMs: opts.timeoutMs ?? CFG.autoConnectTimeoutMs });
+      { params: { username, password }, body: '', timeoutMs: opts.timeoutMs ?? CFG.autoConnectTimeoutMs });
     return r?.base64EncodedAuthenticationKey || '';
   }
 
@@ -622,6 +620,28 @@ class FineractAPI {
         body: (() => { try { return JSON.parse(r.body); } catch { return r.body; } })()
       })));
     }
+  };
+
+  // ============== DOCUMENTS & IMAGES (KYC) ==============
+  // Generic file-attachment API confirmed against Fineract's documentmanagement module.
+  // entityType is one of: clients, loans, savingsaccounts, groups, centers, staff.
+  // FormData bodies are auto-detected by _req (skips JSON.stringify + lets the browser
+  // set its own multipart boundary) — see the FormData branch in _req above.
+  documents = {
+    list:     (entityType, entityId)             => this._g(`/${entityType}/${entityId}/documents`),
+    get:      (entityType, entityId, docId)       => this._g(`/${entityType}/${entityId}/documents/${docId}`),
+    download: (entityType, entityId, docId)       => this._req('GET', `/${entityType}/${entityId}/documents/${docId}/attachment`, { raw: true }),
+    upload:   (entityType, entityId, formData)    => this._req('POST', `/${entityType}/${entityId}/documents`, { body: formData }),
+    update:   (entityType, entityId, docId, formData) => this._req('PUT', `/${entityType}/${entityId}/documents/${docId}`, { body: formData }),
+    delete:   (entityType, entityId, docId)       => this._d(`/${entityType}/${entityId}/documents/${docId}`)
+  };
+  // Profile/ID photo — a separate, simpler endpoint from generic Documents above.
+  // Confirmed against Fineract's own API docs: multipart field name must be "file",
+  // or alternatively a raw base64 data-URI string with Content-Type: text/plain.
+  images = {
+    get:    (entityType, entityId) => this._req('GET', `/${entityType}/${entityId}/images`, { raw: true }),
+    upload: (entityType, entityId, formData) => this._req('POST', `/${entityType}/${entityId}/images`, { body: formData }),
+    delete: (entityType, entityId) => this._d(`/${entityType}/${entityId}/images`)
   };
 
   search = {

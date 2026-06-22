@@ -166,8 +166,13 @@ async function renderDetail(c, id) {
     c.innerHTML = `
     <div class="page active">
       <div class="page-header">
-        <div><h1 class="page-title">${escapeHtml(cl.displayName || cl.firstname || '')}</h1>
-          <div class="page-subtitle">Account #${escapeHtml(cl.accountNo || '—')} · ${escapeHtml(cl.officeName || '')}</div></div>
+        <div class="flex gap-3 items-center">
+          <div id="cl-photo-wrap" style="width:56px;height:56px;border-radius:50%;background:var(--bg-elev,#1a2942);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+            <i class="fa-solid fa-user" style="color:var(--text-3)"></i>
+          </div>
+          <div><h1 class="page-title">${escapeHtml(cl.displayName || cl.firstname || '')}</h1>
+            <div class="page-subtitle">Account #${escapeHtml(cl.accountNo || '—')} · ${escapeHtml(cl.officeName || '')}</div></div>
+        </div>
         <div class="flex gap-2">
           <button class="btn-ghost" id="back-to-clients"><i class="fa-solid fa-arrow-left"></i> Back</button>
         </div>
@@ -183,6 +188,10 @@ async function renderDetail(c, id) {
             <label><span class="form-label">Mobile</span><div>${escapeHtml(cl.mobileNo || '—')}</div></label>
             <label><span class="form-label">Gender</span><div>${escapeHtml(cl.gender?.name || '—')}</div></label>
           </div>
+          <div class="mt-4">
+            <label class="form-label">Profile Photo</label>
+            <input type="file" id="cl-photo-input" accept="image/*" class="form-control"/>
+          </div>
         </div>
         <div class="card">
           <h3 class="card-title mb-4">Loan Accounts</h3>
@@ -196,12 +205,110 @@ async function renderDetail(c, id) {
             <tbody>${savingsRows.map(s => `<tr><td class="mono">${escapeHtml(s.accountNo||'')}</td><td>${escapeHtml(s.productName||s.savingsProductName||'')}</td><td>${escapeHtml(s.status?.value||'')}</td></tr>`).join('') || '<tr><td colspan="3" class="text-center text-muted" style="padding:16px">No savings accounts</td></tr>'}</tbody>
           </table></div>
         </div>
+        <div class="card">
+          <h3 class="card-title mb-4">Documents (KYC)</h3>
+          <div id="cl-doc-list"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div></div>
+          <form id="cl-doc-form" class="form-grid mt-4">
+            <label><span class="form-label">Document name *</span><input name="name" required class="form-control" placeholder="e.g. National ID"/></label>
+            <label><span class="form-label">Description</span><input name="description" class="form-control" placeholder="optional"/></label>
+            <label class="full"><span class="form-label">File *</span><input name="file" type="file" required class="form-control"/></label>
+            <label class="full"><button type="submit" class="btn-primary"><i class="fa-solid fa-upload"></i> Upload Document</button></label>
+          </form>
+        </div>
       </div>
     </div>`;
     c.querySelector('#back-to-clients').addEventListener('click', () => {
       import('../router.js').then(r => r.navigate('clients'));
     });
+    loadClientPhoto(c, id);
+    loadClientDocuments(c, id);
+    c.querySelector('#cl-photo-input').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const fd = new FormData(); fd.append('file', file);
+      try {
+        await api.images.upload('clients', id, fd);
+        toast('success', 'Photo updated', file.name);
+        loadClientPhoto(c, id);
+      } catch (err) { toast('error', 'Upload failed', err.message || String(err)); }
+    });
+    c.querySelector('#cl-doc-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const fd = new FormData(form);
+      if (!fd.get('file') || !fd.get('file').name) { toast('warn', 'No file selected', 'Choose a file to upload'); return; }
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      try {
+        await api.documents.upload('clients', id, fd);
+        toast('success', 'Document uploaded', fd.get('name'));
+        form.reset();
+        loadClientDocuments(c, id);
+      } catch (err) {
+        toast('error', 'Upload failed', err.message || String(err));
+      } finally { submitBtn.disabled = false; }
+    });
   } catch (e) {
     c.innerHTML = `<div class="card"><div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><div><b>Failed to load client</b></div><div class="text-muted mt-2">${escapeHtml(e.message || String(e))}</div></div></div>`;
+  }
+}
+
+// Fineract serves images from an authenticated endpoint, so a plain <img src="..."> tag
+// can't be used (the browser won't attach the Basic Auth header) — fetch it as a blob instead.
+async function loadClientPhoto(c, id) {
+  const wrap = c.querySelector('#cl-photo-wrap');
+  if (!wrap) return;
+  try {
+    const res = await api.images.get('clients', id);
+    if (!res.ok) throw new Error('No photo');
+    const blob = await res.blob();
+    wrap.innerHTML = `<img src="${URL.createObjectURL(blob)}" style="width:100%;height:100%;object-fit:cover"/>`;
+  } catch {
+    // No photo on file yet — leave the placeholder person icon as-is, this is expected
+    // for most clients and not an error worth surfacing.
+  }
+}
+
+async function loadClientDocuments(c, id) {
+  const listEl = c.querySelector('#cl-doc-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div>';
+  try {
+    const docs = await api.documents.list('clients', id);
+    const list = Array.isArray(docs) ? docs : [];
+    listEl.innerHTML = list.length
+      ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Description</th><th>Type</th><th></th></tr></thead>
+          <tbody>${list.map(d => `<tr>
+            <td>${escapeHtml(d.name || '—')}</td>
+            <td>${escapeHtml(d.description || '—')}</td>
+            <td class="mono">${escapeHtml(d.type || d.fileName?.split('.').pop() || '—')}</td>
+            <td>
+              <button class="btn-ghost btn-sm" data-doc-dl="${d.id}" title="Download"><i class="fa-solid fa-download"></i></button>
+              <button class="btn-ghost btn-sm" data-doc-del="${d.id}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>`).join('')}</tbody></table></div>`
+      : '<div class="empty-state"><i class="fa-solid fa-file-circle-question"></i><div>No documents uploaded yet</div></div>';
+
+    listEl.querySelectorAll('[data-doc-dl]').forEach(b => b.addEventListener('click', async () => {
+      try {
+        const res = await api.documents.download('clients', id, b.dataset.docDl);
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        const cd = res.headers.get('Content-Disposition') || '';
+        a.download = /filename="?([^";]+)"?/.exec(cd)?.[1] || `document-${b.dataset.docDl}`;
+        a.click();
+      } catch (e) { toast('error', 'Download failed', e.message || String(e)); }
+    }));
+    listEl.querySelectorAll('[data-doc-del]').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Delete this document? This cannot be undone.')) return;
+      try {
+        await api.documents.delete('clients', id, b.dataset.docDel);
+        toast('success', 'Document deleted', '');
+        loadClientDocuments(c, id);
+      } catch (e) { toast('error', 'Delete failed', e.message || String(e)); }
+    }));
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><div>${escapeHtml(e.message || String(e))}</div></div>`;
   }
 }

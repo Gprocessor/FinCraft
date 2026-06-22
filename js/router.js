@@ -52,6 +52,7 @@ export async function handleHash() {
   const realName = PAGES[page] ? page : 'dashboard';
   store.set('currentPage', realName);
   store.set('currentParams', params);
+  store.set('lastPage', realName);
   const content = document.getElementById('contentArea');
   if (!content) return;
   content.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading ${def.label}…</div></div>`;
@@ -76,6 +77,7 @@ export function navigate(page, params = {}) { location.hash = buildHash(page, pa
 
 export function initRouter() {
   window.addEventListener('hashchange', handleHash);
-  if (!location.hash) location.hash = '#dashboard';
-  else handleHash();
+  // Always call handleHash on init — covers both the "existing hash" case and the
+  // case where navigate() just set a new hash immediately before we registered.
+  handleHash();
 }

@@ -58,7 +58,14 @@ function showApp() {
   if (l) l.setAttribute('hidden', '');
   import('./ui.js').then(m => {
     m.mountAppShell();
-    import('./router.js').then(r => r.navigate(store.get('lastPage') || 'dashboard'));
+    import('./router.js').then(r => {
+      r.initRouter();
+      // Navigate only if we don't already have a hash — initRouter() handles the
+      // initial hash if one exists, but after a fresh login the hash is empty.
+      if (!location.hash || location.hash === '#') {
+        r.navigate(store.get('lastPage') || 'dashboard');
+      }
+    });
   });
 }
 
