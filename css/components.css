@@ -1,7 +1,7 @@
-.app-shell{display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;grid-template-areas:"sidebar topbar" "sidebar content";min-height:100vh}
+.app-shell{display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;grid-template-areas:"sidebar topbar" "sidebar content";height:100vh;overflow:hidden}
 .app-shell.collapsed{grid-template-columns:64px 1fr}
 
-.sidebar{grid-area:sidebar;background:var(--sidebar-bg);border-right:1px solid var(--border-1);overflow-y:auto;padding:var(--s-3) var(--s-2)}
+.sidebar{grid-area:sidebar;background:var(--sidebar-bg);border-right:1px solid var(--border-1);overflow-y:auto;overflow-x:hidden;padding:var(--s-3) var(--s-2);height:100%;min-height:0}
 .brand{display:flex;align-items:center;gap:var(--s-3);padding:var(--s-3) var(--s-4);margin-bottom:var(--s-4)}
 .brand-mark{width:36px;height:36px;border-radius:var(--r-md);background:linear-gradient(135deg,var(--brand-teal),var(--brand-teal-2));color:var(--brand-navy);display:grid;place-items:center;font-family:var(--font-brand);font-size:22px;font-weight:700;box-shadow:var(--shadow-glow)}
 .brand-title{color:#fff;font-family:var(--font-brand);font-size:20px;line-height:1}
@@ -16,7 +16,7 @@
 .collapsed .brand-title,.collapsed .brand-sub,.collapsed .nav-group-title,.collapsed .nav-item span{display:none}
 .collapsed .nav-item{justify-content:center}
 
-.topbar{grid-area:topbar;background:var(--bg-card);border-bottom:1px solid var(--border-1);display:flex;align-items:center;gap:var(--s-4);padding:0 var(--s-6)}
+.topbar{grid-area:topbar;background:var(--bg-card);border-bottom:1px solid var(--border-1);display:flex;align-items:center;gap:var(--s-4);padding:0 var(--s-6);min-height:0;overflow:hidden}
 .topbar .crumb{color:var(--text-2);font-size:13px}
 .topbar .crumb b{color:var(--text-1);font-weight:600}
 .top-spacer{flex:1}
@@ -27,7 +27,7 @@
 .icon-btn:hover{color:var(--brand-teal);border-color:var(--brand-teal)}
 .icon-btn.has-dot::after{content:'';position:absolute;width:8px;height:8px;border-radius:50%;background:var(--brand-coral);top:6px;right:6px}
 
-.content-area{grid-area:content;padding:var(--s-6);overflow-y:auto;background:var(--bg-app)}
+.content-area{grid-area:content;padding:var(--s-6);overflow-y:auto;overflow-x:hidden;background:var(--bg-app);height:100%;min-height:0}
 .page{display:none}
 .page.active{display:block;animation:pageIn .25s ease}
 @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -203,9 +203,9 @@
 }
 @media (max-width:720px){
   /* On mobile the sidebar slides over content rather than squishing it */
-  .app-shell{grid-template-columns:1fr;grid-template-rows:56px 1fr;grid-template-areas:"topbar" "content"}
+  .app-shell{grid-template-columns:1fr;grid-template-rows:56px 1fr;grid-template-areas:"topbar" "content";height:100dvh;height:100vh}
   .sidebar{
-    position:fixed;top:0;left:0;height:100vh;width:260px;z-index:200;
+    position:fixed;top:0;left:0;height:100vh;height:100dvh;width:260px;z-index:200;
     transform:translateX(-100%);transition:transform .22s ease;
     /* Restore nav labels since we have full width when open */
   }

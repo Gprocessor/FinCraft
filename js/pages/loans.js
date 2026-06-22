@@ -150,19 +150,86 @@ function viewLoan(id, onChange) {
         <tbody>${(l.repaymentSchedule?.periods || []).filter(p => p.period).slice(0, 12).map(p => `<tr><td>${fmtDate(p.dueDate)||'—'}</td><td class="mono">${fmt(p.principalDue||0)}</td><td class="mono">${fmt(p.interestDue||0)}</td><td>${p.complete ? '<span class="badge b-success">Paid</span>' : '<span class="badge b-warn">Due</span>'}</td></tr>`).join('')
           || '<tr><td colspan="4" class="text-center text-muted" style="padding:14px">No schedule available</td></tr>'}</tbody>
       </table></div>
-      <div class="mt-4 flex gap-2" id="edm-loan-actions"></div>`,
+      <div class="mt-4 flex gap-2 flex-wrap" id="edm-loan-actions"></div>
+      <h4 class="mt-4 mb-2">Notes</h4>
+      <div id="edm-loan-notes"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div></div>
+      <div class="flex gap-2 mt-3">
+        <input id="edm-note-input" class="form-control" placeholder="Add a note…" style="flex:1"/>
+        <button class="btn-primary btn-sm" id="edm-note-save"><i class="fa-solid fa-plus"></i> Add</button>
+      </div>`,
     onMount: (bodyEl, l) => {
       const actions = bodyEl.querySelector('#edm-loan-actions');
-      if (l.status?.value === 'Active') {
+      const loanId = l.id;
+
+      const addBtn = (label, icon, classes, clickFn) => {
         const btn = document.createElement('button');
-        btn.className = 'btn-primary btn-sm';
-        btn.innerHTML = '<i class="fa-solid fa-money-bill"></i> Make Repayment';
-        btn.addEventListener('click', () => {
-          const modal = openModal('repaymentModal');
-          if (modal) modal.dataset.loanId = l.id;
-        });
+        btn.className = `${classes} btn-sm`;
+        btn.innerHTML = `<i class="fa-solid ${icon}"></i> ${label}`;
+        btn.addEventListener('click', clickFn);
         actions.appendChild(btn);
+      };
+
+      if (l.status?.value === 'Active') {
+        addBtn('Make Repayment', 'fa-money-bill', 'btn-primary', () => {
+          const modal = openModal('repaymentModal');
+          if (modal) modal.dataset.loanId = loanId;
+        });
       }
+      if (l.status?.value === 'Approved') {
+        addBtn('Disburse', 'fa-paper-plane', 'btn-primary', async () => {
+          const today = new Date().toISOString().split('T')[0];
+          try {
+            await api.loans.disburse(loanId, { actualDisbursementDate: today, dateFormat: 'yyyy-MM-dd', locale: 'en' });
+            toast('success', 'Loan disbursed', `#${loanId}`);
+            onChange && onChange();
+          } catch (e) { toast('error', 'Disburse failed', e.message); }
+        });
+        addBtn('Undo Approval', 'fa-rotate-left', 'btn-ghost', async () => {
+          if (!confirm('Undo approval for this loan?')) return;
+          try {
+            await api.loans.undoApproval(loanId);
+            toast('success', 'Approval undone', `#${loanId}`);
+            onChange && onChange();
+          } catch (e) { toast('error', 'Failed', e.message); }
+        });
+      }
+      if (l.status?.value === 'Active') {
+        addBtn('Foreclose', 'fa-ban', 'btn-ghost', async () => {
+          const today = new Date().toISOString().split('T')[0];
+          if (!confirm('Foreclose this loan? This cannot be undone.')) return;
+          try {
+            await api.loans.foreclose(loanId, { transactionDate: today, dateFormat: 'yyyy-MM-dd', locale: 'en' });
+            toast('success', 'Loan foreclosed', `#${loanId}`);
+            onChange && onChange();
+          } catch (e) { toast('error', 'Foreclose failed', e.message); }
+        });
+      }
+
+      // Notes
+      const notesEl = bodyEl.querySelector('#edm-loan-notes');
+      const loadNotes = () => {
+        notesEl.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div>';
+        api.notes.list('loans', loanId).then(notes => {
+          const list = Array.isArray(notes) ? notes : [];
+          notesEl.innerHTML = list.length
+            ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Note</th><th>By</th><th>Date</th></tr></thead><tbody>
+                ${list.map(n => `<tr><td>${escapeHtml(n.note || '—')}</td><td>${escapeHtml(n.createdByUsername || '—')}</td><td>${fmtDate(n.createdOn) || '—'}</td></tr>`).join('')}
+               </tbody></table></div>`
+            : '<div class="text-muted" style="padding:8px 0">No notes yet</div>';
+        }).catch(() => { notesEl.innerHTML = '<div class="text-muted" style="padding:8px 0">Could not load notes</div>'; });
+      };
+      loadNotes();
+      bodyEl.querySelector('#edm-note-save').addEventListener('click', async () => {
+        const inp = bodyEl.querySelector('#edm-note-input');
+        const note = inp.value.trim();
+        if (!note) return;
+        try {
+          await api.notes.create('loans', loanId, { note });
+          inp.value = '';
+          loadNotes();
+          toast('success', 'Note added', '');
+        } catch (e) { toast('error', 'Failed to add note', e.message); }
+      });
     }
   });
 }

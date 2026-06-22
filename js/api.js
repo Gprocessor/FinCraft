@@ -68,7 +68,6 @@ class FineractAPI {
   /** POST /authentication with JSON body -> { base64EncodedAuthenticationKey } */
   async auth(username, password, opts = {}) {
     const body = JSON.stringify({ username, password });
-    console.log('Auth request:', { username, password, body });
     const r = await this._req('POST', '/authentication',
       { body, timeoutMs: opts.timeoutMs ?? CFG.autoConnectTimeoutMs });
     return r?.base64EncodedAuthenticationKey || '';
@@ -644,6 +643,16 @@ class FineractAPI {
     get:    (entityType, entityId) => this._req('GET', `/${entityType}/${entityId}/images`, { raw: true }),
     upload: (entityType, entityId, formData) => this._req('POST', `/${entityType}/${entityId}/images`, { body: formData }),
     delete: (entityType, entityId) => this._d(`/${entityType}/${entityId}/images`)
+  };
+
+  // ============== NOTES ==============
+  // Generic notes API — entityType: clients, loans, savingsaccounts, groups, centers
+  notes = {
+    list:   (entityType, entityId)         => this._g(`/${entityType}/${entityId}/notes`),
+    get:    (entityType, entityId, noteId) => this._g(`/${entityType}/${entityId}/notes/${noteId}`),
+    create: (entityType, entityId, body)   => this._p(`/${entityType}/${entityId}/notes`, body),
+    update: (entityType, entityId, noteId, body) => this._u(`/${entityType}/${entityId}/notes/${noteId}`, body),
+    delete: (entityType, entityId, noteId) => this._d(`/${entityType}/${entityId}/notes/${noteId}`)
   };
 
   search = {

@@ -3,7 +3,7 @@
    CORS note: the demo server at demo.mifos.io has open CORS headers.
    tenant: default  user: mifos  pass: password */
 export const FINERACT_DEMO = {
-  serverUrl:  'https://132.226.213.96:8443',
+  serverUrl:  'https://demo.mifos.io',
   tenantId:   'default',
   apiBase:    '/fineract-provider/api/v1',
   requestTimeoutMs:     30000000,

@@ -215,6 +215,14 @@ async function renderDetail(c, id) {
             <label class="full"><button type="submit" class="btn-primary"><i class="fa-solid fa-upload"></i> Upload Document</button></label>
           </form>
         </div>
+        <div class="card">
+          <h3 class="card-title mb-4">Notes</h3>
+          <div id="cl-note-list"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div></div>
+          <div class="flex gap-2 mt-3">
+            <input id="cl-note-input" class="form-control" placeholder="Add a note…" style="flex:1"/>
+            <button class="btn-primary btn-sm" id="cl-note-save"><i class="fa-solid fa-plus"></i> Add</button>
+          </div>
+        </div>
       </div>
     </div>`;
     c.querySelector('#back-to-clients').addEventListener('click', () => {
@@ -222,6 +230,18 @@ async function renderDetail(c, id) {
     });
     loadClientPhoto(c, id);
     loadClientDocuments(c, id);
+    loadClientNotes(c, id);
+    c.querySelector('#cl-note-save').addEventListener('click', async () => {
+      const inp = c.querySelector('#cl-note-input');
+      const note = inp.value.trim();
+      if (!note) return;
+      try {
+        await api.notes.create('clients', id, { note });
+        inp.value = '';
+        loadClientNotes(c, id);
+        toast('success', 'Note added', '');
+      } catch (e) { toast('error', 'Failed to add note', e.message); }
+    });
     c.querySelector('#cl-photo-input').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -310,5 +330,25 @@ async function loadClientDocuments(c, id) {
     }));
   } catch (e) {
     listEl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><div>${escapeHtml(e.message || String(e))}</div></div>`;
+  }
+}
+
+async function loadClientNotes(c, id) {
+  const listEl = c.querySelector('#cl-note-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div>';
+  try {
+    const notes = await api.notes.list('clients', id);
+    const list = Array.isArray(notes) ? notes : [];
+    listEl.innerHTML = list.length
+      ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Note</th><th>By</th><th>Date</th></tr></thead>
+          <tbody>${list.map(n => `<tr>
+            <td>${escapeHtml(n.note || '—')}</td>
+            <td>${escapeHtml(n.createdByUsername || '—')}</td>
+            <td>${fmtDate(n.createdOn) || '—'}</td>
+          </tr>`).join('')}</tbody></table></div>`
+      : '<div class="text-muted" style="padding:8px 0">No notes yet</div>';
+  } catch (e) {
+    listEl.innerHTML = `<div class="text-muted" style="padding:8px 0">Could not load notes</div>`;
   }
 }

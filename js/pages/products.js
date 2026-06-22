@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { fmt, num, sb, escapeHtml } from '../utils.js';
 import { toast, openModal } from '../ui.js';
 
-const TABS = ['Loan Products','Saving Products','Fixed Deposits','Recurring Deposits','Share Products','Charges'];
+const TABS = ['Loan Products','Saving Products','Fixed Deposits','Recurring Deposits','Share Products','Charges','Floating Rates','Tax Components','Delinquency'];
 
 // data-action-button per tab: 'modal' opens a real Fineract-backed creation form;
 // 'soon' is honest about the multi-step product builders not being implemented yet
@@ -15,7 +15,10 @@ const NEW_BTN = [
   { mode: 'soon' },                          // Fixed Deposits
   { mode: 'soon' },                          // Recurring Deposits
   { mode: 'soon' },                          // Share Products
-  { mode: 'modal', modal: 'newChargeModal' } // Charges — simple enough to be fully wired now
+  { mode: 'modal', modal: 'newChargeModal' }, // Charges — simple enough to be fully wired now
+  { mode: 'soon' },                          // Floating Rates
+  { mode: 'soon' },                          // Tax Components/Groups
+  { mode: 'soon' }                           // Delinquency Buckets
 ];
 
 export async function render(c) {
@@ -36,7 +39,12 @@ export async function render(c) {
     { fn: () => api.fdProducts.list(),       key: 2, label: 'FD Products',      cols: ['Name','Short Name','Min Deposit','Max Term'],       row: p => [p.name, p.shortName, fmt(p.minDepositAmount || 0), `${p.maxDepositTerm || 0} ${p.maxDepositTermType?.value || ''}`] },
     { fn: () => api.rdProducts.list(),       key: 3, label: 'RD Products',      cols: ['Name','Short Name','Mandatory Deposit'],            row: p => [p.name, p.shortName, fmt(p.mandatoryRecommendedDepositAmount || 0)] },
     { fn: () => api.shareProducts.list(),    key: 4, label: 'Share Products',   cols: ['Name','Short Name','Unit Price','Min Shares'],       row: p => [p.name, p.shortName, fmt(p.unitPrice || 0), num(p.minimumShares || 0)] },
-    { fn: () => api.charges.list(),          key: 5, label: 'Charges',          cols: ['Name','Type','Amount','Currency'],                  row: p => [p.name, p.chargeTimeType?.value || '—', fmt(p.amount || 0), p.currency?.code || '—'] }
+    { fn: () => api.charges.list(),          key: 5, label: 'Charges',          cols: ['Name','Type','Amount','Currency'],                  row: p => [p.name, p.chargeTimeType?.value || '—', fmt(p.amount || 0), p.currency?.code || '—'] },
+    { fn: () => api.floatingRates.list(),    key: 6, label: 'Floating Rates',   cols: ['Name','Is Base','Is Active'],                        row: p => [p.name, p.isBaseLendingRate ? 'Yes' : 'No', p.active !== false ? 'Active' : 'Inactive'] },
+    { fn: async () => { const [tc, tg] = await Promise.all([api.taxComponents.list(), api.taxGroups.list()]); return [...(Array.isArray(tc)?tc:[]).map(x=>({...x,_type:'Component'})), ...(Array.isArray(tg)?tg:[]).map(x=>({...x,_type:'Group'}))]; },
+      key: 7, label: 'Tax',               cols: ['Name','Type','Credit Account','Debit Account'],          row: p => [p.name, p._type, p.creditAccount?.name || '—', p.debitAccount?.name || '—'] },
+    { fn: async () => { const [b,r] = await Promise.all([api.delinquencyBuckets.list(), api.delinquencyBuckets.ranges()]); return (Array.isArray(b)?b:[]).map(bk=>({...bk,_ranges:(Array.isArray(r)?r:[]).filter(x=>x.delinquencyBucketId===bk.id)})); },
+      key: 8, label: 'Delinquency',       cols: ['Bucket Name','Ranges'],                                  row: p => [p.name, (p._ranges||[]).map(r=>`${r.classification || r.minimumAgeDays+'d'}`).join(', ') || '—'] }
   ];
 
   for (const { fn, key, label, cols, row } of loaders) {

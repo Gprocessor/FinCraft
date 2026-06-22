@@ -12,7 +12,7 @@ export async function render(c, params) {
   await fn(c);
 }
 
-function profile(c) {
+async function profile(c) {
   const a = store.get('auth') || {};
   c.innerHTML = `
   <div class="page active">
@@ -20,11 +20,7 @@ function profile(c) {
     <div class="grid-2">
       <div class="card">
         <h3 class="card-title mb-4">Account Details</h3>
-        <div class="form-grid">
-          <label><span class="form-label">Username</span><input class="form-control" value="${escapeHtml(a.username || '')}" readonly /></label>
-          <label><span class="form-label">Tenant</span><input class="form-control" value="${escapeHtml(a.tenantId || 'default')}" readonly /></label>
-          <label class="full"><span class="form-label">Server</span><input class="form-control" value="${escapeHtml(a.serverUrl || '')}" readonly /></label>
-        </div>
+        <div id="profile-details"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div></div>
       </div>
       <div class="card">
         <h3 class="card-title mb-4">Change Password</h3>
@@ -37,6 +33,39 @@ function profile(c) {
       </div>
     </div>
   </div>`;
+
+  // Fetch real user details from Fineract
+  const detailEl = c.querySelector('#profile-details');
+  const userId = a.userId;
+  if (userId) {
+    try {
+      const u = await api.users.get(userId);
+      const roles = (u.roles || []).map(r => escapeHtml(r.name || '')).filter(Boolean).join(', ') || '—';
+      detailEl.innerHTML = `<div class="form-grid">
+        <label><span class="form-label">Username</span><input class="form-control" value="${escapeHtml(u.username || a.username || '')}" readonly /></label>
+        <label><span class="form-label">Email</span><input class="form-control" value="${escapeHtml(u.email || '—')}" readonly /></label>
+        <label><span class="form-label">First Name</span><input class="form-control" value="${escapeHtml(u.firstname || '—')}" readonly /></label>
+        <label><span class="form-label">Last Name</span><input class="form-control" value="${escapeHtml(u.lastname || '—')}" readonly /></label>
+        <label><span class="form-label">Office</span><input class="form-control" value="${escapeHtml(u.officeName || '—')}" readonly /></label>
+        <label><span class="form-label">Roles</span><input class="form-control" value="${roles}" readonly /></label>
+        <label><span class="form-label">Tenant</span><input class="form-control" value="${escapeHtml(a.tenantId || 'default')}" readonly /></label>
+        <label class="full"><span class="form-label">Server</span><input class="form-control" value="${escapeHtml(a.serverUrl || '')}" readonly /></label>
+      </div>`;
+    } catch {
+      // Fall back to store-only data if the API call fails (e.g. permissions)
+      detailEl.innerHTML = `<div class="form-grid">
+        <label><span class="form-label">Username</span><input class="form-control" value="${escapeHtml(a.username || '')}" readonly /></label>
+        <label><span class="form-label">Tenant</span><input class="form-control" value="${escapeHtml(a.tenantId || 'default')}" readonly /></label>
+        <label class="full"><span class="form-label">Server</span><input class="form-control" value="${escapeHtml(a.serverUrl || '')}" readonly /></label>
+      </div>`;
+    }
+  } else {
+    detailEl.innerHTML = `<div class="form-grid">
+      <label><span class="form-label">Username</span><input class="form-control" value="${escapeHtml(a.username || '')}" readonly /></label>
+      <label><span class="form-label">Tenant</span><input class="form-control" value="${escapeHtml(a.tenantId || 'default')}" readonly /></label>
+      <label class="full"><span class="form-label">Server</span><input class="form-control" value="${escapeHtml(a.serverUrl || '')}" readonly /></label>
+    </div>`;
+  }
 
   c.querySelector('#pw-save').addEventListener('click', async () => {
     const cur = c.querySelector('#pw-cur').value;

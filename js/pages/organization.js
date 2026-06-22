@@ -52,14 +52,56 @@ export async function render(c) {
       </table></div>`;
   } catch (e) { c.querySelector('#og-1').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><div>${escapeHtml(e.message)}</div></div>`; }
 
-  // Tellers
+  // Tellers + Cashiers
   try {
     const tellers = await api.tellers.list();
     const list = Array.isArray(tellers) ? tellers : [];
     c.querySelector('#og-2').innerHTML = list.length
-      ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Office</th><th>Start Date</th><th>End Date</th><th>Status</th></tr></thead>
-          <tbody>${list.map(t => `<tr><td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.officeName || '—')}</td><td>${fmtDate(t.startDate)}</td><td>${fmtDate(t.endDate)}</td><td>${sb(t.status || 'Active')}</td></tr>`).join('')}</tbody></table></div>`
+      ? `<div class="flex justify-between mb-4"><span class="text-muted">${list.length} teller(s)</span>
+          <button class="btn-primary" data-org-new="teller"><i class="fa-solid fa-plus"></i> New Teller</button></div>
+          <div class="tbl-wrap"><table class="tbl">
+            <thead><tr><th>Name</th><th>Office</th><th>Start</th><th>End</th><th>Status</th><th></th></tr></thead>
+            <tbody id="tellers-body">${list.map(t => `
+              <tr>
+                <td>${escapeHtml(t.name)}</td>
+                <td>${escapeHtml(t.officeName || '—')}</td>
+                <td>${fmtDate(t.startDate)}</td>
+                <td>${fmtDate(t.endDate)}</td>
+                <td>${sb(t.status || 'Active')}</td>
+                <td><button class="btn-ghost btn-sm" data-teller-cashiers="${t.id}" data-teller-name="${escapeHtml(t.name)}" title="View cashiers"><i class="fa-solid fa-user-tie"></i></button></td>
+              </tr>
+              <tr id="cashier-row-${t.id}" class="cashier-row" style="display:none">
+                <td colspan="6" style="background:var(--bg-elev,#131929);padding:12px 16px">
+                  <div id="cashier-body-${t.id}"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading cashiers…</div></div></div>
+                </td>
+              </tr>`).join('')}
+            </tbody></table></div>`
       : '<div class="empty-state"><i class="fa-solid fa-cash-register"></i><div>No tellers configured</div><button class="btn-primary mt-4" data-org-new="teller"><i class="fa-solid fa-plus"></i> New Teller</button></div>';
+
+    c.querySelectorAll('[data-teller-cashiers]').forEach(b => {
+      b.addEventListener('click', async () => {
+        const tid = b.dataset.tellerCashiers;
+        const row = c.querySelector(`#cashier-row-${tid}`);
+        const body = c.querySelector(`#cashier-body-${tid}`);
+        if (row.style.display !== 'none') { row.style.display = 'none'; return; }
+        row.style.display = '';
+        try {
+          const cashiers = await api.tellers.cashiers(tid);
+          const clist = Array.isArray(cashiers) ? cashiers : (cashiers?.cashiers || []);
+          body.innerHTML = clist.length
+            ? `<b style="font-size:12px">Cashiers for ${escapeHtml(b.dataset.tellerName)}</b>
+               <div class="tbl-wrap" style="margin-top:8px"><table class="tbl">
+                 <thead><tr><th>Name</th><th>Start</th><th>End</th><th>Type</th></tr></thead>
+                 <tbody>${clist.map(cx => `<tr>
+                   <td>${escapeHtml(cx.staffName || cx.name || '—')}</td>
+                   <td>${fmtDate(cx.startDate)}</td>
+                   <td>${fmtDate(cx.endDate)}</td>
+                   <td>${escapeHtml(cx.type || '—')}</td>
+                 </tr>`).join('')}</tbody></table></div>`
+            : `<span class="text-muted">No cashiers assigned to ${escapeHtml(b.dataset.tellerName)}</span>`;
+        } catch (e) { body.innerHTML = `<span class="text-muted">${escapeHtml(e.message)}</span>`; }
+      });
+    });
   } catch (e) { c.querySelector('#og-2').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><div>${escapeHtml(e.message)}</div></div>`; }
 
   // Holidays — Fineract scopes holidays by office; use the actual head office

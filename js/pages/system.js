@@ -4,7 +4,7 @@ import { escapeHtml, fmtDate } from '../utils.js';
 import { toast, showEntityDetail } from '../ui.js';
 import { store } from '../store.js';
 
-const TABS = ['Configurations','Audit Trails','Codes & Values','Roles & Permissions','Manage Jobs','External Services','System Info'];
+const TABS = ['Configurations','Audit Trails','Codes & Values','Roles & Permissions','Manage Jobs','External Services','COB','Hooks','SMS Campaigns','System Info'];
 
 export async function render(c) {
   c.innerHTML = `
@@ -78,13 +78,19 @@ export async function render(c) {
     const list = Array.isArray(roles) ? roles : [];
     c.querySelector('#sy-3').innerHTML = list.length
       ? `<div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Role</th><th>Description</th><th>Disabled</th></tr></thead>
+          <thead><tr><th>Role</th><th>Description</th><th>Status</th><th></th></tr></thead>
           <tbody>${list.map(r => `<tr>
             <td>${escapeHtml(r.name)}</td>
             <td>${escapeHtml(r.description || '—')}</td>
             <td>${r.disabled ? '<span class="badge b-danger">Disabled</span>' : '<span class="badge b-success">Active</span>'}</td>
+            <td>
+              <button class="btn-ghost btn-sm" data-view-perms="${r.id}" data-role-name="${escapeHtml(r.name)}" title="View permissions">
+                <i class="fa-solid fa-key"></i>
+              </button>
+            </td>
           </tr>`).join('')}</tbody></table></div>`
       : '<div class="empty-state"><i class="fa-solid fa-user-shield"></i><div>No roles defined</div></div>';
+    c.querySelectorAll('[data-view-perms]').forEach(b => b.addEventListener('click', () => viewRolePermissions(b.dataset.viewPerms, b.dataset.roleName)));
   } catch (e) { c.querySelector('#sy-3').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><div>${escapeHtml(e.message)}</div></div>`; }
 
   // Jobs
@@ -119,9 +125,84 @@ export async function render(c) {
     </div>`;
   c.querySelectorAll('[data-svc-view]').forEach(b => b.addEventListener('click', () => viewServiceConfig(b.dataset.svcView, b.dataset.svcLabel)));
 
+  // COB (Close of Business)
+  try {
+    const [dateRes, cfgRes] = await Promise.allSettled([
+      api.cob.businessDate.get(),
+      api.cob.configurations()
+    ]);
+    const date = dateRes.status === 'fulfilled' ? dateRes.value : null;
+    const cfgs = cfgRes.status === 'fulfilled' ? cfgRes.value : null;
+    const cfgList = Array.isArray(cfgs) ? cfgs : (cfgs?.businessSteps || []);
+    c.querySelector('#sy-6').innerHTML = `
+      <div style="margin-bottom:20px">
+        <h4 class="mb-2">Business Date</h4>
+        ${date
+          ? `<div class="flex gap-3 items-center flex-wrap">
+               <span class="mono" style="font-size:18px">${escapeHtml(String(date.date || date.businessDate || JSON.stringify(date)))}</span>
+               <span class="badge">${escapeHtml(date.type || '')}</span>
+             </div>`
+          : '<div class="text-muted">Business date not available (may require COB setup)</div>'}
+      </div>
+      <div class="flex gap-2 mb-4 flex-wrap">
+        <button class="btn-primary btn-sm" id="cob-catchup"><i class="fa-solid fa-forward-fast"></i> Run COB Catch-Up</button>
+      </div>
+      ${cfgList.length
+        ? `<h4 class="mb-2">Business Step Configuration</h4>
+           <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Step Name</th><th>Job Name</th><th>Order</th></tr></thead>
+             <tbody>${cfgList.map(s => `<tr>
+               <td>${escapeHtml(s.stepName || s.name || '—')}</td>
+               <td>${escapeHtml(s.jobName || '—')}</td>
+               <td>${escapeHtml(String(s.order ?? '—'))}</td>
+             </tr>`).join('')}</tbody></table></div>`
+        : '<div class="text-muted">No business step configuration found</div>'}`;
+    c.querySelector('#cob-catchup')?.addEventListener('click', async () => {
+      if (!confirm('Trigger COB catch-up processing? This runs all overdue COB steps.')) return;
+      try {
+        await api.cob.catchUp();
+        toast('success', 'COB catch-up triggered', 'Processing will run asynchronously');
+      } catch (e) { toast('error', 'COB catch-up failed', e.message); }
+    });
+  } catch (e) {
+    c.querySelector('#sy-6').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><div>${escapeHtml(e.message)}</div></div>`;
+  }
+
+  // Hooks (Webhooks)
+  try {
+    const hooks = await api.hooks.list();
+    const list = Array.isArray(hooks) ? hooks : [];
+    c.querySelector('#sy-7').innerHTML = list.length
+      ? `<div class="flex justify-between mb-4"><span class="text-muted">${list.length} webhooks</span></div>
+          <div class="tbl-wrap"><table class="tbl">
+            <thead><tr><th>Name</th><th>Template</th><th>Active</th><th>Events</th></tr></thead>
+            <tbody>${list.map(h => `<tr>
+              <td>${escapeHtml(h.name || '—')}</td>
+              <td>${escapeHtml(h.templateName || h.templateId || '—')}</td>
+              <td>${h.isActive ? '<span class="badge b-success">Active</span>' : '<span class="badge">Inactive</span>'}</td>
+              <td class="text-muted">${(h.events || []).map(e => escapeHtml(e.actionName + ':' + e.entityName)).join(', ') || '—'}</td>
+            </tr>`).join('')}</tbody></table></div>`
+      : '<div class="empty-state"><i class="fa-solid fa-webhook"></i><div>No webhooks configured</div></div>';
+  } catch (e) { c.querySelector('#sy-7').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><div>${escapeHtml(e.message)}</div></div>`; }
+
+  // SMS Campaigns
+  try {
+    const sms = await api.smsCampaigns.list();
+    const list = Array.isArray(sms) ? sms : [];
+    c.querySelector('#sy-8').innerHTML = list.length
+      ? `<div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Campaign Name</th><th>Type</th><th>Status</th><th>Next Run</th></tr></thead>
+          <tbody>${list.map(s => `<tr>
+            <td>${escapeHtml(s.campaignName || s.name || '—')}</td>
+            <td>${escapeHtml(s.campaignType?.value || '—')}</td>
+            <td>${escapeHtml(s.campaignStatus?.value || s.status || '—')}</td>
+            <td>${fmtDate(s.nextTriggerDate) || '—'}</td>
+          </tr>`).join('')}</tbody></table></div>`
+      : '<div class="empty-state"><i class="fa-solid fa-sms"></i><div>No SMS campaigns</div></div>';
+  } catch (e) { c.querySelector('#sy-8').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation"></i><div>${escapeHtml(e.message)}</div></div>`; }
+
   // System Info
   const a = store.get('auth') || {};
-  c.querySelector('#sy-6').innerHTML = `
+  c.querySelector('#sy-9').innerHTML = `
     <div class="card" style="margin:0">
       <h3 class="card-title mb-4">System Information</h3>
       <div class="grid-2">
@@ -146,6 +227,32 @@ function viewCodeValues(codeId, codeName) {
         ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Value</th><th>Description</th><th>Active</th><th>Position</th></tr></thead>
             <tbody>${list.map(v => `<tr><td>${escapeHtml(v.name)}</td><td>${escapeHtml(v.description || '—')}</td><td>${v.active === false ? '<span class="badge">No</span>' : '<span class="badge b-success">Yes</span>'}</td><td>${v.position ?? '—'}</td></tr>`).join('')}</tbody></table></div>`
         : '<div class="empty-state"><i class="fa-solid fa-list"></i><div>No values defined for this code</div></div>';
+    }
+  });
+}
+
+// Fineract: GET /roles/{id}/permissions — lists all permissions and which are enabled for this role
+function viewRolePermissions(roleId, roleName) {
+  showEntityDetail({
+    title: `${roleName || 'Role'} — Permissions`,
+    fetchFn: () => api.roles.permissions(roleId),
+    renderBody: (data) => {
+      const perms = Array.isArray(data?.permissionUsageData) ? data.permissionUsageData : (Array.isArray(data) ? data : []);
+      if (!perms.length) return '<div class="empty-state"><i class="fa-solid fa-key"></i><div>No permissions data</div></div>';
+      // Group by grouping field
+      const groups = {};
+      perms.forEach(p => {
+        const g = p.grouping || 'Other';
+        if (!groups[g]) groups[g] = [];
+        groups[g].push(p);
+      });
+      return Object.entries(groups).map(([grp, items]) => `
+        <div style="margin-bottom:16px">
+          <div style="font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:8px">${escapeHtml(grp)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${items.map(p => `<span class="badge ${p.selected ? 'b-success' : ''}" title="${escapeHtml(p.code || '')}">${escapeHtml(p.actionName || p.code || '—')} · ${escapeHtml(p.entityName || '')}</span>`).join('')}
+          </div>
+        </div>`).join('');
     }
   });
 }
