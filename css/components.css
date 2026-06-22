@@ -202,7 +202,21 @@
   .form-grid{grid-template-columns:1fr}
 }
 @media (max-width:720px){
-  .content-area{padding:var(--s-4)}
+  /* On mobile the sidebar slides over content rather than squishing it */
+  .app-shell{grid-template-columns:1fr;grid-template-rows:56px 1fr;grid-template-areas:"topbar" "content"}
+  .sidebar{
+    position:fixed;top:0;left:0;height:100vh;width:260px;z-index:200;
+    transform:translateX(-100%);transition:transform .22s ease;
+    /* Restore nav labels since we have full width when open */
+  }
+  .sidebar .brand-title,.sidebar .brand-sub,.sidebar .nav-group-title,.sidebar .nav-item span{display:block}
+  .sidebar .nav-item{justify-content:flex-start}
+  /* When shell has nav-open class the sidebar slides in */
+  .app-shell.nav-open .sidebar{transform:translateX(0);box-shadow:4px 0 32px rgba(0,0,0,.5)}
+  /* Scrim behind open sidebar — real element so click-to-close works */
+  .app-shell.nav-open .nav-scrim{display:block}
+  .nav-scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199;cursor:pointer}
+  .content-area{padding:var(--s-4);grid-column:1}
   .top-search{display:none}
   .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
   .stat-grid{grid-template-columns:1fr 1fr}

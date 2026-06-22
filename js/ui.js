@@ -18,6 +18,7 @@ export function mountAppShell() {
   const shell = document.getElementById('appShell');
   if (!shell || shell.dataset.mounted) { shell?.removeAttribute('hidden'); return; }
   shell.dataset.mounted = '1';
+  shell.classList.add('app-shell'); // grid layout defined on .app-shell in CSS
 
   fetch('./views/modals.html').then(r => r.ok ? r.text() : '').then(html => {
     const root = document.getElementById('modalRoot');
@@ -78,8 +79,10 @@ export function mountAppShell() {
     </header>
 
     <main class="content-area" id="contentArea"></main>
+    <div class="nav-scrim" id="navScrim"></div>
   `;
 
+  document.getElementById('navScrim')?.addEventListener('click', () => sidebar.close());
   document.documentElement.setAttribute('data-theme', store.get('theme'));
 }
 
@@ -175,10 +178,17 @@ export function dropdownToggle(id) {
 
 export const sidebar = {
   toggle() {
-    const next = store.get('sidebar') === 'collapsed' ? 'expanded' : 'collapsed';
-    store.set('sidebar', next);
-    document.getElementById('appShell')?.classList.toggle('collapsed', next === 'collapsed');
-  }
+    const shell = document.getElementById('appShell');
+    if (!shell) return;
+    if (window.innerWidth <= 720) {
+      shell.classList.toggle('nav-open');
+    } else {
+      const next = store.get('sidebar') === 'collapsed' ? 'expanded' : 'collapsed';
+      store.set('sidebar', next);
+      shell.classList.toggle('collapsed', next === 'collapsed');
+    }
+  },
+  close() { document.getElementById('appShell')?.classList.remove('nav-open'); }
 };
 export const theme = {
   toggle() {
@@ -290,7 +300,7 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (t.matches('[data-tab]')) { tab(t, t.dataset.tab); return; }
-  if (t.dataset.nav) { navigate(t.dataset.nav); closeAllDropdowns(); return; }
+  if (t.dataset.nav) { navigate(t.dataset.nav); closeAllDropdowns(); sidebar.close(); return; }
   if (t.dataset.modal) {
     const modalId = t.dataset.modal;
     const modalEl = openModal(modalId);

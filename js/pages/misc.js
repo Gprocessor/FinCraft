@@ -315,7 +315,7 @@ async function collaterals(c) {
     <div id="coll-body" class="card"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div></div>
   </div>`;
   try {
-    const types = await api._g('/loans/collateral-management/template').catch(() => api._g('/codes/CollateralType/codevalues').catch(() => null));
+    const types = await api.collateralManagement.list().catch(() => api.codes.values('CollateralType').catch(() => null));
     const list = Array.isArray(types) ? types : (types?.allowedCollateralTypes || []);
     c.querySelector('#coll-body').innerHTML = list.length
       ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Name</th><th>Quality</th></tr></thead>

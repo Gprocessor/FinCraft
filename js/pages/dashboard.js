@@ -66,6 +66,7 @@ export async function render(c) {
   c.querySelector('#stat-clients').textContent = num(clActive?.totalFilteredRecords ?? '—');
   c.querySelector('#stat-loans').textContent   = num(lnActive?.totalFilteredRecords ?? '—');
 
+  const svList = Array.isArray(sv) ? sv : (sv?.pageItems || []);
   const svActiveList = Array.isArray(svActive) ? svActive : (svActive?.pageItems || []);
   const svTotal = svActiveList.reduce((s, a) => s + (a.summary?.accountBalance || 0), 0);
   c.querySelector('#stat-savings').textContent = svActiveList.length ? fmt(svTotal) : '—';

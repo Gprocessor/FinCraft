@@ -13,7 +13,7 @@ export async function render(c) {
     </div>
     <div class="card">
       <div class="tabs">${TABS.map((t, i) => `<button class="tab ${i === 0 ? 'active' : ''}" data-tab="tk-${i}">${t}</button>`).join('')}</div>
-      ${TABS.map((t, i) => `<div id="tk-${i}" class="tab-panel ${i === 0 ? 'active' : ''}"></div>`).join('')}
+      ${TABS.map((t, i) => `<div id="tk-${i}" class="tab-panel ${i === 0 ? 'active' : ''}"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div></div>`).join('')}
     </div>
   </div>`;
 
