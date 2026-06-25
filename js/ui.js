@@ -398,41 +398,55 @@ async function populateModalDropdowns() {
 }
 document.addEventListener('fc:modals-loaded', populateModalDropdowns);
 
-  // Populate all [data-populate="offices"] selects
-  document.querySelectorAll('[data-populate="offices"]').forEach(sel => {
-    sel.innerHTML = '<option value="">Select office…</option>' +
-      officeList.map(o => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('');
-  });
-  document.querySelectorAll('[data-populate="staff"]').forEach(sel => {
-    sel.innerHTML = '<option value="">Unassigned</option>' +
-      staffList.map(s => `<option value="${s.id}">${escapeHtml(s.displayName)}</option>`).join('');
-  });
-  document.querySelectorAll('[data-populate="loanProducts"]').forEach(sel => {
-    sel.innerHTML = '<option value="">Select product…</option>' +
-      loanProdList.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
-  });
-  document.querySelectorAll('[data-populate="savingsProducts"]').forEach(sel => {
-    sel.innerHTML = '<option value="">Select product…</option>' +
-      savProdList.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
-  });
-  document.querySelectorAll('[data-populate="fdProducts"]').forEach(sel => {
-    sel.innerHTML = '<option value="">Select product…</option>' +
-      fdProdList.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
-  });
-  document.querySelectorAll('[data-populate="rdProducts"]').forEach(sel => {
-    sel.innerHTML = '<option value="">Select product…</option>' +
-      rdProdList.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
-  });
-
-  const genderOpts = clientTpl.status === 'fulfilled' ? (clientTpl.value?.genderOptions || []) : [];
-  document.querySelectorAll('[data-populate="gender"]').forEach(sel => {
-    sel.innerHTML = '<option value="">— Not specified —</option>' +
-      genderOpts.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
-  });
-}
-document.addEventListener('fc:modals-loaded', populateModalDropdowns);
-
 // ---- Global click handler ----
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-nav],[data-modal],[data-close-modal],[data-action],[data-tab]');
+  if (!t) {
+    if (!e.target.closest('.dropdown')) closeAllDropdowns();
+    return;
+  }
+  if (t.matches('[data-tab]')) { tab(t, t.dataset.tab); return; }
+  if (t.dataset.nav) { navigate(t.dataset.nav); closeAllDropdowns(); sidebar.close(); return; }
+  if (t.dataset.modal) {
+    const modalId = t.dataset.modal;
+    const modalEl = openModal(modalId);
+    if (modalEl) {
+      // Forward any extra data-* context from the trigger (e.g. data-report, data-report-id,
+      // data-loan-id) onto the modal element so its submit handler knows what it's acting on.
+      Object.entries(t.dataset).forEach(([k, v]) => { if (k !== 'modal') modalEl.dataset[k] = v; });
+      if (modalId === 'runReportModal') {
+        const nameEl = modalEl.querySelector('#run-report-name');
+        if (nameEl) nameEl.textContent = t.dataset.report || '—';
+        modalEl.querySelector('#rep-output').innerHTML = '';
+        if (t.dataset.report) {
+          renderReportParameters(t.dataset.report);
+        }
+      }
+      if (modalId === 'repaymentModal' && modalEl.dataset.loanId) {
+        const loanIdInput = modalEl.querySelector('#rp-loanid');
+        if (loanIdInput) loanIdInput.value = modalEl.dataset.loanId;
+      }
+    }
+    return;
+  }
+  if (t.hasAttribute('data-close-modal')) {
+    const m = t.closest('.modal-overlay');
+    if (m) m.classList.remove('open');
+    return;
+  }
+  const action = t.dataset.action;
+  if (!action) return;
+  switch (action) {
+    case 'toggle-theme':     theme.toggle();   break;
+    case 'toggle-sidebar':   sidebar.toggle(); break;
+    case 'toggle-user-menu': dropdownToggle('userMenu'); break;
+    case 'open-cmd':         import('./cmd.js').then(m => m.openCmd()); break;
+    case 'logout':           import('./auth.js').then(m => m.logout()); break;
+    case 'dismiss-toast':    t.closest('.toast')?.remove(); break;
+    default:
+      handleAction(action, t);
+  }
+});
 document.addEventListener('click', (e) => {
   const t = e.target.closest('[data-nav],[data-modal],[data-close-modal],[data-action],[data-tab]');
   if (!t) {
