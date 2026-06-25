@@ -25,6 +25,7 @@ class Store {
         sessionStorage.setItem(SS_KEY, JSON.stringify({
           serverUrl: this.state.auth.serverUrl, tenantId: this.state.auth.tenantId,
           username: this.state.auth.username, authToken: this.state.auth.authToken,
+          userId: this.state.auth.userId || null,
           server: this.state.auth.server || null
         }));
       } else sessionStorage.removeItem(SS_KEY);

@@ -1,3 +1,4 @@
+import { LOCALE, DATE_FORMAT, today } from '../config.js';
 /* FinCraft · collections.js — Live API */
 import { api } from '../api.js';
 import { fmt, escapeHtml } from '../utils.js';
@@ -93,7 +94,7 @@ export async function render(c) {
               transactionDate: date, // the collection sheet date selected above, not necessarily today
               transactionAmount: r.amount,
               paymentTypeId: paymentTypeId || undefined,
-              dateFormat: 'yyyy-MM-dd', locale: 'en'
+              dateFormat: DATE_FORMAT, locale: LOCALE
             }
           };
         });

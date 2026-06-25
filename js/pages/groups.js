@@ -1,3 +1,4 @@
+import { LOCALE, DATE_FORMAT, today } from '../config.js';
 /* FinCraft · groups.js — Live API */
 import { api } from '../api.js';
 import { num, sb, escapeHtml } from '../utils.js';
@@ -56,9 +57,9 @@ export async function render(c) {
 
       c.querySelectorAll('[data-grp-view]').forEach(b => b.addEventListener('click', () => viewGroup(b.dataset.grpView, load)));
       c.querySelectorAll('[data-grp-activate]').forEach(b => b.addEventListener('click', async () => {
-        const today = new Date().toISOString().split('T')[0];
+        // today() from config.js
         try {
-          await api.groups.activate(b.dataset.grpActivate, { activationDate: today, dateFormat: 'yyyy-MM-dd', locale: 'en' });
+          await api.groups.activate(b.dataset.grpActivate, { activationDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
           toast('success', 'Group activated', `#${b.dataset.grpActivate}`);
           load();
         } catch (e) { toast('error', 'Failed', e.message); }
@@ -102,8 +103,8 @@ function viewGroup(id, onChange) {
         btn.addEventListener('click', async () => {
           btn.disabled = true;
           try {
-            const today = new Date().toISOString().split('T')[0];
-            await api.groups.activate(g.id, { activationDate: today, dateFormat: 'yyyy-MM-dd', locale: 'en' });
+            // today() from config.js
+            await api.groups.activate(g.id, { activationDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
             toast('success', 'Group activated', `#${g.id}`);
             refresh(); onChange?.();
           } catch (e) { toast('error', 'Activation failed', e.message); btn.disabled = false; }

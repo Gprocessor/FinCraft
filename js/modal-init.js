@@ -53,7 +53,18 @@ document.addEventListener('fc:modals-loaded', async () => {
     }
   } catch {}
 
-  // Bulk import — file name display
+  // Auto-fill today's date into any [type=date] input that has no value when a modal opens
+  document.addEventListener('click', e => {
+    const trigger = e.target.closest('[data-modal]');
+    if (!trigger) return;
+    const modalId = trigger.dataset.modal;
+    const modal = modalId && document.getElementById(modalId);
+    if (!modal) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    modal.querySelectorAll('input[type="date"]').forEach(inp => {
+      if (!inp.value) inp.value = todayStr;
+    });
+  });
   document.getElementById('bulkImportFile')?.addEventListener('change', e => {
     const fn = document.getElementById('import-file-name');
     if (fn) fn.textContent = e.target.files[0]?.name || '';
@@ -65,11 +76,96 @@ document.addEventListener('fc:modals-loaded', async () => {
   wireClientSearch('fdClientSearch',   'fdClientId',   'fdClientResults');
   wireClientSearch('rdClientSearch',   'rdClientId',   'rdClientResults');
   wireClientSearch('shClientSearch',   'shClientId',   'shClientResults');
+  wireClientSearch('ssClientSearch',   'ssClientId',   'ssClientResults'); // self-service portal user
+
+  // Populate payment type dropdowns in journal entry + savings deposit modals
+  api.paymentTypes.list().then(pts => {
+    const list = Array.isArray(pts) ? pts : [];
+    const opts = '<option value="">— None —</option>' +
+      list.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    ['je-paymenttype', 'sv-dep-paymenttype'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = opts;
+    });
+  }).catch(() => {});
+
+  // GL Account modal — populate parent account selector and wire usage toggle
+  api.glAccounts.list().then(accts => {
+    const list = Array.isArray(accts) ? accts : [];
+    const parentSel = document.getElementById('gl-parent-sel');
+    if (parentSel) {
+      parentSel.innerHTML = '<option value="">— None (root) —</option>' +
+        list.map(a => `<option value="${a.id}">${escapeHtml((a.glCode ? a.glCode + ' — ' : '') + a.name)}</option>`).join('');
+    }
+  }).catch(() => {});
+
+  // Reschedule modal — load reschedule reason codes from Fineract code 61 (LoanRescheduleReason)
+  api.codes.values(61).then(vals => {
+    const list = Array.isArray(vals) ? vals : [];
+    const sel = document.getElementById('rs-reason-sel');
+    if (sel && list.length) {
+      sel.innerHTML = '<option value="">Select reason…</option>' +
+        list.map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`).join('');
+    }
+  }).catch(() => {
+    // Fallback: look up by name if code ID 61 doesn't resolve
+    api.codes.list().then(codes => {
+      const code = (Array.isArray(codes) ? codes : []).find(c => /reschedule/i.test(c.name));
+      if (!code) return;
+      return api.codes.values(code.id).then(vals => {
+        const list = Array.isArray(vals) ? vals : [];
+        const sel = document.getElementById('rs-reason-sel');
+        if (sel && list.length) {
+          sel.innerHTML = '<option value="">Select reason…</option>' +
+            list.map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`).join('');
+        }
+      });
+    }).catch(() => {});
+  });
+
+  // writeOffModal — forward loanId from data-modal trigger context
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-modal="writeOffModal"]');
+    if (t) {
+      const loanId = t.dataset.loanId || t.closest('[data-loan-id]')?.dataset.loanId;
+      if (loanId) {
+        const modal = document.getElementById('writeOffModal');
+        if (modal) modal.dataset.loanId = loanId;
+      }
+    }
+    // rescheduleModal — forward loanId
+    const r = e.target.closest('[data-modal="rescheduleModal"]');
+    if (r) {
+      const loanId = r.dataset.loanId || r.closest('[data-loan-id]')?.dataset.loanId;
+      const modal = document.getElementById('rescheduleModal');
+      if (loanId && modal) {
+        modal.dataset.loanId = loanId;
+        const hidden = document.getElementById('rs-loanid');
+        if (hidden) hidden.value = loanId;
+      }
+    }
+  });
+
+  // Client modal — legalFormId toggle: show individual or entity name fields
+  const clientLegalForm = document.getElementById('client-legal-form');
+  if (clientLegalForm) {
+    const toggleClientFields = () => {
+      const isEntity = clientLegalForm.value === '2';
+      const indFields = document.getElementById('client-individual-fields');
+      const entFields = document.getElementById('client-entity-fields');
+      if (indFields) indFields.style.display = isEntity ? 'none' : 'contents';
+      if (entFields) entFields.style.display = isEntity ? 'contents' : 'none';
+      // Toggle required attributes so browser validation stays correct
+      document.querySelector('#newClientModal [name="firstname"]')?.toggleAttribute('required', !isEntity);
+      document.querySelector('#newClientModal [name="lastname"]')?.toggleAttribute('required', !isEntity);
+      document.querySelector('#newClientModal [name="fullname"]')?.toggleAttribute('required', isEntity);
+    };
+    clientLegalForm.addEventListener('change', toggleClientFields);
+    toggleClientFields(); // run once on load
+  }
 
   // Loan product selection → pull the product's real config from /loans/template
   // so we submit the terms Fineract actually expects for that product
-  // (amortization type, interest type, calc period, repayment strategy, frequency types)
-  // instead of guessing fixed constants.
   const loanProductSel = document.querySelector('#newLoanModal [name="productId"]');
   const loanForm = document.getElementById('newLoanForm');
   if (loanProductSel && loanForm) {
@@ -92,11 +188,15 @@ document.addEventListener('fc:modals-loaded', async () => {
         };
         loanForm.dataset.tpl = JSON.stringify(cfg);
         // Pre-fill empty fields with the product's real defaults
-        const principalInput = loanForm.querySelector('[name="principal"]');
-        const termInput      = loanForm.querySelector('[name="term"]');
-        const rateInput      = loanForm.querySelector('[name="interestRate"]');
+        const principalInput  = loanForm.querySelector('[name="principal"]');
+        const nRepInput       = loanForm.querySelector('[name="numberOfRepayments"]');
+        const repEveryInput   = loanForm.querySelector('[name="repaymentEvery"]');
+        const repFreqSel      = loanForm.querySelector('[name="repaymentFrequencyType"]');
+        const rateInput       = loanForm.querySelector('[name="interestRate"]');
         if (principalInput && !principalInput.value && cfg.principal) principalInput.value = cfg.principal;
-        if (termInput && cfg.numberOfRepayments) termInput.value = cfg.numberOfRepayments;
+        if (nRepInput && cfg.numberOfRepayments) nRepInput.value = cfg.numberOfRepayments;
+        if (repEveryInput && tpl.repaymentEvery) repEveryInput.value = tpl.repaymentEvery;
+        if (repFreqSel && cfg.repaymentFrequencyType != null) repFreqSel.value = String(cfg.repaymentFrequencyType);
         if (rateInput && cfg.interestRatePerPeriod != null) rateInput.value = cfg.interestRatePerPeriod;
       } catch { /* fall back to defaults at submit time */ }
     });
@@ -127,6 +227,52 @@ document.addEventListener('fc:modals-loaded', async () => {
       if (rpPayType) rpPayType.innerHTML = optHtml;
     } catch (e) { console.warn('[paymenttypes]', e); }
   }
+
+  // Reschedule reasons — /rescheduleloans/template provides the reason codes
+  const rsReasonSel = document.getElementById('rs-reason-sel');
+  if (rsReasonSel) {
+    try {
+      const tpl = await api.loans.rescheduleTemplate().catch(() => null)
+        || await api.loans.template({ command: 'reschedule' }).catch(() => null);
+      const reasons = tpl?.rescheduleReasons || tpl?.rescheduleReasonOptions || [];
+      if (reasons.length) {
+        rsReasonSel.innerHTML = '<option value="">Select reason…</option>' +
+          reasons.map(r => `<option value="${r.id}">${escapeHtml(r.value || r.name || String(r.id))}</option>`).join('');
+      } else {
+        // Fineract uses code values for reschedule reasons — fallback to the code named LoanRescheduleReason
+        const codeValues = await api.codes.list().then(async codes => {
+          const match = (Array.isArray(codes) ? codes : []).find(c => c.name === 'LoanRescheduleReason');
+          return match ? api.codes.values(match.id) : [];
+        }).catch(() => []);
+        if (Array.isArray(codeValues) && codeValues.length) {
+          rsReasonSel.innerHTML = '<option value="">Select reason…</option>' +
+            codeValues.map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`).join('');
+        } else {
+          rsReasonSel.innerHTML = '<option value="">No reasons configured</option>';
+        }
+      }
+    } catch (e) {
+      rsReasonSel.innerHTML = '<option value="">Could not load reasons</option>';
+      console.warn('[reschedule/template]', e);
+    }
+  }
+
+  // Repayment modal — auto-fill today's date and sync loanId when modal opens
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-modal="repaymentModal"], [data-loan-repay]');
+    if (!t) return;
+    const modal = document.getElementById('repaymentModal');
+    if (!modal) return;
+    // Auto-fill transaction date to today if empty
+    const dateInput = modal.querySelector('[name="transactionDate"]');
+    if (dateInput && !dateInput.value) {
+      dateInput.value = new Date().toISOString().split('T')[0];
+    }
+    // Sync loanId from data attributes into hidden input
+    const loanId = t.dataset.loanRepay || t.dataset.loanId || modal.dataset.loanId;
+    const loanIdInput = modal.querySelector('#rp-loanid');
+    if (loanId && loanIdInput) loanIdInput.value = loanId;
+  });
 
   // New User modal — roles multi-select + password field toggle
   const rolesSel = document.getElementById('newuser-roles');

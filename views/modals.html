@@ -30,20 +30,36 @@
     <div class="modal-head"><h3 class="modal-title">New Client</h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
-      <div class="msg-banner b-info mb-4"><i class="fa-solid fa-circle-info"></i> Client will be <b>submitted for activation</b>. Go to Tasks or the client record to activate.</div>
       <form class="form-grid" id="newClientForm">
-        <label><span class="form-label">First name *</span><input name="firstname" required class="form-control" autocomplete="off"/></label>
-        <label><span class="form-label">Last name *</span><input name="lastname" required class="form-control" autocomplete="off"/></label>
-        <label><span class="form-label">Mobile</span><input name="mobile" class="form-control" type="tel"/></label>
-        <label><span class="form-label">Date of birth</span><input name="dob" type="date" class="form-control"/></label>
+        <label class="full"><span class="form-label">Client type *</span>
+          <select name="legalFormId" class="form-control" required id="client-legal-form">
+            <option value="1">Individual (Person)</option>
+            <option value="2">Entity (Organisation)</option>
+          </select></label>
+        <!-- Individual fields -->
+        <div id="client-individual-fields" style="display:contents">
+          <label><span class="form-label">First name *</span><input name="firstname" class="form-control" autocomplete="off"/></label>
+          <label><span class="form-label">Middle name</span><input name="middlename" class="form-control" autocomplete="off"/></label>
+          <label><span class="form-label">Last name *</span><input name="lastname" class="form-control" autocomplete="off"/></label>
+          <label><span class="form-label">Date of birth</span><input name="dateOfBirth" type="date" class="form-control"/></label>
+          <label><span class="form-label">Gender</span>
+            <select name="genderId" class="form-control" data-populate="gender"><option value="">— Not specified —</option></select></label>
+        </div>
+        <!-- Entity fields (hidden unless Entity selected) -->
+        <div id="client-entity-fields" style="display:none" class="full">
+          <label class="full"><span class="form-label">Full legal name *</span><input name="fullname" class="form-control" autocomplete="off"/></label>
+        </div>
+        <label><span class="form-label">Mobile</span><input name="mobileNo" class="form-control" type="tel"/></label>
         <label><span class="form-label">External ID</span><input name="externalId" class="form-control"/></label>
-        <label><span class="form-label">Gender</span>
-          <select name="genderId" class="form-control" data-populate="gender"><option value="">— Not specified —</option></select></label>
         <label><span class="form-label">Office *</span>
           <select name="officeId" class="form-control" data-populate="offices" required></select></label>
         <label><span class="form-label">Loan officer</span>
-          <select name="staffId" class="form-control" data-populate="staff"></select></label>
-        <label class="flex items-center gap-2" style="align-items:center;padding-top:28px">
+          <select name="staffId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Activation date</span>
+          <input name="activationDate" type="date" class="form-control"/></label>
+        <label class="full flex items-center gap-2" style="align-items:center">
           <input type="checkbox" name="isStaff"/> <span>Is a staff member</span></label>
       </form>
     </div>
@@ -68,20 +84,38 @@
             <div id="loanClientResults" class="search-dropdown" style="display:none"></div>
           </div>
         </label>
+        <label><span class="form-label">Loan type *</span>
+          <select name="loanType" class="form-control" required>
+            <option value="individual">Individual</option>
+            <option value="group">Group</option>
+            <option value="jlg">JLG</option>
+          </select></label>
         <label><span class="form-label">Loan product *</span>
           <select name="productId" class="form-control" data-populate="loanProducts" required></select></label>
         <label><span class="form-label">Loan officer</span>
-          <select name="loanOfficerId" class="form-control" data-populate="staff"></select></label>
+          <select name="loanOfficerId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
         <label><span class="form-label">Principal *</span>
           <input name="principal" type="number" min="0" step="0.01" class="form-control" required/></label>
-        <label><span class="form-label">Term (months) *</span>
-          <input name="term" type="number" min="1" value="12" class="form-control" required/></label>
-        <label><span class="form-label">Interest rate p.a. (%)</span>
-          <input name="interestRate" type="number" min="0" step="0.01" value="18" class="form-control"/></label>
-        <label><span class="form-label">Disbursement date *</span>
+        <label><span class="form-label">Interest rate % (per period)</span>
+          <input name="interestRate" type="number" min="0" step="0.01" class="form-control"/></label>
+        <label><span class="form-label">No. of repayments *</span>
+          <input name="numberOfRepayments" type="number" min="1" value="12" class="form-control" required/></label>
+        <label><span class="form-label">Repay every</span>
+          <input name="repaymentEvery" type="number" min="1" value="1" class="form-control"/></label>
+        <label><span class="form-label">Repayment frequency</span>
+          <select name="repaymentFrequencyType" class="form-control">
+            <option value="2">Months</option>
+            <option value="1">Weeks</option>
+            <option value="0">Days</option>
+          </select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Expected disbursement *</span>
           <input name="expectedDisbursementDate" type="date" class="form-control" required/></label>
         <label><span class="form-label">Purpose</span>
           <input name="purpose" class="form-control"/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
       </form>
     </div>
     <div class="modal-foot">
@@ -93,7 +127,7 @@
 
 <!-- New Savings -->
 <div id="newSavingsModal" class="modal-overlay">
-  <div class="modal">
+  <div class="modal lg">
     <div class="modal-head"><h3 class="modal-title">New Savings Account</h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
@@ -107,10 +141,14 @@
         </label>
         <label><span class="form-label">Product *</span>
           <select name="productId" class="form-control" data-populate="savingsProducts" required></select></label>
-        <label><span class="form-label">Submitted on</span>
-          <input name="submittedDate" type="date" class="form-control"/></label>
         <label><span class="form-label">Field officer</span>
-          <select name="staffId" class="form-control" data-populate="staff"></select></label>
+          <select name="staffId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Nominal annual interest %</span>
+          <input name="nominalAnnualInterestRate" type="number" min="0" step="0.01" class="form-control" placeholder="Leave blank to use product rate"/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
       </form>
     </div>
     <div class="modal-foot">
@@ -122,7 +160,7 @@
 
 <!-- New Fixed Deposit -->
 <div id="newFDModal" class="modal-overlay">
-  <div class="modal">
+  <div class="modal lg">
     <div class="modal-head"><h3 class="modal-title">New Fixed Deposit</h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
@@ -136,18 +174,31 @@
         </label>
         <label><span class="form-label">FD product *</span>
           <select name="productId" class="form-control" data-populate="fdProducts" required></select></label>
+        <label><span class="form-label">Field officer</span>
+          <select name="fieldOfficerId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
         <label><span class="form-label">Deposit amount *</span>
           <input name="depositAmount" type="number" min="0" step="0.01" class="form-control" required/></label>
-        <label><span class="form-label">Period (months) *</span>
+        <label><span class="form-label">Deposit period *</span>
           <input name="depositPeriod" type="number" min="1" value="12" class="form-control" required/></label>
-        <label><span class="form-label">Submitted on</span>
-          <input name="submittedDate" type="date" class="form-control"/></label>
+        <label><span class="form-label">Period frequency</span>
+          <select name="depositPeriodFrequencyId" class="form-control">
+            <option value="0">Days</option>
+            <option value="1">Weeks</option>
+            <option value="2" selected>Months</option>
+            <option value="3">Years</option>
+          </select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Expected first deposit on</span>
+          <input name="expectedFirstDepositOnDate" type="date" class="form-control"/></label>
         <label class="full"><span class="form-label">Maturity instruction</span>
-          <select name="maturityInstruction" class="form-control">
-            <option value="1">Withdraw</option>
+          <select name="maturityInstructionId" class="form-control">
+            <option value="1">Withdraw deposit</option>
             <option value="2">Reinvest principal &amp; interest</option>
             <option value="3">Reinvest principal only</option>
           </select></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
       </form>
     </div>
     <div class="modal-foot">
@@ -159,7 +210,7 @@
 
 <!-- New Recurring Deposit -->
 <div id="newRDModal" class="modal-overlay">
-  <div class="modal">
+  <div class="modal lg">
     <div class="modal-head"><h3 class="modal-title">New Recurring Deposit</h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
@@ -173,12 +224,34 @@
         </label>
         <label><span class="form-label">RD product *</span>
           <select name="productId" class="form-control" data-populate="rdProducts" required></select></label>
-        <label><span class="form-label">Deposit amount / period *</span>
+        <label><span class="form-label">Field officer</span>
+          <select name="fieldOfficerId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Deposit amount per period *</span>
           <input name="mandatoryRecommendedDepositAmount" type="number" min="0" step="0.01" class="form-control" required/></label>
-        <label><span class="form-label">Period (months) *</span>
+        <label><span class="form-label">Recurring frequency *</span>
+          <input name="recurringDepositFrequency" type="number" min="1" value="1" class="form-control" required/></label>
+        <label><span class="form-label">Frequency type *</span>
+          <select name="recurringDepositFrequencyTypeId" class="form-control" required>
+            <option value="0">Days</option>
+            <option value="1">Weeks</option>
+            <option value="2" selected>Months</option>
+            <option value="3">Years</option>
+          </select></label>
+        <label><span class="form-label">Deposit period *</span>
           <input name="depositPeriod" type="number" min="1" value="12" class="form-control" required/></label>
-        <label><span class="form-label">Submitted on</span>
-          <input name="submittedDate" type="date" class="form-control"/></label>
+        <label><span class="form-label">Deposit period frequency</span>
+          <select name="depositPeriodFrequencyId" class="form-control">
+            <option value="0">Days</option>
+            <option value="1">Weeks</option>
+            <option value="2" selected>Months</option>
+            <option value="3">Years</option>
+          </select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Expected first deposit on</span>
+          <input name="expectedFirstDepositOnDate" type="date" class="form-control"/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
       </form>
     </div>
     <div class="modal-foot">
@@ -190,7 +263,7 @@
 
 <!-- New Share Account -->
 <div id="newShareModal" class="modal-overlay">
-  <div class="modal">
+  <div class="modal lg">
     <div class="modal-head"><h3 class="modal-title">New Share Account</h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
@@ -207,6 +280,12 @@
             <option value="">Select product…</option></select></label>
         <label><span class="form-label">Requested shares *</span>
           <input name="requestedShares" type="number" min="1" class="form-control" required/></label>
+        <label><span class="form-label">Unit price *</span>
+          <input name="unitPrice" type="number" min="0.01" step="0.01" class="form-control" required placeholder="Share price per unit"/></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
       </form>
     </div>
     <div class="modal-foot">
@@ -259,6 +338,8 @@
           <input name="transactionDate" type="date" class="form-control" required/></label>
         <label><span class="form-label">Reference</span>
           <input name="reference" class="form-control"/></label>
+        <label><span class="form-label">Payment type</span>
+          <select name="paymentTypeId" id="je-paymenttype" class="form-control"><option value="">— None —</option></select></label>
         <label class="full"><span class="form-label">Comments</span>
           <textarea name="comments" class="form-control" rows="2"></textarea></label>
         <!-- Debits -->
@@ -304,7 +385,7 @@
 
 <!-- New Group -->
 <div id="newGroupModal" class="modal-overlay">
-  <div class="modal">
+  <div class="modal lg">
     <div class="modal-head"><h3 class="modal-title">New Group</h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
@@ -314,7 +395,11 @@
         <label><span class="form-label">Office *</span>
           <select name="officeId" class="form-control" data-populate="offices" required></select></label>
         <label><span class="form-label">Staff</span>
-          <select name="staffId" class="form-control" data-populate="staff"></select></label>
+          <select name="staffId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
       </form>
     </div>
     <div class="modal-foot">
@@ -338,10 +423,18 @@
           </select></label>
         <label><span class="form-label">Amount *</span>
           <input name="transactionAmount" type="number" min="0.01" step="0.01" required class="form-control"/></label>
-        <label><span class="form-label">Date</span>
-          <input name="transactionDate" type="date" class="form-control"/></label>
+        <label><span class="form-label">Date *</span>
+          <input name="transactionDate" type="date" class="form-control" required/></label>
         <label><span class="form-label">Payment Type</span>
           <select name="paymentTypeId" id="sv-dep-paymenttype" class="form-control"><option value="">— Default —</option></select></label>
+        <label><span class="form-label">Account number</span>
+          <input name="accountNumber" class="form-control" placeholder="For cheque/bank ref"/></label>
+        <label><span class="form-label">Check number</span>
+          <input name="checkNumber" class="form-control"/></label>
+        <label><span class="form-label">Receipt number</span>
+          <input name="receiptNumber" class="form-control"/></label>
+        <label class="full"><span class="form-label">Note</span>
+          <textarea name="note" class="form-control" rows="2"></textarea></label>
       </form>
     </div>
     <div class="modal-foot">
@@ -477,7 +570,7 @@
 
 <!-- New Center -->
 <div id="newCenterModal" class="modal-overlay">
-  <div class="modal">
+  <div class="modal lg">
     <div class="modal-head"><h3 class="modal-title">New Center</h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
@@ -487,7 +580,11 @@
         <label><span class="form-label">Office *</span>
           <select name="officeId" class="form-control" data-populate="offices" required></select></label>
         <label><span class="form-label">Staff</span>
-          <select name="staffId" class="form-control" data-populate="staff"></select></label>
+          <select name="staffId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
       </form>
     </div>
     <div class="modal-foot">
@@ -510,19 +607,21 @@
           <input name="glCode" required class="form-control" placeholder="e.g. 10100"/></label>
         <label><span class="form-label">Type *</span>
           <select name="type" class="form-control" required>
-            <option value="ASSET">Asset</option>
-            <option value="LIABILITY">Liability</option>
-            <option value="EQUITY">Equity</option>
-            <option value="INCOME">Income</option>
-            <option value="EXPENSE">Expense</option>
+            <option value="1">Asset</option>
+            <option value="2">Liability</option>
+            <option value="3">Equity</option>
+            <option value="4">Income</option>
+            <option value="5">Expense</option>
           </select></label>
         <label><span class="form-label">Usage *</span>
-          <select name="usage" class="form-control" required>
-            <option value="DETAIL">Detail</option>
-            <option value="HEADER">Header</option>
+          <select name="usage" class="form-control" id="gl-usage" required>
+            <option value="1">Detail (postable)</option>
+            <option value="2">Header (group only)</option>
           </select></label>
-        <label class="flex items-center gap-2" style="align-items:center;padding-top:28px">
-          <input type="checkbox" name="manualEntries" checked/> <span>Allow manual entries</span></label>
+        <label class="full" id="gl-parent-wrap"><span class="form-label">Parent account</span>
+          <select name="parentId" id="gl-parent-sel" class="form-control"><option value="">— None (root) —</option></select></label>
+        <label class="full flex items-center gap-2" style="align-items:center">
+          <input type="checkbox" name="manualEntries" id="gl-manual" checked/> <span>Allow manual entries</span></label>
         <label class="full"><span class="form-label">Description</span>
           <textarea name="description" class="form-control" rows="2"></textarea></label>
       </form>
@@ -536,11 +635,15 @@
 
 <!-- Account Transfer -->
 <div id="newTransferModal" class="modal-overlay">
-  <div class="modal">
+  <div class="modal lg">
     <div class="modal-head"><h3 class="modal-title">New Account Transfer</h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
       <form class="form-grid" id="newTransferForm">
+        <label><span class="form-label">From office *</span>
+          <select name="fromOfficeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">To office *</span>
+          <select name="toOfficeId" class="form-control" data-populate="offices" required></select></label>
         <label><span class="form-label">From client ID *</span>
           <input name="fromClientId" type="number" class="form-control" required/></label>
         <label><span class="form-label">From account ID *</span>
@@ -715,20 +818,481 @@
     <div class="modal-head"><h3 class="modal-title">Create Portal User</h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
+      <div class="msg-banner b-info mb-4" style="font-size:13px"><i class="fa-solid fa-circle-info"></i> Creates a self-service login for an existing client to access their accounts online.</div>
       <form class="form-grid" id="selfServiceUserForm">
+        <label class="full"><span class="form-label">Client ID *</span>
+          <div class="search-field">
+            <input id="ssClientSearch" placeholder="Type client name…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="ssClientId" required/>
+            <div id="ssClientResults" class="search-dropdown" style="display:none"></div>
+          </div></label>
         <label class="full"><span class="form-label">Username *</span>
           <input name="username" required class="form-control"/></label>
         <label class="full"><span class="form-label">Email *</span>
           <input name="email" type="email" required class="form-control"/></label>
         <label><span class="form-label">Password *</span>
           <input name="password" type="password" required class="form-control"/></label>
-        <label><span class="form-label">Confirm password</span>
-          <input name="passwordRepeat" type="password" class="form-control"/></label>
+        <label><span class="form-label">Confirm password *</span>
+          <input name="passwordRepeat" type="password" required class="form-control"/></label>
       </form>
     </div>
     <div class="modal-foot">
       <button class="btn-ghost" data-close-modal>Cancel</button>
       <button class="btn-primary" data-action="submit-ss-user"><i class="fa-solid fa-check"></i> Register</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Office -->
+<div id="newOfficeModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Office</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newOfficeForm">
+        <label class="full"><span class="form-label">Office name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Parent office *</span>
+          <select name="parentId" class="form-control" id="office-parent-sel" required><option value="">Loading…</option></select></label>
+        <label><span class="form-label">Opened on *</span>
+          <input name="openingDate" type="date" class="form-control" required/></label>
+        <label class="full"><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-office"><i class="fa-solid fa-check"></i> Create Office</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Staff -->
+<div id="newStaffModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Staff Member</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newStaffForm">
+        <label><span class="form-label">First name *</span>
+          <input name="firstname" required class="form-control"/></label>
+        <label><span class="form-label">Last name *</span>
+          <input name="lastname" required class="form-control"/></label>
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Mobile</span>
+          <input name="mobileNo" class="form-control"/></label>
+        <label><span class="form-label">Is Loan Officer?</span>
+          <select name="isLoanOfficer" class="form-control">
+            <option value="true">Yes</option><option value="false">No</option></select></label>
+        <label><span class="form-label">Active?</span>
+          <select name="isActive" class="form-control">
+            <option value="true">Yes</option><option value="false">No</option></select></label>
+        <label class="full"><span class="form-label">Joining date</span>
+          <input name="joiningDate" type="date" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-staff"><i class="fa-solid fa-check"></i> Create Staff</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Holiday -->
+<div id="newHolidayModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Holiday</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newHolidayForm">
+        <label class="full"><span class="form-label">Holiday name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">From date *</span>
+          <input name="fromDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">To date *</span>
+          <input name="toDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Repayment rescheduled to</span>
+          <input name="repaymentsRescheduledTo" type="date" class="form-control"/></label>
+        <label class="full"><span class="form-label">Office(s) *</span>
+          <select name="offices" id="holiday-offices-sel" class="form-control" multiple size="4" required><option value="">Loading…</option></select></label>
+        <label class="full"><span class="form-label">Description</span>
+          <input name="description" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-holiday"><i class="fa-solid fa-check"></i> Create Holiday</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Teller -->
+<div id="newTellerModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Teller</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newTellerForm">
+        <label class="full"><span class="form-label">Teller name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Start date *</span>
+          <input name="startDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">End date</span>
+          <input name="endDate" type="date" class="form-control"/></label>
+        <label class="full"><span class="form-label">Description</span>
+          <input name="description" class="form-control"/></label>
+        <label><span class="form-label">Status</span>
+          <select name="status" class="form-control">
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-teller"><i class="fa-solid fa-check"></i> Create Teller</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Accounting Rule -->
+<div id="newAccRuleModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Accounting Rule</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newAccRuleForm">
+        <label class="full"><span class="form-label">Rule name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Office</span>
+          <select name="officeId" class="form-control" data-populate="offices"><option value="">All offices</option></select></label>
+        <label><span class="form-label">Debit account *</span>
+          <select name="debitAccountId" id="acc-rule-debit" class="form-control" required><option value="">Loading…</option></select></label>
+        <label><span class="form-label">Credit account *</span>
+          <select name="creditAccountId" id="acc-rule-credit" class="form-control" required><option value="">Loading…</option></select></label>
+        <label class="full"><span class="form-label">Description</span>
+          <textarea name="description" class="form-control" rows="2"></textarea></label>
+        <label class="full"><span class="form-label">Tags (comma-separated)</span>
+          <input name="tags" class="form-control" placeholder="e.g. loan,interest"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-acc-rule"><i class="fa-solid fa-check"></i> Create Rule</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Provisioning Criteria -->
+<div id="newProvCriteriaModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">New Provisioning Criteria</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newProvCriteriaForm">
+        <label class="full"><span class="form-label">Criteria name *</span>
+          <input name="criteriaName" required class="form-control"/></label>
+        <label class="full" style="margin-bottom:8px"><span class="form-label">Categories</span>
+          <div class="text-muted" style="font-size:12px">Define age buckets and provisioning percentages for each NPL category.</div></label>
+        <div class="full" id="prov-cats-wrap">
+          <table class="tbl">
+            <thead><tr><th>Category name</th><th>Min age (days)</th><th>Max age (days)</th><th>Min amount</th><th>Liability %</th><th></th></tr></thead>
+            <tbody id="prov-cats-body">
+              <tr>
+                <td><input class="form-control" name="pc_name[]" placeholder="e.g. Standard" required/></td>
+                <td><input class="form-control" name="pc_min[]" type="number" min="0" value="0" required/></td>
+                <td><input class="form-control" name="pc_max[]" type="number" min="0" value="30" required/></td>
+                <td><input class="form-control" name="pc_minamount[]" type="number" min="0" value="0"/></td>
+                <td><input class="form-control" name="pc_pct[]" type="number" min="0" max="100" step="0.01" value="1" required/></td>
+                <td><button type="button" class="btn-ghost btn-sm" onclick="this.closest('tr').remove()"><i class="fa-solid fa-trash"></i></button></td>
+              </tr>
+            </tbody>
+          </table>
+          <button type="button" class="btn-ghost btn-sm mt-2" id="add-prov-cat"><i class="fa-solid fa-plus"></i> Add category</button>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-prov-criteria"><i class="fa-solid fa-check"></i> Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Financial Activity Account -->
+<div id="newFAAccountModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">Map Financial Activity</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newFAAccountForm">
+        <label class="full"><span class="form-label">Financial activity *</span>
+          <select name="financialActivityId" id="fa-activity-sel" class="form-control" required><option value="">Loading…</option></select></label>
+        <label class="full"><span class="form-label">GL Account *</span>
+          <select name="glAccountId" id="fa-glaccount-sel" class="form-control" required><option value="">Loading…</option></select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-fa-account"><i class="fa-solid fa-check"></i> Save Mapping</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Standing Instruction -->
+<div id="newSIModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">New Standing Instruction</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newSIForm">
+        <label class="full"><span class="form-label">Instruction name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">From client ID *</span>
+          <input name="fromClientId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">From account ID *</span>
+          <input name="fromAccountId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">From account type</span>
+          <select name="fromAccountType" class="form-control">
+            <option value="2">Savings</option><option value="1">Loan</option></select></label>
+        <label><span class="form-label">To client ID *</span>
+          <input name="toClientId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">To account ID *</span>
+          <input name="toAccountId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">To account type</span>
+          <select name="toAccountType" class="form-control">
+            <option value="2">Savings</option><option value="1">Loan</option></select></label>
+        <label><span class="form-label">Amount *</span>
+          <input name="amount" type="number" min="0.01" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Transfer type</span>
+          <select name="transferType" class="form-control">
+            <option value="1">Account Transfer</option>
+            <option value="2">Loan Repayment</option></select></label>
+        <label><span class="form-label">Valid from *</span>
+          <input name="validFrom" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Valid till</span>
+          <input name="validTill" type="date" class="form-control"/></label>
+        <label><span class="form-label">Recurrence type *</span>
+          <select name="recurrenceType" class="form-control" required>
+            <option value="1">Fixed</option><option value="2">Variable</option></select></label>
+        <label><span class="form-label">Recurrence frequency</span>
+          <select name="recurrenceFrequency" class="form-control">
+            <option value="1">Daily</option>
+            <option value="2">Weekly</option>
+            <option value="3">Monthly</option>
+            <option value="4">Yearly</option></select></label>
+        <label><span class="form-label">Every (interval)</span>
+          <input name="recurrenceInterval" type="number" min="1" value="1" class="form-control"/></label>
+        <label><span class="form-label">On month day</span>
+          <input name="recurrenceOnMonthDay" type="number" min="1" max="31" class="form-control"/></label>
+        <label class="full"><span class="form-label">Instruction type</span>
+          <select name="instructionType" class="form-control">
+            <option value="1">Fixed</option><option value="2">Best effort (partial allowed)</option></select></label>
+        <label><span class="form-label">Priority</span>
+          <select name="priority" class="form-control">
+            <option value="1">Urgent</option><option value="2">High</option>
+            <option value="3">Medium</option><option value="4">Low</option></select></label>
+        <label><span class="form-label">Status</span>
+          <select name="status" class="form-control">
+            <option value="1">Active</option><option value="2">Disabled</option></select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-si"><i class="fa-solid fa-check"></i> Create Instruction</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Loan Product -->
+<div id="newLoanProductModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">New Loan Product</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newLoanProductForm">
+        <label><span class="form-label">Product name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Short name *</span>
+          <input name="shortName" required class="form-control" maxlength="4"/></label>
+        <label><span class="form-label">Currency *</span>
+          <select name="currencyCode" id="lp-currency" class="form-control" required><option value="">Loading…</option></select></label>
+        <label><span class="form-label">Decimal places</span>
+          <input name="digitsAfterDecimal" type="number" min="0" max="6" value="2" class="form-control"/></label>
+        <label><span class="form-label">Principal *</span>
+          <input name="principal" type="number" min="0" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Min principal</span>
+          <input name="minPrincipal" type="number" min="0" step="0.01" class="form-control"/></label>
+        <label><span class="form-label">Max principal</span>
+          <input name="maxPrincipal" type="number" min="0" step="0.01" class="form-control"/></label>
+        <label><span class="form-label">Interest rate % *</span>
+          <input name="interestRatePerPeriod" type="number" min="0" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Interest frequency</span>
+          <select name="interestRateFrequencyType" class="form-control">
+            <option value="2">Per month</option><option value="3">Per year</option>
+            <option value="0">Per day</option><option value="1">Per week</option></select></label>
+        <label><span class="form-label">Amortization</span>
+          <select name="amortizationType" class="form-control">
+            <option value="1">Equal installments</option>
+            <option value="0">Equal principal payments</option></select></label>
+        <label><span class="form-label">Interest type</span>
+          <select name="interestType" class="form-control">
+            <option value="0">Declining balance</option>
+            <option value="1">Flat</option></select></label>
+        <label><span class="form-label">Repayments *</span>
+          <input name="numberOfRepayments" type="number" min="1" value="12" class="form-control" required/></label>
+        <label><span class="form-label">Repay every</span>
+          <input name="repaymentEvery" type="number" min="1" value="1" class="form-control"/></label>
+        <label><span class="form-label">Repayment frequency</span>
+          <select name="repaymentFrequencyType" class="form-control">
+            <option value="2">Months</option><option value="1">Weeks</option><option value="0">Days</option></select></label>
+        <label><span class="form-label">Transaction strategy *</span>
+          <select name="transactionProcessingStrategyCode" class="form-control" required>
+            <option value="mifos-standard-strategy">Mifos standard</option>
+            <option value="heavensfamily-strategy">Heavens family</option>
+            <option value="creocore-strategy">CreoCore</option>
+            <option value="rbi-india-strategy">RBI India</option>
+            <option value="principal-interest-penalties-fees-order-strategy">P+I+Fees+Penalties order</option>
+            <option value="interest-principal-penalties-fees-order-strategy">I+P+Fees+Penalties order</option>
+          </select></label>
+        <label><span class="form-label">Grace on principal</span>
+          <input name="graceOnPrincipalPayment" type="number" min="0" value="0" class="form-control"/></label>
+        <label><span class="form-label">Grace on interest</span>
+          <input name="graceOnInterestPayment" type="number" min="0" value="0" class="form-control"/></label>
+        <label><span class="form-label">Interest calculation period *</span>
+          <select name="interestCalculationPeriodType" class="form-control" required>
+            <option value="1">Same as repayment period</option>
+            <option value="0">Daily</option>
+          </select></label>
+        <label><span class="form-label">Accounting rule</span>
+          <select name="accountingRule" class="form-control">
+            <option value="1">None</option>
+            <option value="2">Cash</option>
+            <option value="3">Accrual (Periodic)</option>
+            <option value="4">Accrual (Upfront)</option>
+          </select></label>
+        <label class="full"><span class="form-label">Description</span>
+          <textarea name="description" class="form-control" rows="2"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-loan-product"><i class="fa-solid fa-check"></i> Create Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Savings Product -->
+<div id="newSavingsProductModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">New Savings Product</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newSavingsProductForm">
+        <label><span class="form-label">Product name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Short name *</span>
+          <input name="shortName" required class="form-control" maxlength="4"/></label>
+        <label><span class="form-label">Currency *</span>
+          <select name="currencyCode" id="sp-currency" class="form-control" required><option value="">Loading…</option></select></label>
+        <label><span class="form-label">Decimal places</span>
+          <input name="digitsAfterDecimal" type="number" min="0" max="6" value="2" class="form-control"/></label>
+        <label><span class="form-label">Nominal annual interest %</span>
+          <input name="nominalAnnualInterestRate" type="number" min="0" step="0.01" value="0" class="form-control"/></label>
+        <label><span class="form-label">Interest compounding</span>
+          <select name="interestCompoundingPeriodType" class="form-control">
+            <option value="1">Daily</option><option value="2">Monthly</option>
+            <option value="3">Quarterly</option><option value="4">Semi-annually</option>
+            <option value="5">Annually</option></select></label>
+        <label><span class="form-label">Interest posting period</span>
+          <select name="interestPostingPeriodType" class="form-control">
+            <option value="4">Monthly</option><option value="5">Quarterly</option>
+            <option value="6">Semi-annually</option><option value="7">Annually</option></select></label>
+        <label><span class="form-label">Interest calculation</span>
+          <select name="interestCalculationType" class="form-control">
+            <option value="1">Daily balance</option>
+            <option value="2">Average daily balance</option></select></label>
+        <label><span class="form-label">Days in year</span>
+          <select name="interestCalculationDaysInYearType" class="form-control">
+            <option value="365">365 days</option>
+            <option value="360">360 days</option></select></label>
+        <label><span class="form-label">Min opening balance</span>
+          <input name="minRequiredOpeningBalance" type="number" min="0" step="0.01" value="0" class="form-control"/></label>
+        <label><span class="form-label">Withdrawal fee (flat)</span>
+          <input name="withdrawalFeeForTransfers" type="number" min="0" step="0.01" value="0" class="form-control"/></label>
+        <label><span class="form-label">Accounting rule</span>
+          <select name="accountingRule" class="form-control">
+            <option value="1">None</option>
+            <option value="2">Cash</option>
+            <option value="3">Accrual (Periodic)</option>
+            <option value="4">Accrual (Upfront)</option>
+          </select></label>
+        <label class="full"><span class="form-label">Description</span>
+          <textarea name="description" class="form-control" rows="2"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-savings-product"><i class="fa-solid fa-check"></i> Create Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- Write-Off Loan -->
+<div id="writeOffModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">Write Off Loan</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="msg-banner b-danger mb-4"><i class="fa-solid fa-triangle-exclamation"></i>
+        This action is <b>irreversible</b>. The loan will be written off to provision and marked as a loss.
+      </div>
+      <form class="form-grid" id="writeOffForm">
+        <label class="full"><span class="form-label">Transaction date *</span>
+          <input name="transactionDate" type="date" class="form-control" required/></label>
+        <label class="full"><span class="form-label">Note</span>
+          <textarea name="note" class="form-control" rows="2" placeholder="Reason for write-off…"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" style="background:var(--c-danger)" data-action="submit-writeoff">
+        <i class="fa-solid fa-skull-crossbones"></i> Confirm Write-Off
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Loan Reschedule -->
+<div id="rescheduleModal" class="modal-overlay">
+  <div class="modal lg">
+    <div class="modal-head"><h3 class="modal-title">Reschedule Loan</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="rescheduleForm">
+        <input type="hidden" name="loanId" id="rs-loanid"/>
+        <label><span class="form-label">Reschedule from date *</span>
+          <input name="rescheduleFromDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Adjusted due date</span>
+          <input name="adjustedDueDate" type="date" class="form-control"/></label>
+        <label><span class="form-label">Reason *</span>
+          <select name="rescheduleReasonId" id="rs-reason-sel" class="form-control" required>
+            <option value="">Loading reasons…</option>
+          </select></label>
+        <label><span class="form-label">New number of repayments</span>
+          <input name="numberOfRepayments" type="number" min="1" class="form-control" placeholder="Leave blank to keep original"/></label>
+        <label><span class="form-label">New interest rate % (per period)</span>
+          <input name="interestRatePerPeriod" type="number" min="0" step="0.01" class="form-control" placeholder="Leave blank to keep original"/></label>
+        <label class="full"><span class="form-label">Comments</span>
+          <textarea name="comments" class="form-control" rows="2"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-reschedule"><i class="fa-solid fa-calendar-days"></i> Submit Reschedule</button>
     </div>
   </div>
 </div>

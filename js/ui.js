@@ -4,6 +4,7 @@ import { store } from './store.js';
 import { navigate, PAGE_REGISTRY } from './router.js';
 import { escapeHtml } from './utils.js';
 import { api } from './api.js';
+import { LOCALE, DATE_FORMAT, today } from './config.js';
 
 const NAV_GROUPS = [
   { title: 'Overview', items: ['dashboard','analytics','tasks','navigation','search'] },
@@ -237,18 +238,22 @@ function setSubmitting(btn, loading = true) {
     ? '<i class="fa-solid fa-circle-notch fa-spin"></i> Processing…'
     : btn._origHtml;
 }
-function today() { return new Date().toISOString().split('T')[0]; }
+// today(), LOCALE, DATE_FORMAT imported from config.js
 
 // ---- Modal population helpers (called on fc:modals-loaded) ----
 async function populateModalDropdowns() {
-  const [offices, staff, loanProds, savProds, fdProds, rdProds, clientTpl] = await Promise.allSettled([
+  const [offices, staff, loanProds, savProds, fdProds, rdProds, clientTpl,
+         currencies, glAccounts, financialActivityAccounts] = await Promise.allSettled([
     api.offices.list(),
     api.staff.list({ isLoanOfficer: true }),
     api.loanProducts.list(),
     api.savingsProducts.list(),
     api.fdProducts.list(),
     api.rdProducts.list(),
-    api.clients.template()
+    api.clients.template(),
+    api.currencies.list(),
+    api.glAccounts.list(),
+    api.financialActivityAccounts.list()
   ]);
 
   const officeList   = offices.status   === 'fulfilled' ? (Array.isArray(offices.value)   ? offices.value   : []) : [];
@@ -257,6 +262,75 @@ async function populateModalDropdowns() {
   const savProdList  = savProds.status  === 'fulfilled' ? (Array.isArray(savProds.value)  ? savProds.value  : []) : [];
   const fdProdList   = fdProds.status   === 'fulfilled' ? (Array.isArray(fdProds.value)   ? fdProds.value   : []) : [];
   const rdProdList   = rdProds.status   === 'fulfilled' ? (Array.isArray(rdProds.value)   ? rdProds.value   : []) : [];
+  const currList     = currencies.status === 'fulfilled' ? (currencies.value?.selectedCurrencyOptions || currencies.value?.currencyOptions || []) : [];
+  const glList       = glAccounts.status === 'fulfilled' ? (Array.isArray(glAccounts.value) ? glAccounts.value : []) : [];
+  const faList       = financialActivityAccounts.status === 'fulfilled' ? (Array.isArray(financialActivityAccounts.value) ? financialActivityAccounts.value : []) : [];
+
+  // Offices (accounts/form dropdowns)
+  document.querySelectorAll('[data-populate="offices"]').forEach(sel => {
+    sel.innerHTML = '<option value="">Select office…</option>' +
+      officeList.map(o => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('');
+  });
+  // Office parent selector (all offices, for creating child offices)
+  const parentSel = document.getElementById('office-parent-sel');
+  if (parentSel) parentSel.innerHTML = '<option value="">— Root office —</option>' +
+    officeList.map(o => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('');
+  // Holiday offices (multi-select)
+  const holidayOffices = document.getElementById('holiday-offices-sel');
+  if (holidayOffices) holidayOffices.innerHTML =
+    officeList.map(o => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('');
+
+  document.querySelectorAll('[data-populate="staff"]').forEach(sel => {
+    sel.innerHTML = '<option value="">Unassigned</option>' +
+      staffList.map(s => `<option value="${s.id}">${escapeHtml(s.displayName)}</option>`).join('');
+  });
+  document.querySelectorAll('[data-populate="loanProducts"]').forEach(sel => {
+    sel.innerHTML = '<option value="">Select product…</option>' +
+      loanProdList.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  });
+  document.querySelectorAll('[data-populate="savingsProducts"]').forEach(sel => {
+    sel.innerHTML = '<option value="">Select product…</option>' +
+      savProdList.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  });
+  document.querySelectorAll('[data-populate="fdProducts"]').forEach(sel => {
+    sel.innerHTML = '<option value="">Select product…</option>' +
+      fdProdList.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  });
+  document.querySelectorAll('[data-populate="rdProducts"]').forEach(sel => {
+    sel.innerHTML = '<option value="">Select product…</option>' +
+      rdProdList.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  });
+
+  const genderOpts = clientTpl.status === 'fulfilled' ? (clientTpl.value?.genderOptions || []) : [];
+  document.querySelectorAll('[data-populate="gender"]').forEach(sel => {
+    sel.innerHTML = '<option value="">— Not specified —</option>' +
+      genderOpts.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+  });
+
+  // Currencies (loan product + savings product modals)
+  const currOpts = currList.length
+    ? currList.map(c => `<option value="${c.code}">${escapeHtml(c.code + ' — ' + c.name)}</option>`).join('')
+    : '<option value="">No currencies configured</option>';
+  ['lp-currency','sp-currency'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">Select currency…</option>' + currOpts;
+  });
+
+  // GL Accounts (accounting rule modal)
+  const glOpts = glList.length
+    ? glList.map(g => `<option value="${g.id}">${escapeHtml((g.glCode ? g.glCode + ' — ' : '') + g.name)}</option>`).join('')
+    : '<option value="">No GL accounts found</option>';
+  ['acc-rule-debit','acc-rule-credit','fa-glaccount-sel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">Select account…</option>' + glOpts;
+  });
+
+  // Financial activities
+  const faEl = document.getElementById('fa-activity-sel');
+  if (faEl) faEl.innerHTML = '<option value="">Select activity…</option>' +
+    faList.map(a => `<option value="${a.financialActivityData?.id || a.id}">${escapeHtml(a.financialActivityData?.name || a.name || '—')}</option>`).join('');
+}
+document.addEventListener('fc:modals-loaded', populateModalDropdowns);
 
   // Populate all [data-populate="offices"] selects
   document.querySelectorAll('[data-populate="offices"]').forEach(sel => {
@@ -368,28 +442,48 @@ async function handleAction(action, btn) {
     case 'submit-client': {
       setSubmitting(btn);
       const f = formData('newClientForm');
+      const legalFormId = parseInt(f.legalFormId) || 1;
+      const isEntity = legalFormId === 2;
+      // Validate required name fields by type
+      if (isEntity && !f.fullname?.trim()) {
+        toast('warn', 'Missing name', 'Enter the full legal name for the entity');
+        setSubmitting(btn, false); break;
+      }
+      if (!isEntity && (!f.firstname?.trim() || !f.lastname?.trim())) {
+        toast('warn', 'Missing name', 'Enter first and last name');
+        setSubmitting(btn, false); break;
+      }
       const payload = {
-        firstname:    f.firstname || '',
-        lastname:     f.lastname  || '',
-        mobileNo:     f.mobile    || undefined,
-        dateOfBirth:  f.dob       || undefined,
-        genderId:     f.genderId  || undefined,
-        externalId:   f.externalId || undefined,
-        officeId:     parseInt(f.officeId) || 1,
-        staffId:      f.staffId ? parseInt(f.staffId) : undefined,
-        active:       false,
-        submittedOnDate: today(),
-        dateFormat:   'yyyy-MM-dd',
-        locale:       'en'
+        legalFormId,
+        officeId:        parseInt(f.officeId) || 1,
+        active:          false,
+        submittedOnDate: f.submittedOnDate || today(),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.staffId    && { staffId:    parseInt(f.staffId) }),
+        ...(f.mobileNo   && { mobileNo:   f.mobileNo }),
+        ...(f.externalId && { externalId: f.externalId }),
+        ...(f.activationDate && { activationDate: f.activationDate }),
+        ...(f.isStaff === 'on' && { isStaff: true }),
+        // Individual-only fields
+        ...(!isEntity && {
+          firstname:   f.firstname,
+          lastname:    f.lastname,
+          ...(f.middlename   && { middlename:  f.middlename }),
+          ...(f.dateOfBirth  && { dateOfBirth: f.dateOfBirth }),
+          ...(f.genderId     && { genderId:    parseInt(f.genderId) })
+        }),
+        // Entity-only field
+        ...(isEntity && { fullname: f.fullname })
       };
       try {
         const res = await api.clients.create(payload);
         closeAllModals();
-        toast('success','Client created',`Account #${res.resourceId || res.clientId || '—'} submitted for activation`);
+        toast('success', 'Client created', `#${res.resourceId || res.clientId || '—'} submitted for activation`);
         document.getElementById('newClientForm')?.reset();
         navigate(store.get('currentPage') || 'clients');
       } catch(e) {
-        toast('error','Client creation failed', extractFineractError(e));
+        toast('error', 'Client creation failed', extractFineractError(e));
       } finally { setSubmitting(btn, false); }
       break;
     }
@@ -399,44 +493,47 @@ async function handleAction(action, btn) {
       setSubmitting(btn);
       const f = formData('newLoanForm');
       if (!f.clientId) {
-        toast('warn','Missing client','Search and select a client first');
+        toast('warn', 'Missing client', 'Search and select a client first');
         setSubmitting(btn, false); break;
       }
       let tpl = {};
       try { tpl = JSON.parse(document.getElementById('newLoanForm')?.dataset.tpl || '{}'); } catch {}
+      const nRep = parseInt(f.numberOfRepayments) || 12;
+      const repEvery = parseInt(f.repaymentEvery) || 1;
+      const repFreq  = parseInt(f.repaymentFrequencyType) ?? 2;
       const payload = {
-        clientId:                  parseInt(f.clientId),
-        productId:                 parseInt(f.productId),
-        loanOfficerId:             f.loanOfficerId ? parseInt(f.loanOfficerId) : undefined,
-        principal:                 parseFloat(f.principal),
-        loanTermFrequency:         parseInt(f.term) || 12,
-        loanTermFrequencyType:     tpl.repaymentFrequencyType ?? 2, // months
-        numberOfRepayments:        parseInt(f.term) || 12,
-        repaymentEvery:            1,
-        repaymentFrequencyType:    tpl.repaymentFrequencyType ?? 2, // months
-        interestRatePerPeriod:     parseFloat(f.interestRate) || 0,
-        interestRateFrequencyType: tpl.interestRateFrequencyType ?? 2,
-        amortizationType:          tpl.amortizationType ?? 1,
-        interestType:              tpl.interestType ?? 0,
+        clientId:                      parseInt(f.clientId),
+        productId:                     parseInt(f.productId),
+        loanType:                      f.loanType || 'individual',
+        principal:                     parseFloat(f.principal),
+        loanTermFrequency:             nRep * repEvery,
+        loanTermFrequencyType:         repFreq,
+        numberOfRepayments:            nRep,
+        repaymentEvery:                repEvery,
+        repaymentFrequencyType:        repFreq,
+        interestRatePerPeriod:         f.interestRate !== '' ? parseFloat(f.interestRate) : (tpl.interestRatePerPeriod ?? 0),
+        interestRateFrequencyType:     tpl.interestRateFrequencyType ?? 2,
+        amortizationType:              tpl.amortizationType ?? 1,
+        interestType:                  tpl.interestType ?? 0,
         interestCalculationPeriodType: tpl.interestCalculationPeriodType ?? 1,
         transactionProcessingStrategyCode: tpl.transactionProcessingStrategyCode || 'mifos-standard-strategy',
-        expectedDisbursementDate: f.expectedDisbursementDate || today(),
-        submittedOnDate:          today(),
-        dateFormat:               'yyyy-MM-dd',
-        locale:                   'en',
-        loanType:                 'individual',
-        linkAccountId:            f.linkAccountId ? parseInt(f.linkAccountId) : undefined,
-        purpose:                  f.purpose || undefined
+        submittedOnDate:               f.submittedOnDate || today(),
+        expectedDisbursementDate:      f.expectedDisbursementDate || today(),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.loanOfficerId && { loanOfficerId: parseInt(f.loanOfficerId) }),
+        ...(f.purpose       && { purpose: f.purpose }),
+        ...(f.externalId    && { externalId: f.externalId })
       };
       try {
         const res = await api.loans.create(payload);
         closeAllModals();
-        toast('success','Loan submitted',`#${res.resourceId || '—'} is pending approval`);
+        toast('success', 'Loan submitted', `#${res.resourceId || '—'} is pending approval`);
         document.getElementById('newLoanForm')?.reset();
         delete document.getElementById('newLoanForm')?.dataset.tpl;
         navigate(store.get('currentPage') || 'loans');
       } catch(e) {
-        toast('error','Loan submission failed', extractFineractError(e));
+        toast('error', 'Loan submission failed', extractFineractError(e));
       } finally { setSubmitting(btn, false); }
       break;
     }
@@ -450,12 +547,16 @@ async function handleAction(action, btn) {
         setSubmitting(btn, false); break;
       }
       const payload = {
-        clientId:         parseInt(f.clientId),
-        productId:        parseInt(f.productId),
-        fieldOfficerId:   f.staffId ? parseInt(f.staffId) : undefined,
-        submittedOnDate:  f.submittedDate || today(),
-        dateFormat:       'yyyy-MM-dd',
-        locale:           'en'
+        clientId:        parseInt(f.clientId),
+        productId:       parseInt(f.productId),
+        submittedOnDate: f.submittedOnDate || today(),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.staffId && { fieldOfficerId: parseInt(f.staffId) }),
+        ...(f.nominalAnnualInterestRate !== '' && f.nominalAnnualInterestRate != null && {
+          nominalAnnualInterestRate: parseFloat(f.nominalAnnualInterestRate)
+        }),
+        ...(f.externalId && { externalId: f.externalId })
       };
       try {
         const res = await api.savings.create(payload);
@@ -478,15 +579,18 @@ async function handleAction(action, btn) {
         setSubmitting(btn, false); break;
       }
       const payload = {
-        clientId:                    parseInt(f.clientId),
-        productId:                   parseInt(f.productId),
-        depositAmount:               parseFloat(f.depositAmount),
-        depositPeriod:               parseInt(f.depositPeriod) || 12,
-        depositPeriodFrequencyId:    2, // months
-        submittedOnDate:             f.submittedDate || today(),
-        maturityInstructionId:       parseInt(f.maturityInstruction) || 1,
-        dateFormat:                  'yyyy-MM-dd',
-        locale:                      'en'
+        clientId:                 parseInt(f.clientId),
+        productId:                parseInt(f.productId),
+        depositAmount:            parseFloat(f.depositAmount),
+        depositPeriod:            parseInt(f.depositPeriod) || 12,
+        depositPeriodFrequencyId: parseInt(f.depositPeriodFrequencyId) ?? 2,
+        maturityInstructionId:    parseInt(f.maturityInstructionId) || 1,
+        submittedOnDate:          f.submittedOnDate || today(),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.fieldOfficerId  && { fieldOfficerId: parseInt(f.fieldOfficerId) }),
+        ...(f.expectedFirstDepositOnDate && { expectedFirstDepositOnDate: f.expectedFirstDepositOnDate }),
+        ...(f.externalId && { externalId: f.externalId })
       };
       try {
         const res = await api.fixedDeposits.create(payload);
@@ -512,11 +616,16 @@ async function handleAction(action, btn) {
         clientId:                          parseInt(f.clientId),
         productId:                         parseInt(f.productId),
         mandatoryRecommendedDepositAmount: parseFloat(f.mandatoryRecommendedDepositAmount),
+        recurringDepositFrequency:         parseInt(f.recurringDepositFrequency) || 1,
+        recurringDepositFrequencyTypeId:   parseInt(f.recurringDepositFrequencyTypeId) ?? 2,
         depositPeriod:                     parseInt(f.depositPeriod) || 12,
-        depositPeriodFrequencyId:          2, // months
-        submittedOnDate:                   f.submittedDate || today(),
-        dateFormat:                        'yyyy-MM-dd',
-        locale:                            'en'
+        depositPeriodFrequencyId:          parseInt(f.depositPeriodFrequencyId) ?? 2,
+        submittedOnDate:                   f.submittedOnDate || today(),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.fieldOfficerId && { fieldOfficerId: parseInt(f.fieldOfficerId) }),
+        ...(f.expectedFirstDepositOnDate && { expectedFirstDepositOnDate: f.expectedFirstDepositOnDate }),
+        ...(f.externalId && { externalId: f.externalId })
       };
       try {
         const res = await api.recurringDeposits.create(payload);
@@ -539,12 +648,14 @@ async function handleAction(action, btn) {
         setSubmitting(btn, false); break;
       }
       const payload = {
-        clientId:          parseInt(f.clientId),
-        productId:         parseInt(f.productId),
-        requestedShares:   parseInt(f.requestedShares),
-        applicationDate:   today(),
-        dateFormat:        'yyyy-MM-dd',
-        locale:            'en'
+        clientId:        parseInt(f.clientId),
+        productId:       parseInt(f.productId),
+        requestedShares: parseInt(f.requestedShares),
+        unitPrice:       parseFloat(f.unitPrice),
+        applicationDate: f.submittedDate || today(),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.externalId && { externalId: f.externalId })
       };
       try {
         const res = await api.shares.create(payload);
@@ -575,8 +686,8 @@ async function handleAction(action, btn) {
         checkNumber:       f.checkNumber    || undefined,
         receiptNumber:     f.receiptNumber  || undefined,
         note:              f.note           || undefined,
-        dateFormat:        'yyyy-MM-dd',
-        locale:            'en'
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE
       };
       try {
         const res = await api.loans.repay(loanId, payload);
@@ -608,8 +719,8 @@ async function handleAction(action, btn) {
         paymentTypeId:    f.paymentTypeId ? parseInt(f.paymentTypeId) : undefined,
         referenceNumber:  f.reference || undefined,
         comments:         f.comments  || undefined,
-        dateFormat:       'yyyy-MM-dd',
-        locale:           'en'
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE
       };
       try {
         const res = await api.journalEntries.create(payload);
@@ -627,17 +738,19 @@ async function handleAction(action, btn) {
       setSubmitting(btn);
       const f = formData('newTransferForm');
       const payload = {
+        fromOfficeId:      parseInt(f.fromOfficeId),
+        toOfficeId:        parseInt(f.toOfficeId),
         fromClientId:      parseInt(f.fromClientId),
         fromAccountId:     parseInt(f.fromAccountId),
-        fromAccountType:   parseInt(f.fromAccountType) || 2,   // 2=savings
+        fromAccountType:   parseInt(f.fromAccountType) || 2,
         toClientId:        parseInt(f.toClientId),
         toAccountId:       parseInt(f.toAccountId),
-        toAccountType:     parseInt(f.toAccountType)   || 2,
+        toAccountType:     parseInt(f.toAccountType) || 2,
         transferAmount:    parseFloat(f.transferAmount),
         transferDate:      f.transferDate || today(),
         transferDescription: f.transferDescription || '',
-        dateFormat:        'yyyy-MM-dd',
-        locale:            'en'
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE
       };
       try {
         const res = await api.transfers.create(payload);
@@ -656,12 +769,13 @@ async function handleAction(action, btn) {
       setSubmitting(btn);
       const f = formData('newGroupForm');
       const payload = {
-        name:           f.name,
-        officeId:       parseInt(f.officeId),
-        staffId:        f.staffId ? parseInt(f.staffId) : undefined,
-        submittedOnDate: today(),
-        dateFormat:     'yyyy-MM-dd',
-        locale:         'en'
+        name:            f.name,
+        officeId:        parseInt(f.officeId),
+        submittedOnDate: f.submittedOnDate || today(),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.staffId    && { staffId: parseInt(f.staffId) }),
+        ...(f.externalId && { externalId: f.externalId })
       };
       try {
         const res = await api.groups.create(payload);
@@ -746,7 +860,7 @@ async function handleAction(action, btn) {
         chargeCalculationType: parseInt(f.chargeCalculationType),
         penalty:               f.penalty === 'true',
         active:                f.active !== 'false',
-        locale:                'en'
+        locale: LOCALE
       };
       try {
         const res = await api.charges.create(payload);
@@ -767,11 +881,12 @@ async function handleAction(action, btn) {
       const payload = {
         name:            f.name,
         officeId:        parseInt(f.officeId),
-        staffId:         f.staffId ? parseInt(f.staffId) : undefined,
         active:          false,
-        submittedOnDate: today(),
-        dateFormat:      'yyyy-MM-dd',
-        locale:          'en'
+        submittedOnDate: f.submittedOnDate || today(),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.staffId    && { staffId: parseInt(f.staffId) }),
+        ...(f.externalId && { externalId: f.externalId })
       };
       try {
         const res = await api.centers.create(payload);
@@ -789,13 +904,16 @@ async function handleAction(action, btn) {
     case 'submit-gl': {
       setSubmitting(btn);
       const f = formData('glAccountForm');
+      // Fineract GLAccountType: 1=ASSET, 2=LIABILITY, 3=EQUITY, 4=INCOME, 5=EXPENSE
+      // Fineract GLAccountUsage: 1=DETAIL, 2=HEADER
       const payload = {
         name:                 f.name,
         glCode:               f.glCode,
-        type:                 f.type || 'ASSET',
-        usage:                f.usage || 'DETAIL',
-        manualEntriesAllowed: f.manualEntries === 'on',
-        description:          f.description || ''
+        type:                 parseInt(f.type),   // numeric required by Fineract
+        usage:                parseInt(f.usage),  // numeric required by Fineract
+        manualEntriesAllowed: document.getElementById('gl-manual')?.checked ?? true,
+        ...(f.parentId && { parentId: parseInt(f.parentId) }),
+        ...(f.description && { description: f.description })
       };
       try {
         const res = await api.glAccounts.create(payload);
@@ -893,10 +1011,18 @@ async function handleAction(action, btn) {
     // ---- WRITE-OFF ----
     case 'submit-writeoff': {
       setSubmitting(btn);
-      const loanId = document.getElementById('writeOffModal')?.dataset.loanId;
-      if (!loanId) { setSubmitting(btn, false); break; }
+      const modal = document.getElementById('writeOffModal');
+      const loanId = modal?.dataset.loanId;
+      if (!loanId) { toast('warn','No loan selected','Open write-off from a loan record'); setSubmitting(btn, false); break; }
+      const f = formData('writeOffForm');
+      const payload = {
+        transactionDate: f.transactionDate || today(),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.note && { note: f.note })
+      };
       try {
-        await api.loans.writeOff(loanId, { transactionDate: today(), dateFormat: 'yyyy-MM-dd', locale: 'en' });
+        await api.loans.writeOff(loanId, payload);
         closeAllModals();
         toast('warn','Loan written off', `#${loanId} written off to provision`);
         navigate(store.get('currentPage') || 'loans');
@@ -910,20 +1036,26 @@ async function handleAction(action, btn) {
     case 'submit-reschedule': {
       setSubmitting(btn);
       const f = formData('rescheduleForm');
+      const loanId = f.loanId || document.getElementById('rescheduleModal')?.dataset.loanId;
+      if (!loanId) { toast('warn','No loan','Open rescheduling from a loan record'); setSubmitting(btn, false); break; }
+      if (!f.rescheduleReasonId) { toast('warn','Reason required','Select a reschedule reason'); setSubmitting(btn, false); break; }
       const payload = {
-        loanId:              parseInt(f.loanId),
+        loanId:              parseInt(loanId),
         rescheduleFromDate:  f.rescheduleFromDate || today(),
-        adjustedDueDate:     f.adjustedDueDate   || undefined,
+        rescheduleReasonId:  parseInt(f.rescheduleReasonId),
         submittedOnDate:     today(),
-        rescheduleReasonId:  f.rescheduleReasonId ? parseInt(f.rescheduleReasonId) : undefined,
-        comments:            f.comments || '',
-        dateFormat:          'yyyy-MM-dd',
-        locale:              'en'
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.adjustedDueDate      && { adjustedDueDate: f.adjustedDueDate }),
+        ...(f.numberOfRepayments   && { numberOfRepayments: parseInt(f.numberOfRepayments) }),
+        ...(f.interestRatePerPeriod && { interestRatePerPeriod: parseFloat(f.interestRatePerPeriod) }),
+        ...(f.comments             && { comments: f.comments })
       };
       try {
         const res = await api.loans.reschedule(payload);
         closeAllModals();
         toast('success','Loan reschedule submitted',`#${res.resourceId || '—'} — pending checker approval`);
+        document.getElementById('rescheduleForm')?.reset();
       } catch(e) {
         toast('error','Reschedule failed', extractFineractError(e));
       } finally { setSubmitting(btn, false); }
@@ -940,8 +1072,23 @@ async function handleAction(action, btn) {
     case 'submit-ss-user': {
       setSubmitting(btn);
       const f = formData('selfServiceUserForm');
+      if (!f.clientId) {
+        toast('warn', 'Client required', 'Search and select a client to link this portal account to');
+        setSubmitting(btn, false); break;
+      }
+      if (!f.password || f.password !== f.passwordRepeat) {
+        toast('warn', 'Password mismatch', 'Passwords do not match');
+        setSubmitting(btn, false); break;
+      }
       try {
-        await api.selfService.register({ username: f.username, email: f.email, password: f.password, authenticationMode: 'email' });
+        await api.selfService.register({
+          username:           f.username,
+          email:              f.email,
+          password:           f.password,
+          repeatPassword:     f.passwordRepeat,
+          clientId:           parseInt(f.clientId),
+          authenticationMode: 'email'
+        });
         closeAllModals();
         toast('success','Portal user registered',`Activation link sent to ${f.email}`);
         document.getElementById('selfServiceUserForm')?.reset();
@@ -976,12 +1123,23 @@ async function handleAction(action, btn) {
       break;
     }
 
-    // ---- DEPOSIT/WITHDRAWAL ON SAVINGS (from savings detail or list) ----
+    // ---- DEPOSIT/WITHDRAWAL ON SAVINGS ----
     case 'submit-savings-deposit': {
       setSubmitting(btn);
       const f = formData('savingsDepositForm');
       const acctId = f.accountId || document.getElementById('savingsDepositModal')?.dataset.accountId;
-      const payload = { transactionDate: f.transactionDate || today(), transactionAmount: parseFloat(f.transactionAmount), paymentTypeId: f.paymentTypeId ? parseInt(f.paymentTypeId) : undefined, dateFormat: 'yyyy-MM-dd', locale: 'en' };
+      if (!acctId) { toast('warn','No account','Open this from a savings account record'); setSubmitting(btn, false); break; }
+      const payload = {
+        transactionDate:   f.transactionDate || today(),
+        transactionAmount: parseFloat(f.transactionAmount),
+        dateFormat: DATE_FORMAT,
+        locale: LOCALE,
+        ...(f.paymentTypeId  && { paymentTypeId:  parseInt(f.paymentTypeId) }),
+        ...(f.accountNumber  && { accountNumber:  f.accountNumber }),
+        ...(f.checkNumber    && { checkNumber:    f.checkNumber }),
+        ...(f.receiptNumber  && { receiptNumber:  f.receiptNumber }),
+        ...(f.note           && { note:           f.note })
+      };
       try {
         const res = f.transactionType === 'withdrawal'
           ? await api.savings.withdrawal(acctId, payload)
@@ -1008,7 +1166,7 @@ async function handleAction(action, btn) {
       const requests = [
         {
           requestId: 1, method: 'PUT', relativeUrl: 'workingdays',
-          body: { recurrence: `FREQ=WEEKLY;INTERVAL=1;BYDAY=${selectedDays.join(',')}`, locale: 'en' }
+          body: { recurrence: `FREQ=WEEKLY;INTERVAL=1;BYDAY=${selectedDays.join(',')}`, locale: LOCALE }
         },
         {
           requestId: 2, method: 'PUT', relativeUrl: 'currencies',
@@ -1030,6 +1188,265 @@ async function handleAction(action, btn) {
       } catch (e) {
         toast('error', 'Batch submission failed', e.message || String(e));
       } finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Office ----
+    case 'submit-office': {
+      setSubmitting(btn);
+      const f = document.getElementById('newOfficeForm');
+      const d = new FormData(f);
+      const payload = {
+        name: d.get('name'), parentId: parseInt(d.get('parentId')),
+        openingDate: d.get('openingDate'), dateFormat: DATE_FORMAT, locale: LOCALE,
+        ...(d.get('externalId') && { externalId: d.get('externalId') })
+      };
+      try {
+        const res = await api.offices.create(payload);
+        closeAllModals(); f.reset();
+        toast('success', 'Office created', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed to create office', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Staff ----
+    case 'submit-staff': {
+      setSubmitting(btn);
+      const f = document.getElementById('newStaffForm');
+      const d = new FormData(f);
+      const payload = {
+        firstname: d.get('firstname'), lastname: d.get('lastname'),
+        officeId: parseInt(d.get('officeId')),
+        isLoanOfficer: d.get('isLoanOfficer') === 'true',
+        isActive: d.get('isActive') === 'true',
+        locale: LOCALE, dateFormat: DATE_FORMAT,
+        ...(d.get('mobileNo') && { mobileNo: d.get('mobileNo') }),
+        ...(d.get('joiningDate') && { joiningDate: d.get('joiningDate') })
+      };
+      try {
+        const res = await api.staff.create(payload);
+        closeAllModals(); f.reset();
+        toast('success', 'Staff member created', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed to create staff', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Holiday ----
+    case 'submit-holiday': {
+      setSubmitting(btn);
+      const f = document.getElementById('newHolidayForm');
+      const d = new FormData(f);
+      const officeEls = document.querySelectorAll('#holiday-offices-sel option:checked');
+      const offices = Array.from(officeEls).map(o => ({ officeId: parseInt(o.value) }));
+      if (!offices.length) { toast('warn', 'Select at least one office', ''); setSubmitting(btn, false); break; }
+      const payload = {
+        name: d.get('name'),
+        fromDate: d.get('fromDate'), toDate: d.get('toDate'),
+        dateFormat: DATE_FORMAT, locale: LOCALE, offices,
+        ...(d.get('repaymentsRescheduledTo') && { repaymentsRescheduledTo: d.get('repaymentsRescheduledTo') }),
+        ...(d.get('description') && { description: d.get('description') })
+      };
+      try {
+        const res = await api.holidays.create(payload);
+        closeAllModals(); f.reset();
+        toast('success', 'Holiday created', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed to create holiday', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Teller ----
+    case 'submit-teller': {
+      setSubmitting(btn);
+      const f = document.getElementById('newTellerForm');
+      const d = new FormData(f);
+      const payload = {
+        name: d.get('name'), officeId: parseInt(d.get('officeId')),
+        startDate: d.get('startDate'), dateFormat: DATE_FORMAT, locale: LOCALE,
+        status: d.get('status'),
+        ...(d.get('endDate') && { endDate: d.get('endDate') }),
+        ...(d.get('description') && { description: d.get('description') })
+      };
+      try {
+        const res = await api.tellers.create(payload);
+        closeAllModals(); f.reset();
+        toast('success', 'Teller created', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed to create teller', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Accounting Rule ----
+    case 'submit-acc-rule': {
+      setSubmitting(btn);
+      const f = document.getElementById('newAccRuleForm');
+      const d = new FormData(f);
+      const payload = {
+        name: d.get('name'),
+        debitAccountId: parseInt(d.get('debitAccountId')),
+        creditAccountId: parseInt(d.get('creditAccountId')),
+        ...(d.get('officeId') && { officeId: parseInt(d.get('officeId')) }),
+        ...(d.get('description') && { description: d.get('description') }),
+        ...(d.get('tags') && { tags: d.get('tags').split(',').map(t => ({ name: t.trim() })).filter(t => t.name) })
+      };
+      try {
+        const res = await api.accountingRules.create(payload);
+        closeAllModals(); f.reset();
+        toast('success', 'Accounting rule created', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed to create rule', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Provisioning Criteria ----
+    case 'submit-prov-criteria': {
+      setSubmitting(btn);
+      const f = document.getElementById('newProvCriteriaForm');
+      const d = new FormData(f);
+      const names = d.getAll('pc_name[]'), mins = d.getAll('pc_min[]'),
+            maxs  = d.getAll('pc_max[]'),  amts = d.getAll('pc_minamount[]'),
+            pcts  = d.getAll('pc_pct[]');
+      const provisioningcriteria = names.map((nm, i) => ({
+        categoryName: nm,
+        minAge: parseInt(mins[i] || 0), maxAge: parseInt(maxs[i] || 0),
+        minAmountStepSize: parseFloat(amts[i] || 0),
+        liabilityPercentage: parseFloat(pcts[i] || 0)
+      }));
+      try {
+        const res = await api.provisioning.createCriteria({ criteriaName: d.get('criteriaName'), provisioningcriteria });
+        closeAllModals(); f.reset();
+        toast('success', 'Provisioning criteria created', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Financial Activity Account ----
+    case 'submit-fa-account': {
+      setSubmitting(btn);
+      const f = document.getElementById('newFAAccountForm');
+      const d = new FormData(f);
+      try {
+        const res = await api.financialActivityAccounts.create({
+          financialActivityId: parseInt(d.get('financialActivityId')),
+          glAccountId: parseInt(d.get('glAccountId'))
+        });
+        closeAllModals(); f.reset();
+        toast('success', 'Financial activity mapped', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Standing Instruction ----
+    case 'submit-si': {
+      setSubmitting(btn);
+      const f = document.getElementById('newSIForm');
+      const d = new FormData(f);
+      const ni = k => d.get(k) ? parseInt(d.get(k)) : undefined;
+      const payload = {
+        name: d.get('name'),
+        fromClientId: ni('fromClientId'), fromAccountId: ni('fromAccountId'),
+        fromAccountType: ni('fromAccountType'),
+        toClientId: ni('toClientId'), toAccountId: ni('toAccountId'),
+        toAccountType: ni('toAccountType'),
+        transferType: ni('transferType'),
+        amount: parseFloat(d.get('amount')),
+        validFrom: d.get('validFrom'), dateFormat: DATE_FORMAT, locale: LOCALE,
+        recurrenceType: ni('recurrenceType'),
+        recurrenceFrequency: ni('recurrenceFrequency'),
+        recurrenceInterval: ni('recurrenceInterval'),
+        instructionType: ni('instructionType'),
+        priority: ni('priority'), status: ni('status'),
+        ...(d.get('validTill') && { validTill: d.get('validTill') }),
+        ...(d.get('recurrenceOnMonthDay') && { recurrenceOnMonthDay: ni('recurrenceOnMonthDay') })
+      };
+      try {
+        const res = await api.standingInstructions.create(payload);
+        closeAllModals(); f.reset();
+        toast('success', 'Standing instruction created', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Loan Product ----
+    case 'submit-loan-product': {
+      setSubmitting(btn);
+      const f = document.getElementById('newLoanProductForm');
+      const d = new FormData(f);
+      const nf = k => { const v = d.get(k); return v !== '' && v !== null ? parseFloat(v) : undefined; };
+      const payload = {
+        name:                              d.get('name'),
+        shortName:                         d.get('shortName'),
+        currencyCode:                      d.get('currencyCode'),
+        digitsAfterDecimal:                parseInt(d.get('digitsAfterDecimal') || 2),
+        principal:                         nf('principal'),
+        interestRatePerPeriod:             nf('interestRatePerPeriod'),
+        interestRateFrequencyType:         parseInt(d.get('interestRateFrequencyType')),
+        amortizationType:                  parseInt(d.get('amortizationType')),
+        interestType:                      parseInt(d.get('interestType')),
+        interestCalculationPeriodType:     parseInt(d.get('interestCalculationPeriodType') || 1),
+        numberOfRepayments:                parseInt(d.get('numberOfRepayments')),
+        repaymentEvery:                    parseInt(d.get('repaymentEvery')),
+        repaymentFrequencyType:            parseInt(d.get('repaymentFrequencyType')),
+        transactionProcessingStrategyCode: d.get('transactionProcessingStrategyCode'),
+        graceOnPrincipalPayment:           parseInt(d.get('graceOnPrincipalPayment') || 0),
+        graceOnInterestPayment:            parseInt(d.get('graceOnInterestPayment') || 0),
+        accountingRule:                    parseInt(d.get('accountingRule') || 1),
+        locale: LOCALE,
+        ...(nf('minPrincipal') !== undefined && { minPrincipal: nf('minPrincipal') }),
+        ...(nf('maxPrincipal') !== undefined && { maxPrincipal: nf('maxPrincipal') }),
+        ...(d.get('description') && { description: d.get('description') })
+      };
+      try {
+        const res = await api.loanProducts.create(payload);
+        closeAllModals(); f.reset();
+        toast('success', 'Loan product created', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed to create loan product', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
+      break;
+    }
+
+    // ---- Savings Product ----
+    case 'submit-savings-product': {
+      setSubmitting(btn);
+      const f = document.getElementById('newSavingsProductForm');
+      const d = new FormData(f);
+      const payload = {
+        name:                              d.get('name'),
+        shortName:                         d.get('shortName'),
+        currencyCode:                      d.get('currencyCode'),
+        digitsAfterDecimal:                parseInt(d.get('digitsAfterDecimal') || 2),
+        nominalAnnualInterestRate:         parseFloat(d.get('nominalAnnualInterestRate') || 0),
+        interestCompoundingPeriodType:     parseInt(d.get('interestCompoundingPeriodType')),
+        interestPostingPeriodType:         parseInt(d.get('interestPostingPeriodType')),
+        interestCalculationType:           parseInt(d.get('interestCalculationType')),
+        interestCalculationDaysInYearType: parseInt(d.get('interestCalculationDaysInYearType')),
+        minRequiredOpeningBalance:         parseFloat(d.get('minRequiredOpeningBalance') || 0),
+        withdrawalFeeForTransfers:         parseFloat(d.get('withdrawalFeeForTransfers') || 0),
+        accountingRule:                    parseInt(d.get('accountingRule') || 1),
+        locale: LOCALE,
+        ...(d.get('description') && { description: d.get('description') })
+      };
+      try {
+        const res = await api.savingsProducts.create(payload);
+        closeAllModals(); f.reset();
+        toast('success', 'Savings product created', `#${res.resourceId}`);
+        document.dispatchEvent(new CustomEvent('fc:reload'));
+      } catch (e) { toast('error', 'Failed to create savings product', extractFineractError(e)); }
+      finally { setSubmitting(btn, false); }
       break;
     }
 

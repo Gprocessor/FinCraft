@@ -73,6 +73,5 @@ export async function render(c) {
         <td>${sb(s.status?.value || '—')}</td></tr>`).join('')
     : '<tr><td colspan="6"><div class="empty-state"><i class="fa-solid fa-calendar-check"></i><div>No standing instructions</div></div></td></tr>';
 
-  c.querySelector('#newSIBtn').addEventListener('click', () => toast('info', 'Builder not built yet',
-    'Standing instructions need a multi-step from/to account + recurrence form — planned as its own task, same as the complex product builders.'));
+  c.querySelector('#newSIBtn').addEventListener('click', () => openModal('newSIModal'));
 }

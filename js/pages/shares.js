@@ -1,3 +1,4 @@
+import { LOCALE, DATE_FORMAT, today } from '../config.js';
 /* FinCraft · shares.js — Live API */
 import { api } from '../api.js';
 import { fmt, num, sb, escapeHtml, fmtDate } from '../utils.js';
@@ -36,9 +37,9 @@ export async function render(c) {
       : '<tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-chart-pie"></i><div>No share accounts found</div></div></td></tr>';
 
     c.querySelectorAll('[data-sh-approve]').forEach(b => b.addEventListener('click', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      // today() from config.js
       try {
-        await api.shares.approve(b.dataset.shApprove, { approvedDate: today, dateFormat: 'yyyy-MM-dd', locale: 'en' });
+        await api.shares.approve(b.dataset.shApprove, { approvedDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Share account approved', `#${b.dataset.shApprove}`);
         render(c);
       } catch (e) { toast('error', 'Approval failed', e.message); }

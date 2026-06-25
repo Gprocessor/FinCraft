@@ -1,3 +1,4 @@
+import { LOCALE, DATE_FORMAT, today } from '../config.js';
 /* FinCraft · tasks.js — Live API */
 import { api } from '../api.js';
 import { sb, fmt, escapeHtml, fmtDate } from '../utils.js';
@@ -74,9 +75,9 @@ export async function render(c) {
       : '<div class="empty-state"><i class="fa-solid fa-check-double"></i><div>No loans pending approval</div></div>';
 
     c.querySelectorAll('[data-loan-approve]').forEach(b => b.addEventListener('click', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      // today() from config.js
       try {
-        await api.loans.approve(b.dataset.loanApprove, { approvedOnDate: today, dateFormat: 'yyyy-MM-dd', locale: 'en' });
+        await api.loans.approve(b.dataset.loanApprove, { approvedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         b.closest('tr')?.remove();
         toast('success', 'Loan approved', `#${b.dataset.loanApprove}`);
       } catch (e) { toast('error', 'Failed', e.message); }
@@ -102,9 +103,9 @@ export async function render(c) {
       : '<div class="empty-state"><i class="fa-solid fa-user-check"></i><div>No clients pending activation</div></div>';
 
     c.querySelectorAll('[data-client-activate]').forEach(b => b.addEventListener('click', async () => {
-      const today = new Date().toISOString().split('T')[0];
+      // today() from config.js
       try {
-        await api.clients.activate(b.dataset.clientActivate, today);
+        await api.clients.activate(b.dataset.clientActivate, today());
         b.closest('tr')?.remove();
         toast('success', 'Client activated', `#${b.dataset.clientActivate}`);
       } catch (e) { toast('error', 'Failed', e.message); }

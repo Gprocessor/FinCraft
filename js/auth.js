@@ -12,8 +12,9 @@ export async function initAuth() {
   if (saved?.authToken && saved?.serverUrl) {
     configureAPI(saved);
     try {
-      // Quick health check — validate token still works
-      await api._g('/users');
+      // Quick health check — /offices is readable by most roles; /users requires READ_USER permission
+      // and would cause a spurious logout for non-admin users on token restore.
+      await api._g('/offices', { limit: '1' });
       showApp();
       return;
     } catch { store.remove('auth'); }

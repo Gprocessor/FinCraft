@@ -1,3 +1,4 @@
+import { LOCALE, DATE_FORMAT, today } from '../config.js';
 /* FinCraft · centers.js — Live API */
 import { api } from '../api.js';
 import { sb, escapeHtml, fmtDate } from '../utils.js';
@@ -71,8 +72,8 @@ function viewCenter(id, onChange) {
         btn.addEventListener('click', async () => {
           btn.disabled = true;
           try {
-            const today = new Date().toISOString().split('T')[0];
-            await api.centers.activate(ctr.id, { activationDate: today, dateFormat: 'yyyy-MM-dd', locale: 'en' });
+            // today() from config.js
+            await api.centers.activate(ctr.id, { activationDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
             toast('success', 'Center activated', `#${ctr.id}`);
             refresh(); onChange?.();
           } catch (e) { toast('error', 'Activation failed', e.message); btn.disabled = false; }

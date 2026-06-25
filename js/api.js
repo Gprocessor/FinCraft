@@ -1,7 +1,7 @@
 /* FinCraft · api.js — Apache Fineract REST API client.
    All endpoints follow the canonical Fineract paths under /fineract-provider/api/v1
    See: https://demo.mifos.io/api-docs/apiLive.htm */
-import { getRuntimeConfig } from './config.js';
+import { getRuntimeConfig, LOCALE, DATE_FORMAT } from './config.js';
 const CFG = getRuntimeConfig();
 
 class FineractAPI {
@@ -80,7 +80,7 @@ class FineractAPI {
     template: ()              => this._g('/clients/template'),
     create:   (body)          => this._p('/clients', body),
     update:   (id, body)      => this._u(`/clients/${id}`, body),
-    activate: (id, date)      => this._p(`/clients/${id}?command=activate`, { activationDate: date, dateFormat: 'yyyy-MM-dd', locale: 'en' }),
+    activate: (id, date)      => this._p(`/clients/${id}?command=activate`, { activationDate: date, dateFormat: DATE_FORMAT, locale: LOCALE }),
     close:    (id, body)      => this._p(`/clients/${id}?command=close`, body),
     reject:   (id, body)      => this._p(`/clients/${id}?command=reject`, body),
     withdraw: (id, body)      => this._p(`/clients/${id}?command=withdraw`, body),
@@ -94,10 +94,16 @@ class FineractAPI {
     addCharge:(id, body)      => this._p(`/clients/${id}/charges`, body),
     images:   (id)            => this._g(`/clients/${id}/images`),
     documents:(id)            => this._g(`/clients/${id}/documents`),
-    identifiers: (id)         => this._g(`/clients/${id}/identifiers`),
-    addresses:(id)            => this._g(`/clients/${id}/addresses`),
-    familyMembers: (id)       => this._g(`/clients/${id}/familymembers`),
-    obligeeDetails: (id)      => this._g(`/clients/${id}/obligeedetails`)
+    identifiers:        (id)       => this._g(`/clients/${id}/identifiers`),
+    createIdentifier:   (id, body) => this._p(`/clients/${id}/identifiers`, body),
+    deleteIdentifier:   (id, iid)  => this._d(`/clients/${id}/identifiers/${iid}`),
+    addresses:          (id)       => this._g(`/clients/${id}/addresses`),
+    createAddress:      (id, body) => this._p(`/clients/${id}/addresses`, body),
+    addressTemplate:    ()         => this._g('/clients/addresses/template'),
+    familyMembers:      (id)       => this._g(`/clients/${id}/familymembers`),
+    createFamilyMember: (id, body) => this._p(`/clients/${id}/familymembers`, body),
+    deleteFamilyMember: (id, mid)  => this._d(`/clients/${id}/familymembers/${mid}`),
+    obligeeDetails:     (id)       => this._g(`/clients/${id}/obligeedetails`)
   };
 
   // ============== LOANS ==============
@@ -122,6 +128,7 @@ class FineractAPI {
     undoChargeOff:  (id, body)           => this._p(`/loans/${id}?command=undo-charge-off`, body),
     close:          (id, body)           => this._p(`/loans/${id}/transactions?command=close`, body),
     closeAsRescheduled: (id, body)       => this._p(`/loans/${id}/transactions?command=close-rescheduled`, body),
+    rescheduleTemplate: (params)         => this._g('/rescheduleloans/template', params),
     reschedule:     (body)               => this._p('/rescheduleloans', body),
     approveReschedule: (id, body)        => this._p(`/rescheduleloans/${id}?command=approve`, body),
     rejectReschedule:  (id, body)        => this._p(`/rescheduleloans/${id}?command=reject`, body),
@@ -133,9 +140,14 @@ class FineractAPI {
     addCharge:      (id, body)           => this._p(`/loans/${id}/charges`, body),
     waiveCharge:    (id, cid)            => this._p(`/loans/${id}/charges/${cid}?command=waive`, {}),
     payCharge:      (id, cid, body)      => this._p(`/loans/${id}/charges/${cid}?command=pay`, body),
+    listCharges:    (id)                 => this._g(`/loans/${id}/charges`),
+    deleteCharge:   (id, cid)            => this._d(`/loans/${id}/charges/${cid}`),
+    listCollaterals:(id)                 => this._g(`/loans/${id}/collaterals`),
     addCollateral:  (id, body)           => this._p(`/loans/${id}/collaterals`, body),
+    deleteCollateral:(id, cid)           => this._d(`/loans/${id}/collaterals/${cid}`),
     guarantors:     (id)                 => this._g(`/loans/${id}/guarantors`),
     addGuarantor:   (id, body)           => this._p(`/loans/${id}/guarantors`, body),
+    deleteGuarantor:(id, gid)            => this._d(`/loans/${id}/guarantors/${gid}`),
     schedule:       (id)                 => this._g(`/loans/${id}`, { associations: 'repaymentSchedule' }),
     transactions:   (id)                 => this._g(`/loans/${id}/transactions`),
     transaction:    (id, txId)           => this._g(`/loans/${id}/transactions/${txId}`),
@@ -429,6 +441,12 @@ class FineractAPI {
     deleteCriteria: (id)   => this._d(`/provisioningcriteria/${id}`),
     createEntry:    (b)    => this._p('/provisioningentries', b),
     createJournal:  (id)   => this._p(`/provisioningentries/${id}?command=createjournalentry`, {})
+  };
+  runAccruals = {
+    run: (tillDate, b={}) => this._p(`/runaccruals?tillDate=${tillDate}`, b)
+  };
+  openingBalances = {
+    define: (officeId, body) => this._p(`/journalentries?command=defineOpeningBalance`, { ...body, officeId })
   };
   financialActivityAccounts = {
     list:   ()     => this._g('/financialactivityaccounts'),
