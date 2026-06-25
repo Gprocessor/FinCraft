@@ -15,6 +15,7 @@ export async function initAuth() {
       // Quick health check — /offices is readable by most roles; /users requires READ_USER permission
       // and would cause a spurious logout for non-admin users on token restore.
       await api._g('/offices', { limit: '1' });
+      await refreshCurrentUser();
       showApp();
       return;
     } catch { store.remove('auth'); }
@@ -27,19 +28,42 @@ export async function login({ serverUrl, tenantId, username, password }) {
   const token = await api.auth(username, password);
   if (!token) throw new Error('Authentication failed — check credentials');
   configureAPI({ authToken: token });
-  // Fetch current user details to get userId
   let userId;
+  let user = null;
   try {
-    const users = await api.users.list();
-    const me = (Array.isArray(users) ? users : []).find(u => u.username === username);
-    userId = me?.id;
-  } catch {}
-  store.set('auth', { serverUrl, tenantId, username, authToken: token, userId });
+    user = await api.users.self();
+    userId = user?.id;
+  } catch {
+    try {
+      const users = await api.users.list();
+      const me = (Array.isArray(users) ? users : []).find(u => u.username === username);
+      userId = me?.id;
+    } catch {}
+  }
+  store.set('auth', { serverUrl, tenantId, username, authToken: token, userId, user });
   store.set('offline', false);
   showApp();
 }
 
-export function logout() {
+async function refreshCurrentUser() {
+  const auth = store.get('auth');
+  if (!auth?.authToken) return null;
+  configureAPI(auth);
+  try {
+    let me = null;
+    try { me = await api.users.self(); } catch (e) {
+      if (auth.userId) me = await api.users.get(auth.userId);
+    }
+    if (me) {
+      store.patch('auth', { user: me, userId: me.id || auth.userId });
+    }
+    return me;
+  } catch {
+    return null;
+  }
+}
+
+export async function logout() {
   store.remove('auth');
   store.set('offline', false);
   api.reset();

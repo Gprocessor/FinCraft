@@ -31,6 +31,25 @@ export function mountAppShell() {
 
   shell.removeAttribute('hidden');
   shell.classList.toggle('collapsed', store.get('sidebar') === 'collapsed');
+  const auth = store.get('auth');
+  const isAdminUser = Boolean(
+    auth?.user?.roles?.some(r => /admin/i.test(String(r.name || ''))) ||
+    auth?.user?.permissions?.some(p => /admin|all/i.test(String(p)))
+  );
+  const navHtml = NAV_GROUPS.map(g => {
+    const items = g.items.filter(i => PAGE_REGISTRY[i] &&
+      (!['system','users','products','organization'].includes(i) || isAdminUser));
+    if (!items.length) return '';
+    return `
+        <div class="nav-group">
+          <div class="nav-group-title">${g.title}</div>
+          ${items.map(i => `
+            <div class="nav-item" data-nav="${i}">
+              <i class="fa-solid ${PAGE_REGISTRY[i].icon}"></i>
+              <span>${PAGE_REGISTRY[i].label}</span>
+            </div>`).join('')}
+        </div>`;
+  }).join('');
 
   shell.innerHTML = `
     <aside class="sidebar" id="sidebar">
@@ -38,15 +57,7 @@ export function mountAppShell() {
         <div class="brand-mark">F</div>
         <div><div class="brand-title">FinCraft</div><div class="brand-sub">Fineract Platform</div></div>
       </div>
-      ${NAV_GROUPS.map(g => `
-        <div class="nav-group">
-          <div class="nav-group-title">${g.title}</div>
-          ${g.items.filter(i => PAGE_REGISTRY[i]).map(i => `
-            <div class="nav-item" data-nav="${i}">
-              <i class="fa-solid ${PAGE_REGISTRY[i].icon}"></i>
-              <span>${PAGE_REGISTRY[i].label}</span>
-            </div>`).join('')}
-        </div>`).join('')}
+      ${navHtml}
     </aside>
 
     <header class="topbar">
@@ -230,6 +241,61 @@ function formData(formId) {
   fd.forEach((v, k) => { obj[k] = v; });
   return obj;
 }
+function renderReportParameterField(field) {
+  const name = field.parameterName || field.columnName || field.name || field.code || '';
+  const label = field.displayName || field.parameterLabel || field.title || field.columnName || name;
+  const value = field.defaultValue ?? field.value ?? '';
+  const required = field.mandatory || field.required ? 'required' : '';
+  const help = field.description ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${escapeHtml(field.description)}</div>` : '';
+  const options = field.parameterOptions || field.options || field.lookups || field.values || field.selectOptions;
+  if (Array.isArray(options) && options.length) {
+    return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
+      <select name="${escapeHtml(name)}" class="form-control" ${required}>
+        <option value="">— Select —</option>
+        ${options.map(opt => {
+          const val = opt.id ?? opt.value ?? opt.code ?? opt.name ?? opt;
+          const text = opt.name ?? opt.description ?? opt.value ?? opt.code ?? String(opt);
+          const selected = String(val) === String(value) ? 'selected' : '';
+          return `<option value="${escapeHtml(String(val))}" ${selected}>${escapeHtml(String(text))}</option>`;
+        }).join('')}
+      </select>${help}</label>`;
+  }
+  const type = String(field.dataType || field.parameterType || 'string').toLowerCase();
+  if (type.includes('date')) {
+    return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
+      <input type="date" name="${escapeHtml(name)}" class="form-control" value="${escapeHtml(String(value||''))}" ${required}/>${help}</label>`;
+  }
+  if (type.includes('boolean')) {
+    return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
+      <select name="${escapeHtml(name)}" class="form-control" ${required}>
+        <option value="">— Select —</option>
+        <option value="true" ${String(value) === 'true' ? 'selected' : ''}>Yes</option>
+        <option value="false" ${String(value) === 'false' ? 'selected' : ''}>No</option>
+      </select>${help}</label>`;
+  }
+  if (type.includes('int') || type.includes('number')) {
+    return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
+      <input type="number" name="${escapeHtml(name)}" class="form-control" value="${escapeHtml(String(value||''))}" ${required}/>${help}</label>`;
+  }
+  return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
+      <input type="text" name="${escapeHtml(name)}" class="form-control" value="${escapeHtml(String(value||''))}" ${required}/>${help}</label>`;
+}
+async function renderReportParameters(reportName) {
+  const container = document.getElementById('run-report-params');
+  if (!container) return;
+  container.innerHTML = '<div class="text-muted" style="grid-column:1/-1"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading report parameters…</div>';
+  try {
+    const res = await api.runReports.parameters(reportName);
+    const params = Array.isArray(res) ? res : res?.reportParameters || res?.parameterData || res?.parameters || [];
+    if (!params.length) {
+      container.innerHTML = '<div class="text-muted" style="grid-column:1/-1">No dynamic report parameters.</div>';
+      return;
+    }
+    container.innerHTML = params.map(renderReportParameterField).join('');
+  } catch (e) {
+    container.innerHTML = `<div class="text-danger" style="grid-column:1/-1">Failed to load parameters: ${escapeHtml(e.message || String(e))}</div>`;
+  }
+}
 function setSubmitting(btn, loading = true) {
   if (!btn) return;
   btn._origHtml = btn._origHtml || btn.innerHTML;
@@ -386,6 +452,9 @@ document.addEventListener('click', (e) => {
         const nameEl = modalEl.querySelector('#run-report-name');
         if (nameEl) nameEl.textContent = t.dataset.report || '—';
         modalEl.querySelector('#rep-output').innerHTML = '';
+        if (t.dataset.report) {
+          renderReportParameters(t.dataset.report);
+        }
       }
       if (modalId === 'repaymentModal' && modalEl.dataset.loanId) {
         const loanIdInput = modalEl.querySelector('#rp-loanid');
@@ -965,19 +1034,13 @@ async function handleAction(action, btn) {
       const reportName = modal?.dataset.report;
       const output = document.getElementById('rep-output');
       if (!reportName) { setSubmitting(btn, false); break; }
-      const fromDate = document.getElementById('rep-from')?.value;
-      const toDate   = document.getElementById('rep-to')?.value;
-      const officeId = modal.querySelector('[data-populate="offices"]')?.value;
-      const format   = document.getElementById('rep-fmt')?.value || 'JSON';
-      // Fineract "stretchy" report params are R_-prefixed; common ones across the
-      // default report pack are R_officeId / R_startDate / R_endDate / R_loanOfficerId.
-      const params = {
-        'output-type': format,
-        R_officeId: officeId || 1,
-        R_loanOfficerId: -1,
-        R_startDate: fromDate || undefined,
-        R_endDate:   toDate   || undefined
-      };
+      const values = formData('runReportForm');
+      const format = values.outputFormat || 'JSON';
+      const params = Object.entries(values).reduce((acc, [k, v]) => {
+        if (!v || k === 'outputFormat') return acc;
+        acc[k] = v;
+        return acc;
+      }, {});
       try {
         if (format === 'JSON') {
           const res = await api.runReports.run(reportName, params);
@@ -989,7 +1052,7 @@ async function handleAction(action, btn) {
             : '<div class="empty-state"><i class="fa-solid fa-table"></i><div>Report ran but returned no rows</div></div>';
           toast('success','Report generated', reportName);
         } else {
-          const r = await api.runReports.run(reportName, params, { raw: true });
+          const r = await api.runReports.run(reportName, params, { raw: true, outputType: format });
           const blob = await r.blob();
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);

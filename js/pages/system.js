@@ -79,7 +79,7 @@ async function loadAuditTrails(c) {
     const list = Array.isArray(res) ? res : (res?.pageItems || []);
     el.innerHTML = list.length
       ? `<div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Action</th><th>Entity</th><th>Resource</th><th>Maker</th><th>Made on</th><th>Status</th></tr></thead>
+          <thead><tr><th>Action</th><th>Entity</th><th>Resource</th><th>Maker</th><th>Made on</th><th>Status</th><th></th></tr></thead>
           <tbody>${list.map(a=>`<tr>
             <td><b>${escapeHtml(a.actionName||'—')}</b></td>
             <td>${escapeHtml(a.entityName||'—')}</td>
@@ -87,6 +87,7 @@ async function loadAuditTrails(c) {
             <td>${escapeHtml(a.maker||'—')}</td>
             <td>${fmtDate(a.madeOnDate)||'—'}</td>
             <td><span class="badge ${a.processingResult?.value==='Processed'?'b-success':'b-warn'}">${escapeHtml(a.processingResult?.value||'—')}</span></td>
+            <td><button class="btn-ghost btn-sm" data-audit-id="${escapeHtml(String(a.id||a.auditId||''))}"><i class="fa-solid fa-eye"></i> View</button></td>
           </tr>`).join('')}</tbody></table></div>`
       : '<div class="empty-state"><i class="fa-solid fa-clipboard-list"></i><div>No audit trail records</div></div>';
   } catch (e) {

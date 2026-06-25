@@ -470,8 +470,14 @@ class FineractAPI {
   runReports = {
     // NOTE: passing parameterType=true returns the report's *parameter definitions*
     // (dropdown options etc), not actual report data — must be omitted to get real rows.
-    run: (name, params, opts) => this._g(`/runreports/${encodeURIComponent(name)}`,
-                                   { 'output-type': 'JSON', ...params }, opts)
+    run: (name, params = {}, opts = {}) => {
+      const query = {
+        ...(opts.parameterType ? { parameterType: true } : { 'output-type': opts.outputType || 'JSON' }),
+        ...params
+      };
+      return this._g(`/runreports/${encodeURIComponent(name)}`, query, opts);
+    },
+    parameters: (name) => this._g(`/runreports/${encodeURIComponent(name)}`, { parameterType: true })
   };
   adhocQueries = {
     list:    () => this._g('/adhocquery'),
@@ -485,6 +491,7 @@ class FineractAPI {
   // ============== USERS, ROLES, PERMISSIONS ==============
   users = {
     list:   ()       => this._g('/users'),
+    self:   ()       => this._g('/users/self').catch(() => this._g('/users/me')),
     get:    (id)     => this._g(`/users/${id}`),
     template:()      => this._g('/users/template'),
     create: (body)   => this._p('/users', body),

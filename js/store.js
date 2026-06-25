@@ -12,6 +12,15 @@ class Store {
   }
   get(k) { return this.state[k]; }
   set(k, v) { this.state[k] = v; this._notify(k, v); this.persist(); }
+  remove(k) { delete this.state[k]; this._notify(k, undefined); this.persist(); }
+  hasRole(name) {
+    const roles = this.state.auth?.user?.roles || [];
+    return roles.some(r => String(r.name || '').toLowerCase().includes(String(name).toLowerCase()));
+  }
+  hasPermission(code) {
+    const perms = this.state.auth?.user?.permissions || [];
+    return perms.includes(code);
+  }
   patch(k, v) { this.state[k] = { ...(this.state[k] || {}), ...v }; this._notify(k, this.state[k]); this.persist(); }
   subscribe(k, cb) {
     (this.subs[k] ||= new Set()).add(cb);
@@ -22,12 +31,14 @@ class Store {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({ theme: this.state.theme, sidebar: this.state.sidebar }));
       if (this.state.auth) {
-        sessionStorage.setItem(SS_KEY, JSON.stringify({
+        const authPayload = {
           serverUrl: this.state.auth.serverUrl, tenantId: this.state.auth.tenantId,
           username: this.state.auth.username, authToken: this.state.auth.authToken,
           userId: this.state.auth.userId || null,
           server: this.state.auth.server || null
-        }));
+        };
+        if (this.state.auth.user) authPayload.user = this.state.auth.user;
+        sessionStorage.setItem(SS_KEY, JSON.stringify(authPayload));
       } else sessionStorage.removeItem(SS_KEY);
     } catch {}
   }
