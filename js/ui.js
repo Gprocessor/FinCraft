@@ -43,7 +43,7 @@ export function mountAppShell() {
     .catch(() => {});
 
   shell.removeAttribute('hidden');
-  shell.classList.toggle('collapsed', store.get('sidebar') === 'collapsed');
+  shell.classList.toggle('collapsed', false); // shell no longer gets collapsed class
 
   const auth     = store.get('auth') || {};
   const username = auth.username || 'user';
@@ -52,21 +52,22 @@ export function mountAppShell() {
   const tenant   = auth.tenantId   ? escapeHtml(auth.tenantId)   : '';
 
   shell.innerHTML = `
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">F</div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand" data-action="toggle-sidebar">
+        <div class="brand-icon">F</div>
         <div class="brand-text">
-          <div class="brand-title">FinCraft</div>
+          <div class="brand-name">FinCraft</div>
           <div class="brand-sub">Fineract Platform</div>
         </div>
       </div>
-      <nav class="nav" id="navList">
+
+      <div class="sidebar-scroll" id="navList">
         ${NAV_GROUPS.map(g => {
           const items = g.items.filter(i => PAGE_REGISTRY[i] && _isNavVisible(i));
           if (!items.length) return '';
           return `
-            <div class="nav-group">
-              <div class="nav-group-title">${g.title}</div>
+            <div class="nav-section">
+              <div class="nav-section-label">${g.title}</div>
               ${items.map(i => `
                 <button class="nav-item" data-nav="${i}" data-nav-key="${i}">
                   <i class="fa-solid ${PAGE_REGISTRY[i].icon}"></i>
@@ -74,61 +75,87 @@ export function mountAppShell() {
                 </button>`).join('')}
             </div>`;
         }).join('')}
-      </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-card" data-action="toggle-user-menu" id="userCardBtn">
+          <div class="user-avatar">${initials}</div>
+          <div class="user-info">
+            <div class="user-name">${escapeHtml(username)}</div>
+            <div class="user-role">${office || tenant || 'Administrator'}</div>
+          </div>
+        </div>
+      </div>
     </aside>
 
     <div class="nav-scrim" id="navScrim"></div>
 
-    <header class="topbar">
-      <button class="icon-btn" data-action="toggle-sidebar" title="Toggle sidebar">
-        <i class="fa-solid fa-bars"></i>
-      </button>
-
-      <nav class="breadcrumb" id="breadcrumb"><b>Home</b></nav>
-
-      <div class="topbar-search top-search">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input id="globalSearch" type="search" placeholder="Search clients, loans, groups…" autocomplete="off" />
-        <div class="search-results" id="globalSearchResults" hidden></div>
-      </div>
-
-      <button class="icon-btn" data-action="open-cmd" title="Command palette (Ctrl+K)">
-        <i class="fa-solid fa-keyboard"></i>
-      </button>
-
-      <button class="icon-btn" data-action="toggle-theme" title="Toggle theme">
-        <i class="fa-solid fa-circle-half-stroke"></i>
-      </button>
-
-      <button class="icon-btn notif-btn" data-nav="notifications" id="notifBell" title="Notifications">
-        <i class="fa-solid fa-bell"></i>
-        <span class="notif-dot" id="notifDot" hidden></span>
-      </button>
-
-      <div class="user-menu dropdown" id="userMenu">
-        <button class="icon-btn" data-action="toggle-user-menu" style="width:auto;gap:8px;padding:0 10px">
-          <div class="avatar">${initials}</div>
-          <div class="user-info">
-            <div class="user-name">${escapeHtml(username)}</div>
-            <div class="user-office text-muted">${office || tenant || ''}</div>
-          </div>
-          <i class="fa-solid fa-chevron-down"></i>
+    <div class="main-area">
+      <header class="topbar">
+        <button class="topbar-btn" data-action="toggle-sidebar" title="Toggle sidebar">
+          <i class="fa-solid fa-bars"></i>
         </button>
-        <div class="dropdown-menu">
-          <button data-nav="profile"><i class="fa-solid fa-user"></i> Profile</button>
-          <button data-modal="changePasswordModal"><i class="fa-solid fa-key"></i> Change password</button>
-          <button data-nav="settings"><i class="fa-solid fa-gear"></i> Settings</button>
-          <hr/>
-          <button data-action="logout"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+
+        <nav class="topbar-breadcrumb" id="breadcrumb">
+          <span class="crumb-current">Home</span>
+        </nav>
+
+        <div class="topbar-search" style="margin-left:auto">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input id="globalSearch" type="search" placeholder="Search clients, loans, groups…" autocomplete="off" />
+          <div id="globalSearchResults" hidden></div>
         </div>
-      </div>
-    </header>
 
-    <main class="content-area" id="contentArea"></main>
+        <div class="topbar-divider"></div>
 
-    <div id="toastContainer" class="toast-container"></div>`;
+        <button class="topbar-btn" data-action="open-cmd" title="Command palette (Ctrl+K)">
+          <i class="fa-solid fa-keyboard"></i>
+        </button>
+
+        <button class="topbar-btn" data-action="toggle-theme" title="Toggle theme">
+          <i class="fa-solid fa-circle-half-stroke"></i>
+        </button>
+
+        <div style="position:relative">
+          <button class="topbar-btn" data-nav="notifications" id="notifBell" title="Notifications">
+            <i class="fa-solid fa-bell"></i>
+            <span id="notifDot" class="topbar-badge" hidden>0</span>
+          </button>
+        </div>
+
+        <div class="dropdown" id="userMenu">
+          <button class="topbar-btn" data-action="toggle-user-menu" style="width:auto;gap:8px;padding:0 10px">
+            <div class="user-avatar" style="width:28px;height:28px;font-size:11px;border-radius:99px">${initials}</div>
+            <i class="fa-solid fa-chevron-down" style="font-size:10px"></i>
+          </button>
+          <div class="dropdown-menu">
+            <button data-nav="profile"><i class="fa-solid fa-user"></i> Profile</button>
+            <button data-modal="changePasswordModal"><i class="fa-solid fa-key"></i> Change password</button>
+            <button data-nav="settings"><i class="fa-solid fa-gear"></i> Settings</button>
+            <hr class="dropdown-divider"/>
+            <button data-action="logout" class="danger"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="content-area" id="contentArea"></main>
+    </div>`;
+
+  // Toast container must live outside the CSS grid shell so it overlays freely.
+  if (!document.getElementById('toastContainer')) {
+    const tc = document.createElement('div');
+    tc.id = 'toastContainer';
+    tc.className = 'toast-container';
+    tc.setAttribute('aria-live', 'assertive');
+    document.body.appendChild(tc);
+  }
 
   document.getElementById('navScrim')?.addEventListener('click', () => sidebar.close());
+
+  // Apply desktop collapsed state after render
+  if (window.innerWidth > 720 && store.get('sidebar') === 'collapsed') {
+    document.getElementById('sidebar')?.classList.add('collapsed');
+  }
   document.documentElement.setAttribute('data-theme', store.get('theme'));
 
   _wireGlobalSearch();
@@ -297,17 +324,21 @@ export function dropdownToggle(id) {
 
 export const sidebar = {
   toggle() {
-    const shell = document.getElementById('appShell');
-    if (!shell) return;
+    const shell   = document.getElementById('appShell');
+    const sidebar = document.getElementById('sidebar');
+    if (!shell || !sidebar) return;
     if (window.innerWidth <= 720) {
+      sidebar.classList.remove('collapsed');
       shell.classList.toggle('nav-open');
     } else {
       const next = store.get('sidebar') === 'collapsed' ? 'expanded' : 'collapsed';
       store.set('sidebar', next);
-      shell.classList.toggle('collapsed', next === 'collapsed');
+      sidebar.classList.toggle('collapsed', next === 'collapsed');
     }
   },
-  close() { document.getElementById('appShell')?.classList.remove('nav-open'); }
+  close() {
+    document.getElementById('appShell')?.classList.remove('nav-open');
+  }
 };
 export const theme = {
   toggle() {

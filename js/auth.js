@@ -156,36 +156,54 @@ function showApp() {
 
 function renderLogin(container, banner) {
   container.innerHTML = `
-    <div class="login-wrap">
-      <div class="login-card">
-        <div class="brand" style="justify-content:center;margin-bottom:32px">
-          <div class="brand-mark" style="width:52px;height:52px;font-size:28px">F</div>
-          <div>
-            <div class="brand-title" style="font-size:22px">FinCraft</div>
-            <div class="brand-sub">Apache Fineract Platform</div>
+    <div class="login-wrap active" style="width:100%;height:100vh;display:flex">
+      <div class="login-left">
+        <div class="login-brand">
+          <div class="login-logo-row">
+            <div class="login-logo">F</div>
+            <div>
+              <div class="login-app-name">Fin<em>Craft</em></div>
+              <div style="font-size:10px;color:var(--brand-teal);letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-top:2px">Fineract Platform</div>
+            </div>
+          </div>
+          <div class="login-tagline">A unified microfinance platform — every feature from the Community App, Web App, and Field Officer App rebuilt with a modern interface.</div>
+          <div class="login-features">
+            <div class="login-feature"><div class="login-feature-icon"><i class="fa-solid fa-users"></i></div><div class="login-feature-text"><strong>Full Client Lifecycle</strong>Create, manage and track every client</div></div>
+            <div class="login-feature"><div class="login-feature-icon"><i class="fa-solid fa-money-bill-wave"></i></div><div class="login-feature-text"><strong>Complete Loan Engine</strong>35+ actions, disbursements, repayments</div></div>
+            <div class="login-feature"><div class="login-feature-icon"><i class="fa-solid fa-calculator"></i></div><div class="login-feature-text"><strong>Full Accounting GL</strong>COA, journal entries, closures</div></div>
+            <div class="login-feature"><div class="login-feature-icon"><i class="fa-solid fa-chart-bar"></i></div><div class="login-feature-text"><strong>Reports & Analytics</strong>PAR, trial balance, ad hoc queries</div></div>
+            <div class="login-feature"><div class="login-feature-icon"><i class="fa-solid fa-terminal"></i></div><div class="login-feature-text"><strong>Command Palette</strong>Jump anywhere instantly with Ctrl+K</div></div>
+            <div class="login-feature"><div class="login-feature-icon"><i class="fa-solid fa-plug"></i></div><div class="login-feature-text"><strong>Live Fineract API</strong>Connects to any Fineract instance</div></div>
           </div>
         </div>
-        ${banner ? `<div class="msg-banner b-warning mb-4">${banner}</div>` : ''}
-        <div id="login-error" class="msg-banner b-danger mb-4" style="display:none"></div>
-        <div class="form-grid">
-          <label class="full"><span class="form-label">Server URL</span>
-            <input id="l-server" class="form-control" value="${FINERACT_DEMO.serverUrl}"/></label>
-          <label><span class="form-label">Tenant ID</span>
-            <input id="l-tenant" class="form-control" value="${FINERACT_DEMO.tenantId}"/></label>
-          <label><span class="form-label">Username</span>
-            <input id="l-user" class="form-control" value="mifos" autocomplete="username"/></label>
-          <label class="full"><span class="form-label">Password</span>
-            <input id="l-pass" class="form-control" type="password" value="password" autocomplete="current-password"/></label>
-        </div>
-        <button class="btn-primary w-full mt-4" id="l-btn" style="width:100%">
-          <i class="fa-solid fa-right-to-bracket"></i> Sign In
-        </button>
-        <div class="text-center mt-3">
-          <a href="#" id="l-forgot" class="text-muted" style="font-size:13px">Forgot password?</a>
-        </div>
-        <div class="text-center mt-4 text-muted" style="font-size:13px">
-          Demo server: <b>demo.mifos.io</b> · tenant: <b>default</b><br/>
-          Default credentials: <b>mifos / password</b>
+      </div>
+      <div class="login-right">
+        <div class="login-form-box">
+          <div class="login-form-title">Welcome back</div>
+          <div class="login-form-sub">Sign in to your FinCraft account</div>
+          ${banner ? `<div class="msg-banner b-warning mb-4">${banner}</div>` : ''}
+          <div id="login-error" class="msg-banner b-danger mb-4" style="display:none"></div>
+          <div class="form-group mb-3"><label class="form-label">Server URL</label>
+            <input id="l-server" class="form-control" value="${FINERACT_DEMO.serverUrl}"/></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="mb-3">
+            <div class="form-group"><label class="form-label">Tenant ID</label>
+              <input id="l-tenant" class="form-control" value="${FINERACT_DEMO.tenantId}"/></div>
+            <div class="form-group"><label class="form-label">Username</label>
+              <input id="l-user" class="form-control" value="mifos" autocomplete="username"/></div>
+          </div>
+          <div class="form-group mb-4"><label class="form-label">Password</label>
+            <div class="input-group">
+              <input id="l-pass" class="form-control" type="password" value="password" autocomplete="current-password"/>
+              <button class="btn btn-secondary" style="border-radius:0 6px 6px 0;border-left:none" onclick="const p=document.getElementById('l-pass');p.type=p.type==='password'?'text':'password'"><i class="fa-solid fa-eye"></i></button>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" id="l-btn">
+            <i class="fa-solid fa-right-to-bracket"></i> Sign In
+          </button>
+          <div class="login-footer mt-3">
+            <a href="#" id="l-forgot" class="link" style="font-size:12px">Forgot password?</a>
+            &nbsp;·&nbsp; Demo: <b>mifos / password</b>
+          </div>
         </div>
       </div>
     </div>`;
