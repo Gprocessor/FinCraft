@@ -77,7 +77,7 @@ export function mountAppShell() {
       </nav>
     </aside>
 
-    <div class="scrim" id="navScrim"></div>
+    <div class="nav-scrim" id="navScrim"></div>
 
     <header class="topbar">
       toggle-sidebar
@@ -124,7 +124,7 @@ export function mountAppShell() {
       </div>
     </header>
 
-    <main class="content" id="contentArea"></main>
+    <main class="content-area" id="contentArea"></main>
 
     <div id="toastContainer" class="toast-container"></div>`;
 
