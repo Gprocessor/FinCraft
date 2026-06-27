@@ -7,95 +7,202 @@ import { api } from './api.js';
 import { LOCALE, DATE_FORMAT, today } from './config.js';
 
 const NAV_GROUPS = [
-  { title: 'Overview', items: ['dashboard','analytics','tasks','navigation','search'] },
-  { title: 'Clients & Accounts',
-    items: ['clients','groups','centers','loans','savings','deposits','shares','collections','transfers'] },
-  { title: 'Finance', items: ['accounting','reports','surveys'] },
-  { title: 'Admin',
-    items: ['products','organization','system','users','templates','self-service','notifications','profile','settings'] }
+  { title: 'Overview',           items: ['dashboard','analytics','tasks','navigation','search'] },
+  { title: 'Clients & Accounts', items: ['clients','groups','centers','loans','savings','deposits','shares','collections','transfers'] },
+  { title: 'Finance',            items: ['accounting','reports','surveys'] },
+  { title: 'Admin', items: ['products','charges','organization','system','users','datatables','templates','self-service','notifications','profile','settings'] }
 ];
+
+/** Visible if user has the page's required permission (null = always show to authenticated users). */
+function _isNavVisible(pageKey) {
+  const def = PAGE_REGISTRY[pageKey];
+  if (!def) return false;
+  const need = def.requiredPermission;
+  if (need === null || need === undefined) return true;
+  const codes = Array.isArray(need) ? need : [need];
+  return codes.some(c => store.hasPermission(c));
+}
 
 export function mountAppShell() {
   const shell = document.getElementById('appShell');
   if (!shell || shell.dataset.mounted) { shell?.removeAttribute('hidden'); return; }
   shell.dataset.mounted = '1';
-  shell.classList.add('app-shell'); // grid layout defined on .app-shell in CSS
+  shell.classList.add('app-shell');
 
-  fetch('./views/modals.html').then(r => r.ok ? r.text() : '').then(html => {
-    const root = document.getElementById('modalRoot');
-    if (root && !root.dataset.loaded) {
-      root.innerHTML = html; root.dataset.loaded = '1';
-      document.dispatchEvent(new CustomEvent('fc:modals-loaded'));
-    }
-  }).catch(() => {});
+  // Load modal HTML once.
+  fetch('./views/modals.html')
+    .then(r => r.ok ? r.text() : '')
+    .then(html => {
+      const root = document.getElementById('modalRoot');
+      if (root && !root.dataset.loaded) {
+        root.innerHTML = html;
+        root.dataset.loaded = '1';
+        document.dispatchEvent(new CustomEvent('fc:modals-loaded'));
+      }
+    })
+    .catch(() => {});
 
   shell.removeAttribute('hidden');
   shell.classList.toggle('collapsed', store.get('sidebar') === 'collapsed');
-  const auth = store.get('auth');
-  const isAdminUser = Boolean(
-    auth?.user?.roles?.some(r => /admin/i.test(String(r.name || ''))) ||
-    auth?.user?.permissions?.some(p => /admin|all/i.test(String(p)))
-  );
-  const navHtml = NAV_GROUPS.map(g => {
-    const items = g.items.filter(i => PAGE_REGISTRY[i] &&
-      (!['system','users','products','organization'].includes(i) || isAdminUser));
-    if (!items.length) return '';
-    return `
-        <div class="nav-group">
-          <div class="nav-group-title">${g.title}</div>
-          ${items.map(i => `
-            <div class="nav-item" data-nav="${i}">
-              <i class="fa-solid ${PAGE_REGISTRY[i].icon}"></i>
-              <span>${PAGE_REGISTRY[i].label}</span>
-            </div>`).join('')}
-        </div>`;
-  }).join('');
+
+  const auth     = store.get('auth') || {};
+  const username = auth.username || 'user';
+  const initials = (username[0] || 'U').toUpperCase();
+  const office   = auth.officeName ? escapeHtml(auth.officeName) : '';
+  const tenant   = auth.tenantId   ? escapeHtml(auth.tenantId)   : '';
 
   shell.innerHTML = `
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">F</div>
-        <div><div class="brand-title">FinCraft</div><div class="brand-sub">Fineract Platform</div></div>
+        <div class="brand-text">
+          <div class="brand-title">FinCraft</div>
+          <div class="brand-sub">Fineract Platform</div>
+        </div>
       </div>
-      ${navHtml}
+      <nav class="nav" id="navList">
+        ${NAV_GROUPS.map(g => {
+          const items = g.items.filter(i => PAGE_REGISTRY[i] && _isNavVisible(i));
+          if (!items.length) return '';
+          return `
+            <div class="nav-group">
+              <div class="nav-group-title">${g.title}</div>
+              ${items.map(i => `
+                <button class="nav-item" data-nav="${i}" data-nav-key="${i}">
+                  <i class="fa-solid ${PAGE_REGISTRY[i].icon}"></i>
+                  <span>${PAGE_REGISTRY[i].label}</span>
+                </button>`).join('')}
+            </div>`;
+        }).join('')}
+      </nav>
     </aside>
 
+    <div class="scrim" id="navScrim"></div>
+
     <header class="topbar">
-      <button class="icon-btn" data-action="toggle-sidebar" title="Toggle sidebar">
+      toggle-sidebar
         <i class="fa-solid fa-bars"></i>
       </button>
-      <div class="crumb" id="breadcrumb"><b>Home</b></div>
-      <div class="top-spacer"></div>
-      <div class="top-search" data-action="open-cmd">
+
+      <nav class="breadcrumb" id="breadcrumb"><b>Home</b></nav>
+
+      <div class="topbar-search">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input placeholder="Search clients, loans, groups…" readonly />
-        <kbd>Ctrl K</kbd>
+        <input id="globalSearch" type="search" placeholder="Search clients, loans, groups…" autocomplete="off" />
+        <div class="search-results" id="globalSearchResults" hidden></div>
       </div>
-      <button class="icon-btn" data-action="toggle-theme" title="Toggle theme">
+
+      open-cmd
+        <i class="fa-solid fa-keyboard"></i>
+      </button>
+
+      toggle-theme
         <i class="fa-solid fa-circle-half-stroke"></i>
       </button>
-      <button class="icon-btn has-dot" data-nav="notifications" title="Notifications">
+
+      <button class="icon-btn notif-btn" data-nav="notifications" id="notifBell" title="Notifications">
         <i class="fa-solid fa-bell"></i>
+        <span class="notif-dot" id="notifDot" hidden></span>
       </button>
-      <div class="dropdown" id="userMenu">
-        <button class="icon-btn" data-action="toggle-user-menu" title="Account">
-          <i class="fa-solid fa-user"></i>
+
+      <div class="user-menu dropdown" id="userMenu">
+        toggle-user-menu
+          <div class="avatar">${initials}</div>
+          <div class="user-info">
+            <div class="user-name">${escapeHtml(username)}</div>
+            <div class="user-office text-muted">${office || tenant || ''}</div>
+          </div>
+          <i class="fa-solid fa-chevron-down"></i>
         </button>
         <div class="dropdown-menu">
-          <div class="dropdown-item" data-nav="profile"><i class="fa-solid fa-id-badge"></i> Profile</div>
-          <div class="dropdown-item" data-nav="settings"><i class="fa-solid fa-gear"></i> Settings</div>
-          <div class="dropdown-divider"></div>
-          <div class="dropdown-item" data-action="logout"><i class="fa-solid fa-right-from-bracket"></i> Sign out</div>
+          <button data-nav="profile"><i class="fa-solid fa-user"></i> Profile</button>
+          <button data-modal="changePasswordModal"><i class="fa-solid fa-key"></i> Change password</button>
+          <button data-nav="settings"><i class="fa-solid fa-gear"></i> Settings</button>
+          <hr/>
+          logout<i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
         </div>
       </div>
     </header>
 
-    <main class="content-area" id="contentArea"></main>
-    <div class="nav-scrim" id="navScrim"></div>
-  `;
+    <main class="content" id="contentArea"></main>
+
+    <div id="toastContainer" class="toast-container"></div>`;
 
   document.getElementById('navScrim')?.addEventListener('click', () => sidebar.close());
   document.documentElement.setAttribute('data-theme', store.get('theme'));
+
+  _wireGlobalSearch();
+  _refreshNotifBadge();
+  // Re-render the nav whenever perms change (e.g. after re-login or session refresh).
+  store.subscribe('perms', () => { _gateNavByPerms(); _refreshNotifBadge(); });
+}
+
+/** Recomputes nav-item visibility based on current perms. Called when perms change. */
+function _gateNavByPerms() {
+  document.querySelectorAll('[data-nav-key]').forEach(btn => {
+    const key = btn.dataset.navKey;
+    btn.style.display = _isNavVisible(key) ? '' : 'none';
+  });
+}
+
+/** Debounced global search wired to /search (resource: clients, loans, groups). */
+function _wireGlobalSearch() {
+  const input = document.getElementById('globalSearch');
+  const box   = document.getElementById('globalSearchResults');
+  if (!input || !box) return;
+  let timer;
+  const close = () => { box.hidden = true; box.innerHTML = ''; };
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2) return close();
+    timer = setTimeout(async () => {
+      try {
+        const res = await api.search.search(q);
+        const items = Array.isArray(res) ? res : (res?.pageItems || []);
+        if (!items.length) {
+          box.innerHTML = `<div class="search-empty">No matches for "${escapeHtml(q)}"</div>`;
+          box.hidden = false; return;
+        }
+        box.innerHTML = items.slice(0, 8).map(r => {
+          const type   = (r.entityType || '').toLowerCase();
+          const id     = r.entityId || r.id;
+          const route  = type === 'client' ? `client-detail?id=${id}`
+                       : type === 'loan'   ? `loans?id=${id}`
+                       : type === 'group'  ? `groups?id=${id}`
+                       : 'search';
+          return `<button class="search-result" data-nav="${route}">
+            <i class="fa-solid ${type === 'client' ? 'fa-user' : type === 'loan' ? 'fa-hand-holding-dollar' : 'fa-people-group'}"></i>
+            <div>
+              <strong>${escapeHtml(r.entityAccountNo || r.entityName || '—')}</strong>
+              <div class="text-muted small">${escapeHtml(r.entityType || '')}</div>
+            </div>
+          </button>`;
+        }).join('');
+        box.hidden = false;
+      } catch (e) {
+        box.innerHTML = `<div class="search-empty text-error">Search failed: ${escapeHtml(e.message || '')}</div>`;
+        box.hidden = false;
+      }
+    }, 250);
+  });
+
+  input.addEventListener('blur',  () => setTimeout(close, 150));
+  input.addEventListener('focus', () => { if (input.value.trim().length >= 2) box.hidden = false; });
+}
+
+/** Fetches unread notification count and toggles the red dot on the bell. */
+async function _refreshNotifBadge() {
+  const dot = document.getElementById('notifDot');
+  if (!dot) return;
+  try {
+    const r = await api.notifications.list({ isRead: false, limit: 1 });
+    const count = r?.totalFilteredRecords ?? (Array.isArray(r) ? r.length : (r?.pageItems?.length || 0));
+    dot.hidden = !(count > 0);
+  } catch {
+    dot.hidden = true;
+  }
 }
 
 export function setBreadcrumb(parts) {
@@ -241,61 +348,6 @@ function formData(formId) {
   fd.forEach((v, k) => { obj[k] = v; });
   return obj;
 }
-function renderReportParameterField(field) {
-  const name = field.parameterName || field.columnName || field.name || field.code || '';
-  const label = field.displayName || field.parameterLabel || field.title || field.columnName || name;
-  const value = field.defaultValue ?? field.value ?? '';
-  const required = field.mandatory || field.required ? 'required' : '';
-  const help = field.description ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${escapeHtml(field.description)}</div>` : '';
-  const options = field.parameterOptions || field.options || field.lookups || field.values || field.selectOptions;
-  if (Array.isArray(options) && options.length) {
-    return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
-      <select name="${escapeHtml(name)}" class="form-control" ${required}>
-        <option value="">— Select —</option>
-        ${options.map(opt => {
-          const val = opt.id ?? opt.value ?? opt.code ?? opt.name ?? opt;
-          const text = opt.name ?? opt.description ?? opt.value ?? opt.code ?? String(opt);
-          const selected = String(val) === String(value) ? 'selected' : '';
-          return `<option value="${escapeHtml(String(val))}" ${selected}>${escapeHtml(String(text))}</option>`;
-        }).join('')}
-      </select>${help}</label>`;
-  }
-  const type = String(field.dataType || field.parameterType || 'string').toLowerCase();
-  if (type.includes('date')) {
-    return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
-      <input type="date" name="${escapeHtml(name)}" class="form-control" value="${escapeHtml(String(value||''))}" ${required}/>${help}</label>`;
-  }
-  if (type.includes('boolean')) {
-    return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
-      <select name="${escapeHtml(name)}" class="form-control" ${required}>
-        <option value="">— Select —</option>
-        <option value="true" ${String(value) === 'true' ? 'selected' : ''}>Yes</option>
-        <option value="false" ${String(value) === 'false' ? 'selected' : ''}>No</option>
-      </select>${help}</label>`;
-  }
-  if (type.includes('int') || type.includes('number')) {
-    return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
-      <input type="number" name="${escapeHtml(name)}" class="form-control" value="${escapeHtml(String(value||''))}" ${required}/>${help}</label>`;
-  }
-  return `<label class="full"><span class="form-label">${escapeHtml(label)}</span>
-      <input type="text" name="${escapeHtml(name)}" class="form-control" value="${escapeHtml(String(value||''))}" ${required}/>${help}</label>`;
-}
-async function renderReportParameters(reportName) {
-  const container = document.getElementById('run-report-params');
-  if (!container) return;
-  container.innerHTML = '<div class="text-muted" style="grid-column:1/-1"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading report parameters…</div>';
-  try {
-    const res = await api.runReports.parameters(reportName);
-    const params = Array.isArray(res) ? res : res?.reportParameters || res?.parameterData || res?.parameters || [];
-    if (!params.length) {
-      container.innerHTML = '<div class="text-muted" style="grid-column:1/-1">No dynamic report parameters.</div>';
-      return;
-    }
-    container.innerHTML = params.map(renderReportParameterField).join('');
-  } catch (e) {
-    container.innerHTML = `<div class="text-danger" style="grid-column:1/-1">Failed to load parameters: ${escapeHtml(e.message || String(e))}</div>`;
-  }
-}
 function setSubmitting(btn, loading = true) {
   if (!btn) return;
   btn._origHtml = btn._origHtml || btn.innerHTML;
@@ -398,6 +450,7 @@ async function populateModalDropdowns() {
 }
 document.addEventListener('fc:modals-loaded', populateModalDropdowns);
 
+
 // ---- Global click handler ----
 document.addEventListener('click', (e) => {
   const t = e.target.closest('[data-nav],[data-modal],[data-close-modal],[data-action],[data-tab]');
@@ -418,57 +471,6 @@ document.addEventListener('click', (e) => {
         const nameEl = modalEl.querySelector('#run-report-name');
         if (nameEl) nameEl.textContent = t.dataset.report || '—';
         modalEl.querySelector('#rep-output').innerHTML = '';
-        if (t.dataset.report) {
-          renderReportParameters(t.dataset.report);
-        }
-      }
-      if (modalId === 'repaymentModal' && modalEl.dataset.loanId) {
-        const loanIdInput = modalEl.querySelector('#rp-loanid');
-        if (loanIdInput) loanIdInput.value = modalEl.dataset.loanId;
-      }
-    }
-    return;
-  }
-  if (t.hasAttribute('data-close-modal')) {
-    const m = t.closest('.modal-overlay');
-    if (m) m.classList.remove('open');
-    return;
-  }
-  const action = t.dataset.action;
-  if (!action) return;
-  switch (action) {
-    case 'toggle-theme':     theme.toggle();   break;
-    case 'toggle-sidebar':   sidebar.toggle(); break;
-    case 'toggle-user-menu': dropdownToggle('userMenu'); break;
-    case 'open-cmd':         import('./cmd.js').then(m => m.openCmd()); break;
-    case 'logout':           import('./auth.js').then(m => m.logout()); break;
-    case 'dismiss-toast':    t.closest('.toast')?.remove(); break;
-    default:
-      handleAction(action, t);
-  }
-});
-document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-nav],[data-modal],[data-close-modal],[data-action],[data-tab]');
-  if (!t) {
-    if (!e.target.closest('.dropdown')) closeAllDropdowns();
-    return;
-  }
-  if (t.matches('[data-tab]')) { tab(t, t.dataset.tab); return; }
-  if (t.dataset.nav) { navigate(t.dataset.nav); closeAllDropdowns(); sidebar.close(); return; }
-  if (t.dataset.modal) {
-    const modalId = t.dataset.modal;
-    const modalEl = openModal(modalId);
-    if (modalEl) {
-      // Forward any extra data-* context from the trigger (e.g. data-report, data-report-id,
-      // data-loan-id) onto the modal element so its submit handler knows what it's acting on.
-      Object.entries(t.dataset).forEach(([k, v]) => { if (k !== 'modal') modalEl.dataset[k] = v; });
-      if (modalId === 'runReportModal') {
-        const nameEl = modalEl.querySelector('#run-report-name');
-        if (nameEl) nameEl.textContent = t.dataset.report || '—';
-        modalEl.querySelector('#rep-output').innerHTML = '';
-        if (t.dataset.report) {
-          renderReportParameters(t.dataset.report);
-        }
       }
       if (modalId === 'repaymentModal' && modalEl.dataset.loanId) {
         const loanIdInput = modalEl.querySelector('#rp-loanid');
@@ -1048,13 +1050,19 @@ async function handleAction(action, btn) {
       const reportName = modal?.dataset.report;
       const output = document.getElementById('rep-output');
       if (!reportName) { setSubmitting(btn, false); break; }
-      const values = formData('runReportForm');
-      const format = values.outputFormat || 'JSON';
-      const params = Object.entries(values).reduce((acc, [k, v]) => {
-        if (!v || k === 'outputFormat') return acc;
-        acc[k] = v;
-        return acc;
-      }, {});
+      const fromDate = document.getElementById('rep-from')?.value;
+      const toDate   = document.getElementById('rep-to')?.value;
+      const officeId = modal.querySelector('[data-populate="offices"]')?.value;
+      const format   = document.getElementById('rep-fmt')?.value || 'JSON';
+      // Fineract "stretchy" report params are R_-prefixed; common ones across the
+      // default report pack are R_officeId / R_startDate / R_endDate / R_loanOfficerId.
+      const params = {
+        'output-type': format,
+        R_officeId: officeId || 1,
+        R_loanOfficerId: -1,
+        R_startDate: fromDate || undefined,
+        R_endDate:   toDate   || undefined
+      };
       try {
         if (format === 'JSON') {
           const res = await api.runReports.run(reportName, params);
@@ -1066,7 +1074,7 @@ async function handleAction(action, btn) {
             : '<div class="empty-state"><i class="fa-solid fa-table"></i><div>Report ran but returned no rows</div></div>';
           toast('success','Report generated', reportName);
         } else {
-          const r = await api.runReports.run(reportName, params, { raw: true, outputType: format });
+          const r = await api.runReports.run(reportName, params, { raw: true });
           const blob = await r.blob();
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);

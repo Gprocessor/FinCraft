@@ -2,16 +2,21 @@
    All endpoints follow the canonical Fineract paths under /fineract-provider/api/v1
    See: https://demo.mifos.io/api-docs/apiLive.htm */
 import { getRuntimeConfig, LOCALE, DATE_FORMAT } from './config.js';
+
 const CFG = getRuntimeConfig();
 
 class FineractAPI {
-  constructor() { this.serverUrl = ''; this.tenantId = 'default'; this.authToken = ''; }
+  constructor() { this.serverUrl = ''; this.tenantId = 'default'; this.authToken = ''; this._onUnauthorized = null; }
+
   configure({ serverUrl, tenantId, authToken }) {
     if (serverUrl != null) this.serverUrl = serverUrl.replace(/\/$/, '');
     if (tenantId  != null) this.tenantId  = tenantId;
     if (authToken != null) this.authToken = authToken;
   }
   reset() { this.serverUrl = ''; this.authToken = ''; }
+
+  /** Registers a callback invoked once whenever any request returns HTTP 401. */
+  onUnauthorized(fn) { this._onUnauthorized = fn; }
 
   _url(path, params) {
     let u = `${this.serverUrl}${CFG.apiBase}${path}`;
@@ -23,6 +28,7 @@ class FineractAPI {
     }
     return u;
   }
+
   _headers(extra = {}) {
     const h = { 'Accept': 'application/json', 'Content-Type': 'application/json',
                 'Fineract-Platform-TenantId': this.tenantId, ...extra };
@@ -32,6 +38,7 @@ class FineractAPI {
     if (this.authToken) h['Authorization'] = 'Basic ' + this.authToken;
     return h;
   }
+
   async _req(method, path, { params, body, headers, raw, timeoutMs } = {}) {
     const url = this._url(path, params);
     const isFormData = (typeof FormData !== 'undefined' && body instanceof FormData);
@@ -46,6 +53,10 @@ class FineractAPI {
       clearTimeout(t);
       if (!r.ok) {
         let detail; try { detail = await r.json(); } catch { detail = await r.text(); }
+        // Global 401 → notify auth layer (skip the /authentication endpoint itself).
+        if (r.status === 401 && typeof this._onUnauthorized === 'function' && path !== '/authentication') {
+          try { this._onUnauthorized(); } catch {}
+        }
         const err = new Error(`API ${r.status} on ${method} ${path}`);
         err.status = r.status; err.detail = detail; throw err;
       }
@@ -60,6 +71,7 @@ class FineractAPI {
       throw e;
     }
   }
+
   _g(p, params, opts) { return this._req('GET',    p, { params, ...opts }); }
   _p(p, body,   opts) { return this._req('POST',   p, { body,   ...opts }); }
   _u(p, body,   opts) { return this._req('PUT',    p, { body,   ...opts }); }
@@ -72,6 +84,43 @@ class FineractAPI {
       { body, timeoutMs: opts.timeoutMs ?? CFG.autoConnectTimeoutMs });
     return r?.base64EncodedAuthenticationKey || '';
   }
+
+  // ============== USER DETAILS (authenticated user info + perms) ==============
+  // GET /userdetails returns the canonical authenticated-user payload:
+  // { userId, username, officeId, officeName, roles[], permissions[] }
+  userDetails = {
+    self: () => this._g('/userdetails')
+  };
+
+  // ============== PASSWORD MANAGEMENT ==============
+  password = {
+    /** Trigger a password-reset email; payload depends on tenant config. */
+    forgot:      (body)         => this._p('/password', body),
+    /** Change a user's password — also used for self change-password. */
+    change:      (userId, body) => this._u(`/users/${userId}`, body),
+    /** Active password policy. */
+    preferences: ()             => this._g('/passwordpreferences'),
+    updatePreferences: (body)   => this._u('/passwordpreferences', body)
+  };
+
+  // ============== TWO-FACTOR AUTH ==============
+  twoFactor = {
+    methods:  ()       => this._g('/twofactor'),
+    request:  (params) => this._req('POST', '/twofactor',          { params }),
+    validate: (token)  => this._req('POST', '/twofactor/validate', { params: { token } }),
+    config:   {
+      get:    ()  => this._g('/twofactor/configure'),
+      update: (b) => this._u('/twofactor/configure', b)
+    }
+  };
+
+  // ============== TENANT OIDC (optional SSO discovery) ==============
+  tenantOidc = {
+    get:    (tenantId)    => this._g(`/tenants/${tenantId}/oidc-config`),
+    create: (tenantId, b) => this._p(`/tenants/${tenantId}/oidc-config`, b),
+    update: (tenantId, b) => this._u(`/tenants/${tenantId}/oidc-config`, b),
+    delete: (tenantId)    => this._d(`/tenants/${tenantId}/oidc-config`)
+  };
 
   // ============== CLIENTS ==============
   clients = {
@@ -106,59 +155,186 @@ class FineractAPI {
     obligeeDetails:     (id)       => this._g(`/clients/${id}/obligeedetails`)
   };
 
-  // ============== LOANS ==============
+// ============== LOANS ==============
   loans = {
     list:           (params)             => this._g('/loans', params),
     get:            (id, assoc = 'all')  => this._g(`/loans/${id}`, { associations: assoc }),
+    getWithParams:  (id, params)         => this._g(`/loans/${id}`, params),
     template:       (params)             => this._g('/loans/template', params),
+    approvalTemplate: (id)               => this._g(`/loans/${id}/template`, { templateType: 'approval' }),
     create:         (body)               => this._p('/loans', body),
     update:         (id, body)           => this._u(`/loans/${id}`, body),
+    delete:         (id)                 => this._d(`/loans/${id}`),
+
+    // ---- Lifecycle commands ----
     approve:        (id, body)           => this._p(`/loans/${id}?command=approve`, body),
     undoApproval:   (id)                 => this._p(`/loans/${id}?command=undoApproval`, {}),
+    reject:         (id, body)           => this._p(`/loans/${id}?command=reject`, body),
+    withdrawApplication: (id, body)      => this._p(`/loans/${id}?command=withdrawnByApplicant`, body),
     disburse:       (id, body)           => this._p(`/loans/${id}?command=disburse`, body),
     disburseToSavings: (id, body)        => this._p(`/loans/${id}?command=disburseToSavings`, body),
     undoDisbursal:  (id)                 => this._p(`/loans/${id}?command=undoDisbursal`, {}),
-    repay:          (id, body)           => this._p(`/loans/${id}/transactions?command=repayment`, body),
-    merchantIssued: (id, body)           => this._p(`/loans/${id}/transactions?command=merchantIssuedRefund`, body),
-    payoutRefund:   (id, body)           => this._p(`/loans/${id}/transactions?command=payoutRefund`, body),
-    chargebackTx:   (id, txId, body)     => this._p(`/loans/${id}/transactions/${txId}?command=chargeback`, body),
-    waiveInterest:  (id, body)           => this._p(`/loans/${id}/transactions?command=waiveinterest`, body),
-    writeOff:       (id, body)           => this._p(`/loans/${id}/transactions?command=writeoff`, body),
-    chargeOff:      (id, body)           => this._p(`/loans/${id}?command=charge-off`, body),
-    undoChargeOff:  (id, body)           => this._p(`/loans/${id}?command=undo-charge-off`, body),
-    close:          (id, body)           => this._p(`/loans/${id}/transactions?command=close`, body),
-    closeAsRescheduled: (id, body)       => this._p(`/loans/${id}/transactions?command=close-rescheduled`, body),
-    rescheduleTemplate: (params)         => this._g('/rescheduleloans/template', params),
-    reschedule:     (body)               => this._p('/rescheduleloans', body),
-    approveReschedule: (id, body)        => this._p(`/rescheduleloans/${id}?command=approve`, body),
-    rejectReschedule:  (id, body)        => this._p(`/rescheduleloans/${id}?command=reject`, body),
+    writeOff:       (id, body)           => this._p(`/loans/${id}?command=writeoff`, body),
+    chargeOff:      (id, body)           => this._p(`/loans/${id}?command=chargeOff`, body),
+    undoChargeOff:  (id, body)           => this._p(`/loans/${id}?command=undoChargeOff`, body),
+    close:          (id, body)           => this._p(`/loans/${id}?command=close`, body),
+    closeAsRescheduled: (id, body)       => this._p(`/loans/${id}?command=close-rescheduled`, body),
     foreclose:      (id, body)           => this._p(`/loans/${id}?command=foreclosure`, body),
-    reage:          (id, body)           => this._p(`/loans/${id}?command=re-age`, body),
-    reamortize:     (id, body)           => this._p(`/loans/${id}?command=re-amortize`, body),
+    reage:          (id, body)           => this._p(`/loans/${id}?command=reAge`, body),
+    undoReAge:      (id)                 => this._p(`/loans/${id}?command=undoReAge`, {}),
+    reamortize:     (id, body)           => this._p(`/loans/${id}?command=reAmortize`, body),
+    undoReAmortize: (id)                 => this._p(`/loans/${id}?command=undoReAmortize`, {}),
+    markAsFraud:    (id, body)           => this._p(`/loans/${id}?command=markAsFraud`, body || { fraud: true }),
+    recoverGuarantees: (id, body)        => this._p(`/loans/${id}?command=recoverGuarantees`, body || {}),
     assignOfficer:  (id, body)           => this._p(`/loans/${id}?command=assignLoanOfficer`, body),
     removeOfficer:  (id, body)           => this._p(`/loans/${id}?command=removeLoanOfficer`, body),
+
+    // ---- Transactions ----
+    transactions:   (id, params)         => this._g(`/loans/${id}/transactions`, params),
+    transaction:    (id, txId)           => this._g(`/loans/${id}/transactions/${txId}`),
+    repay:          (id, body)           => this._p(`/loans/${id}/transactions?command=repayment`, body),
+    prepayLoan:     (id, body)           => this._p(`/loans/${id}/transactions?command=prepayLoan`, body),
+    downPayment:    (id, body)           => this._p(`/loans/${id}/transactions?command=downPayment`, body),
+    recoverPayment: (id, body)           => this._p(`/loans/${id}/transactions?command=recoverypayment`, body),
+    goodwillCredit: (id, body)           => this._p(`/loans/${id}/transactions?command=goodwillCredit`, body),
+    creditBalanceRefund: (id, body)      => this._p(`/loans/${id}/transactions?command=creditBalanceRefund`, body),
+    chargeRefund:   (id, body)           => this._p(`/loans/${id}/transactions?command=chargeRefund`, body),
+    interestPaymentWaiver: (id, body)    => this._p(`/loans/${id}/transactions?command=interestPaymentWaiver`, body),
+    merchantIssued: (id, body)           => this._p(`/loans/${id}/transactions?command=merchantIssuedRefund`, body),
+    payoutRefund:   (id, body)           => this._p(`/loans/${id}/transactions?command=payoutRefund`, body),
+    refundByCash:   (id, body)           => this._p(`/loans/${id}/transactions?command=refundByCash`, body),
+    refundByTransfer: (id, body)         => this._p(`/loans/${id}/transactions?command=refundByTransfer`, body),
+    waiveInterest:  (id, body)           => this._p(`/loans/${id}/transactions?command=waiveinterest`, body),
+    chargebackTx:   (id, txId, body)     => this._p(`/loans/${id}/transactions/${txId}?command=chargeback`, body),
+    reverseTransaction: (id, txId, body) => this._p(`/loans/${id}/transactions/${txId}?command=reverse`, body || {}),
+    undoTransaction: (id, txId, body)    => this._p(`/loans/${id}/transactions/${txId}?command=undo`, body || {}),
+    adjustTransaction: (id, txId, body)  => this._p(`/loans/${id}/transactions/${txId}?command=adjust`, body),
+    modifyTransaction: (id, txId, body)  => this._u(`/loans/${id}/transactions/${txId}`, body),
+
+    // ---- Schedule ----
+    schedule:       (id)                 => this._g(`/loans/${id}`, { associations: 'repaymentSchedule' }),
+    originalSchedule: (id)               => this._g(`/loans/${id}`, { associations: 'originalSchedule' }),
+    calculateSchedule: (id, body)        => this._p(`/loans/${id}/schedule?command=calculateLoanSchedule`, body),
+    submitVariableSchedule: (id, body)   => this._p(`/loans/${id}/schedule?command=updateSchedule`, body),
+
+    // ---- Charges ----
     addCharge:      (id, body)           => this._p(`/loans/${id}/charges`, body),
     waiveCharge:    (id, cid)            => this._p(`/loans/${id}/charges/${cid}?command=waive`, {}),
     payCharge:      (id, cid, body)      => this._p(`/loans/${id}/charges/${cid}?command=pay`, body),
+    chargeAdjustment: (id, cid, body)    => this._p(`/loans/${id}/charges/${cid}?command=adjustment`, body),
     listCharges:    (id)                 => this._g(`/loans/${id}/charges`),
     deleteCharge:   (id, cid)            => this._d(`/loans/${id}/charges/${cid}`),
+
+    // ---- Collateral ----
     listCollaterals:(id)                 => this._g(`/loans/${id}/collaterals`),
     addCollateral:  (id, body)           => this._p(`/loans/${id}/collaterals`, body),
     deleteCollateral:(id, cid)           => this._d(`/loans/${id}/collaterals/${cid}`),
+
+    // ---- Guarantors ----
     guarantors:     (id)                 => this._g(`/loans/${id}/guarantors`),
+    guarantorTemplate: (id)              => this._g(`/loans/${id}/guarantors/template`),
     addGuarantor:   (id, body)           => this._p(`/loans/${id}/guarantors`, body),
     deleteGuarantor:(id, gid)            => this._d(`/loans/${id}/guarantors/${gid}`),
-    schedule:       (id)                 => this._g(`/loans/${id}`, { associations: 'repaymentSchedule' }),
-    transactions:   (id)                 => this._g(`/loans/${id}/transactions`),
-    transaction:    (id, txId)           => this._g(`/loans/${id}/transactions/${txId}`),
+
+    // ---- Disbursements / Tranches ----
+    disbursements:  (id)                 => this._g(`/loans/${id}/disbursements`),
+    disbursement:   (id, disbId)         => this._g(`/loans/${id}/disbursements/${disbId}`),
+    addDisbursement:(id, body)           => this._u(`/loans/${id}/disbursements`, body),
+    updateDisbursement: (id, disbId, body) => this._u(`/loans/${id}/disbursements/${disbId}`, body),
+
+    // ---- Delinquency ----
     delinquency:    (id)                 => this._g(`/loans/${id}/delinquency-actions`),
     addDelinquencyAction: (id, body)     => this._p(`/loans/${id}/delinquency-actions`, body),
-    standingInstructions: (id)           => this._g(`/loans/${id}?associations=standingInstructions`),
+    delinquencyTags:(id)                 => this._g(`/loans/${id}/delinquency-tags`),
+
+    // ---- Standing Instructions (via association) ----
+    standingInstructions: (id)           => this._g(`/loans/${id}`, { associations: 'standingInstructions' }),
+
+    // ---- Interest pauses (progressive loan) ----
     interestPauses: (id)                 => this._g(`/loans/${id}/interest-pauses`),
     interestPause:  (id, body)           => this._p(`/loans/${id}/interest-pauses`, body),
+    updateInterestPause: (id, vid, body) => this._u(`/loans/${id}/interest-pauses/${vid}`, body),
+    deleteInterestPause: (id, vid)       => this._d(`/loans/${id}/interest-pauses/${vid}`),
+
+    // ---- Buy-down fees & Capitalized income (progressive loan) ----
+    buyDownFees:    (id)                 => this._g(`/loans/${id}/buydown-fees`),
+    buyDownFeeAllocation: (id, txId)     => this._g(`/loans/${id}/buydown-fees/${txId}/allocation`),
+    capitalizedIncomes: (id)             => this._g(`/loans/${id}/capitalized-incomes`),
+    deferredIncome: (id)                 => this._g(`/loans/${id}/deferredincome`),
+
+    // ---- Rescheduling ----
+    rescheduleTemplate: (params)         => this._g('/rescheduleloans/template', params),
+    reschedule:     (body)               => this._p('/rescheduleloans', body),
+    rescheduleRequests: (loanId)         => this._g('/rescheduleloans', { loanId, command: 'pending' }),
+    rescheduleRequest:  (schedId)        => this._g(`/rescheduleloans/${schedId}`),
+    approveReschedule: (id, body)        => this._p(`/rescheduleloans/${id}?command=approve`, body),
+    rejectReschedule:  (id, body)        => this._p(`/rescheduleloans/${id}?command=reject`, body),
+
+    // ---- Post-dated checks ----
+    postDatedChecks:(id)                 => this._g(`/loans/${id}/postdatedchecks`),
+    postDatedCheck: (id, instId)         => this._g(`/loans/${id}/postdatedchecks/${instId}`),
+    updatePostDatedCheck: (id, pdcId, body, editType) =>
+      this._u(`/loans/${id}/postdatedchecks/${pdcId}`, body, { params: editType ? { editType } : undefined }),
+    deletePostDatedCheck: (id, pdcId)    => this._d(`/loans/${id}/postdatedchecks/${pdcId}`),
+
+    // ---- External Asset Owners (per loan) ----
+    eaoList:        (id)                 => this._g(`/loans/${id}/external-asset-owners`),
+    eaoTransfer:    (id, body)           => this._p(`/loans/${id}/external-asset-owners/transfer`, body),
+    eaoBuyBack:     (id, body)           => this._p(`/loans/${id}/external-asset-owners/buy-back`, body),
+
+    // ---- Originators (per loan) ----
+    originators:    (id)                 => this._g(`/loans/${id}/originators`),
+    attachOriginator:(id, originatorId, body) =>
+      this._p(`/loans/${id}/originators/${originatorId}`, body || {}),
+    detachOriginator:(id, originatorId)  => this._d(`/loans/${id}/originators/${originatorId}`),
+
+    // ---- Bulk loan reassignment ----
+    bulkReassign:   (body)               => this._p('/loans/loanreassignment', body),
+    loanReassignTemplate: ()             => this._g('/loans/loanreassignment/template'),
+
+    // ---- Loan at date (point-in-time) ----
+    loanAtDate:     (id, params)         => this._g(`/loans/at-date/${id}`, params),
+
+    // ---- GLIM ----
     glimAccounts:   (id)                 => this._g(`/loans/glimAccount/${id}`),
-    delete:         (id)                 => this._d(`/loans/${id}`)
+
+    // ---- Generic command escape hatch ----
+    command:        (id, cmd, body)      => this._p(`/loans/${id}?command=${cmd}`, body || {})
   };
+
+  delinquencyBuckets = {
+    list:    () => this._g('/delinquency/buckets'),
+    create:  (b) => this._p('/delinquency/buckets', b),
+    ranges:  () => this._g('/delinquency/ranges'),
+    createRange: (b) => this._p('/delinquency/ranges', b),
+    // NEW: read delinquency tag history for a specific loan (used by Loans → Delinquency tab)
+    loanTagHistory: (loanId) => this._g(`/loans/${loanId}/delinquency-tags`)
+  };
+
+
+// ============== LOAN ORIGINATORS (master CRUD) ==============
+  loanOriginators = {
+    list:    (params)      => this._g('/loan-originators', params),
+    get:     (id)          => this._g(`/loan-originators/${id}`),
+    template:()            => this._g('/loan-originators/template'),
+    create:  (body)        => this._p('/loan-originators', body),
+    update:  (id, body)    => this._u(`/loan-originators/${id}`, body),
+    delete:  (id)          => this._d(`/loan-originators/${id}`)
+  };
+
+  // ============== EXTERNAL ASSET OWNERS (master + transfers) ==============
+  externalAssetOwners = {
+    list:           (params)     => this._g('/external-asset-owners', params),
+    get:            (ownerId)    => this._g(`/external-asset-owners/${ownerId}`),
+    create:         (body)       => this._p('/external-asset-owners', body),
+    update:         (ownerId, b) => this._u(`/external-asset-owners/${ownerId}`, b),
+    delete:         (ownerId)    => this._d(`/external-asset-owners/${ownerId}`),
+    journalEntries: (transferId, params) => this._g(`/external-asset-owners/transfers/${transferId}/journal-entries`, params),
+    transferLoans:  (transferId) => this._g(`/external-asset-owners/transfers/${transferId}/loans`),
+    transfers:      (params)     => this._g('/external-asset-owners/transfers', params),
+    transfer:       (transferId) => this._g(`/external-asset-owners/transfers/${transferId}`)
+  };
+
 
   // ============== SAVINGS ==============
   savings = {
@@ -169,8 +345,8 @@ class FineractAPI {
     approve:     (id, body)    => this._p(`/savingsaccounts/${id}?command=approve`, body),
     undoApproval:(id)          => this._p(`/savingsaccounts/${id}?command=undoApproval`, {}),
     reject:      (id, body)    => this._p(`/savingsaccounts/${id}?command=reject`, body),
-    withdrawApplication: (id, body) => this._p(`/savingsaccounts/${id}?command=withdrawnByApplicant`, body), // cancels a pending application — NOT a cash withdrawal
-    withdrawal:  (id, body)    => this._p(`/savingsaccounts/${id}/transactions?command=withdrawal`, body),    // actual cash withdrawal transaction
+    withdrawApplication: (id, body) => this._p(`/savingsaccounts/${id}?command=withdrawnByApplicant`, body),
+    withdrawal:  (id, body)    => this._p(`/savingsaccounts/${id}/transactions?command=withdrawal`, body),
     activate:    (id, body)    => this._p(`/savingsaccounts/${id}?command=activate`, body),
     deposit:     (id, body)    => this._p(`/savingsaccounts/${id}/transactions?command=deposit`, body),
     withdrawTx:  (id, body)    => this._p(`/savingsaccounts/${id}/transactions?command=withdrawal`, body),
@@ -181,10 +357,10 @@ class FineractAPI {
     calculateInterest: (id)    => this._p(`/savingsaccounts/${id}?command=calculateInterest`, {}),
     block:       (id)          => this._p(`/savingsaccounts/${id}?command=block`, {}),
     unblock:     (id)          => this._p(`/savingsaccounts/${id}?command=unblock`, {}),
-    blockDeposit:(id)          => this._p(`/savingsaccounts/${id}?command=blockDeposit`, {}),
-    unblockDeposit:(id)        => this._p(`/savingsaccounts/${id}?command=unblockDeposit`, {}),
-    blockWithdrawal:(id)       => this._p(`/savingsaccounts/${id}?command=blockWithdrawal`, {}),
-    unblockWithdrawal:(id)     => this._p(`/savingsaccounts/${id}?command=unblockWithdrawal`, {}),
+    blockDebit:  (id)          => this._p(`/savingsaccounts/${id}?command=blockDebit`, {}),
+    unblockDebit:(id)          => this._p(`/savingsaccounts/${id}?command=unblockDebit`, {}),
+    blockCredit: (id)          => this._p(`/savingsaccounts/${id}?command=blockCredit`, {}),
+    unblockCredit:(id)         => this._p(`/savingsaccounts/${id}?command=unblockCredit`, {}),
     update:      (id, body)    => this._u(`/savingsaccounts/${id}`, body),
     delete:      (id)          => this._d(`/savingsaccounts/${id}`),
     charges:     (id)          => this._g(`/savingsaccounts/${id}/charges`),
@@ -192,79 +368,220 @@ class FineractAPI {
     transactions:(id)          => this._g(`/savingsaccounts/${id}/transactions`)
   };
 
-  // ============== FIXED & RECURRING DEPOSITS ==============
+// ============== FIXED DEPOSITS ==============
   fixedDeposits = {
     list:     (params)   => this._g('/fixeddepositaccounts', params),
-    get:      (id, params)       => this._g(`/fixeddepositaccounts/${id}`, params),
+    get:      (id, params) => this._g(`/fixeddepositaccounts/${id}`, params),
     template: (params)   => this._g('/fixeddepositaccounts/template', params),
     create:   (body)     => this._p('/fixeddepositaccounts', body),
-    approve:  (id, body) => this._p(`/fixeddepositaccounts/${id}?command=approve`, body),
-    undoApproval:(id)    => this._p(`/fixeddepositaccounts/${id}?command=undoapproval`, {}),
-    reject:   (id, body) => this._p(`/fixeddepositaccounts/${id}?command=reject`, body),
-    activate: (id, body) => this._p(`/fixeddepositaccounts/${id}?command=activate`, body),
-    premature:(id, body) => this._p(`/fixeddepositaccounts/${id}?command=prematureClose`, body),
-    close:    (id, body) => this._p(`/fixeddepositaccounts/${id}?command=close`, body),
+    update:   (id, body) => this._u(`/fixeddepositaccounts/${id}`, body),
+    delete:   (id)       => this._d(`/fixeddepositaccounts/${id}`),
+
+    // ---- Lifecycle ----
+    approve:     (id, body) => this._p(`/fixeddepositaccounts/${id}?command=approve`, body),
+    undoApproval:(id)       => this._p(`/fixeddepositaccounts/${id}?command=undoapproval`, {}),
+    reject:      (id, body) => this._p(`/fixeddepositaccounts/${id}?command=reject`, body),
+    withdrawApplication: (id, body) => this._p(`/fixeddepositaccounts/${id}?command=withdrawnByApplicant`, body),
+    activate:    (id, body) => this._p(`/fixeddepositaccounts/${id}?command=activate`, body),
+    premature:   (id, body) => this._p(`/fixeddepositaccounts/${id}?command=prematureClose`, body),
+    close:       (id, body) => this._p(`/fixeddepositaccounts/${id}?command=close`, body),
+
+    // ---- Premature-close calculator + closure templates ----
+    prematureTemplate: (id) => this._g(`/fixeddepositaccounts/${id}/template`, { command: 'prematureClose' }),
+    closeTemplate:     (id) => this._g(`/fixeddepositaccounts/${id}/template`, { command: 'close' }),
+    withdrawalTemplate:(id) => this._g(`/fixeddepositaccounts/${id}/template`, { command: 'withdrawal' }),
+
+    // ---- Interest ----
     calculateInterest: (id) => this._p(`/fixeddepositaccounts/${id}?command=calculateInterest`, {}),
-    postInterest: (id)   => this._p(`/fixeddepositaccounts/${id}?command=postInterest`, {})
-  };
-  recurringDeposits = {
-    list:     (params)   => this._g('/recurringdepositaccounts', params),
-    get:      (id, params)   => this._g(`/recurringdepositaccounts/${id}`, params),
-    template: (params)   => this._g('/recurringdepositaccounts/template', params),
-    create:   (body)     => this._p('/recurringdepositaccounts', body),
-    approve:  (id, body) => this._p(`/recurringdepositaccounts/${id}?command=approve`, body),
-    activate: (id, body) => this._p(`/recurringdepositaccounts/${id}?command=activate`, body),
-    deposit:  (id, body) => this._p(`/recurringdepositaccounts/${id}/transactions?command=deposit`, body),
-    premature:(id, body) => this._p(`/recurringdepositaccounts/${id}?command=prematureClose`, body)
+    postInterest:      (id) => this._p(`/fixeddepositaccounts/${id}?command=postInterest`, {}),
+
+    // ---- Transactions ----
+    transactions: (id, params) => this._g(`/fixeddepositaccounts/${id}/transactions`, params),
+    transaction:  (id, txId)   => this._g(`/fixeddepositaccounts/${id}/transactions/${txId}`),
+    deposit:      (id, body)   => this._p(`/fixeddepositaccounts/${id}/transactions?command=deposit`, body),
+    withdrawal:   (id, body)   => this._p(`/fixeddepositaccounts/${id}/transactions?command=withdrawal`, body),
+    interestTx:   (id, body)   => this._p(`/fixeddepositaccounts/${id}/transactions?command=interest`, body || {}),
+    prematureTx:  (id, body)   => this._p(`/fixeddepositaccounts/${id}/transactions?command=prematureClose`, body),
+    adjustTransaction: (id, txId, body) => this._p(`/fixeddepositaccounts/${id}/transactions/${txId}?command=adjust`, body),
+    undoTransaction:   (id, txId)       => this._p(`/fixeddepositaccounts/${id}/transactions/${txId}?command=undo`, {}),
+
+    // ---- Charges (mirrors savings charges API) ----
+    charges:      (id)          => this._g(`/fixeddepositaccounts/${id}/charges`),
+    addCharge:    (id, body)    => this._p(`/fixeddepositaccounts/${id}/charges`, body),
+    updateCharge: (id, cid, body) => this._u(`/fixeddepositaccounts/${id}/charges/${cid}`, body),
+    payCharge:    (id, cid, body) => this._p(`/fixeddepositaccounts/${id}/charges/${cid}?command=paycharge`, body),
+    waiveCharge:  (id, cid)     => this._p(`/fixeddepositaccounts/${id}/charges/${cid}?command=waive`, {}),
+    inactivateCharge: (id, cid) => this._p(`/fixeddepositaccounts/${id}/charges/${cid}?command=inactivate`, {}),
+    deleteCharge: (id, cid)     => this._d(`/fixeddepositaccounts/${id}/charges/${cid}`),
+
+    // ---- Generic command escape hatch ----
+    command:      (id, cmd, body) => this._p(`/fixeddepositaccounts/${id}?command=${cmd}`, body || {})
   };
 
-  // ============== SHARES ==============
+ // ============== RECURRING DEPOSITS ==============
+  recurringDeposits = {
+    list:     (params)   => this._g('/recurringdepositaccounts', params),
+    get:      (id, params) => this._g(`/recurringdepositaccounts/${id}`, params),
+    template: (params)   => this._g('/recurringdepositaccounts/template', params),
+    create:   (body)     => this._p('/recurringdepositaccounts', body),
+    update:   (id, body) => this._u(`/recurringdepositaccounts/${id}`, body),
+    delete:   (id)       => this._d(`/recurringdepositaccounts/${id}`),
+
+    // ---- Lifecycle ----
+    approve:     (id, body) => this._p(`/recurringdepositaccounts/${id}?command=approve`, body),
+    undoApproval:(id)       => this._p(`/recurringdepositaccounts/${id}?command=undoapproval`, {}),
+    reject:      (id, body) => this._p(`/recurringdepositaccounts/${id}?command=reject`, body),
+    withdrawApplication: (id, body) => this._p(`/recurringdepositaccounts/${id}?command=withdrawnByApplicant`, body),
+    activate:    (id, body) => this._p(`/recurringdepositaccounts/${id}?command=activate`, body),
+    premature:   (id, body) => this._p(`/recurringdepositaccounts/${id}?command=prematureClose`, body),
+    close:       (id, body) => this._p(`/recurringdepositaccounts/${id}?command=close`, body),
+
+    // ---- Premature-close calculator + closure templates ----
+    prematureTemplate: (id) => this._g(`/recurringdepositaccounts/${id}/template`, { command: 'prematureClose' }),
+    closeTemplate:     (id) => this._g(`/recurringdepositaccounts/${id}/template`, { command: 'close' }),
+    withdrawalTemplate:(id) => this._g(`/recurringdepositaccounts/${id}/template`, { command: 'withdrawal' }),
+
+    // ---- Interest ----
+    calculateInterest: (id) => this._p(`/recurringdepositaccounts/${id}?command=calculateInterest`, {}),
+    postInterest:      (id) => this._p(`/recurringdepositaccounts/${id}?command=postInterest`, {}),
+
+    // ---- Transactions ----
+    transactions: (id, params) => this._g(`/recurringdepositaccounts/${id}/transactions`, params),
+    transaction:  (id, txId)   => this._g(`/recurringdepositaccounts/${id}/transactions/${txId}`),
+    deposit:      (id, body)   => this._p(`/recurringdepositaccounts/${id}/transactions?command=deposit`, body),
+    withdrawal:   (id, body)   => this._p(`/recurringdepositaccounts/${id}/transactions?command=withdrawal`, body),
+    interestTx:   (id, body)   => this._p(`/recurringdepositaccounts/${id}/transactions?command=interest`, body || {}),
+    prematureTx:  (id, body)   => this._p(`/recurringdepositaccounts/${id}/transactions?command=prematureClose`, body),
+    adjustTransaction: (id, txId, body) => this._p(`/recurringdepositaccounts/${id}/transactions/${txId}?command=adjust`, body),
+    undoTransaction:   (id, txId)       => this._p(`/recurringdepositaccounts/${id}/transactions/${txId}?command=undo`, {}),
+
+    // ---- Charges ----
+    charges:      (id)          => this._g(`/recurringdepositaccounts/${id}/charges`),
+    addCharge:    (id, body)    => this._p(`/recurringdepositaccounts/${id}/charges`, body),
+    updateCharge: (id, cid, body) => this._u(`/recurringdepositaccounts/${id}/charges/${cid}`, body),
+    payCharge:    (id, cid, body) => this._p(`/recurringdepositaccounts/${id}/charges/${cid}?command=paycharge`, body),
+    waiveCharge:  (id, cid)     => this._p(`/recurringdepositaccounts/${id}/charges/${cid}?command=waive`, {}),
+    inactivateCharge: (id, cid) => this._p(`/recurringdepositaccounts/${id}/charges/${cid}?command=inactivate`, {}),
+    deleteCharge: (id, cid)     => this._d(`/recurringdepositaccounts/${id}/charges/${cid}`),
+
+    // ---- Generic command escape hatch ----
+    command:      (id, cmd, body) => this._p(`/recurringdepositaccounts/${id}?command=${cmd}`, body || {})
+  };
+
+
+ // ============== SHARES ==============
   shares = {
     list:           (params)   => this._g('/accounts/share', params),
     get:            (id, params) => this._g(`/accounts/share/${id}`, params),
     template:       ()         => this._g('/accounts/share/template'),
     create:         (body)     => this._p('/accounts/share', body),
+    update:         (id, body) => this._u(`/accounts/share/${id}`, body),
+    delete:         (id)       => this._d(`/accounts/share/${id}`),
+
+    // ---- Lifecycle ----
     approve:        (id, body) => this._p(`/accounts/share/${id}?command=approve`, body),
+    undoApproval:   (id)       => this._p(`/accounts/share/${id}?command=undoapproval`, {}),
     reject:         (id, body) => this._p(`/accounts/share/${id}?command=reject`, body),
+    withdrawApplication: (id, body) => this._p(`/accounts/share/${id}?command=withdrawnByApplicant`, body),
     activate:       (id, body) => this._p(`/accounts/share/${id}?command=activate`, body),
+    close:          (id, body) => this._p(`/accounts/share/${id}?command=close`, body),
+
+    // ---- Share operations ----
     applyAdditional:(id, body) => this._p(`/accounts/share/${id}?command=applyadditionalshares`, body),
     redeem:         (id, body) => this._p(`/accounts/share/${id}?command=redeemshares`, body),
-    close:          (id, body) => this._p(`/accounts/share/${id}?command=close`, body),
+
+    // ---- Share-purchase requests (separate from account-level approve) ----
     approveShareReq:(id, body) => this._p(`/accounts/share/${id}?command=approveshare`, body),
     rejectShareReq: (id, body) => this._p(`/accounts/share/${id}?command=rejectshare`, body),
-    dividends:      (id)       => this._g(`/shareproduct/${id}/dividend`),
-    postDividend:   (id, body) => this._p(`/shareproduct/${id}/dividend`, body)
+
+    // ---- Charges ----
+    charges:        (id)          => this._g(`/accounts/share/${id}/charges`),
+    addCharge:      (id, body)    => this._p(`/accounts/share/${id}/charges`, body),
+    updateCharge:   (id, cid, body) => this._u(`/accounts/share/${id}/charges/${cid}`, body),
+    payCharge:      (id, cid, body) => this._p(`/accounts/share/${id}/charges/${cid}?command=paycharge`, body),
+    waiveCharge:    (id, cid)     => this._p(`/accounts/share/${id}/charges/${cid}?command=waive`, {}),
+    inactivateCharge: (id, cid)   => this._p(`/accounts/share/${id}/charges/${cid}?command=inactivate`, {}),
+    deleteCharge:   (id, cid)     => this._d(`/accounts/share/${id}/charges/${cid}`),
+
+    // ---- Dividends (product-level) ----
+    dividends:      (productId)        => this._g(`/shareproduct/${productId}/dividend`),
+    postDividend:   (productId, body)  => this._p(`/shareproduct/${productId}/dividend`, body),
+    approveDividend:(productId, divId) => this._p(`/shareproduct/${productId}/dividend/${divId}?command=approve`, {}),
+    deleteDividend: (productId, divId) => this._d(`/shareproduct/${productId}/dividend/${divId}`),
+
+    // ---- Generic command escape hatch ----
+    command:        (id, cmd, body) => this._p(`/accounts/share/${id}?command=${cmd}`, body || {})
   };
 
-  // ============== GROUPS & CENTERS ==============
+// ============== GROUPS ==============
   groups = {
     list:           (params)   => this._g('/groups', params),
     get:            (id, p)    => this._g(`/groups/${id}`, p),
-    template:       ()         => this._g('/groups/template'),
+    template:       (params)   => this._g('/groups/template', params),
     create:         (body)     => this._p('/groups', body),
     update:         (id, body) => this._u(`/groups/${id}`, body),
     activate:       (id, body) => this._p(`/groups/${id}?command=activate`, body),
     close:          (id, body) => this._p(`/groups/${id}?command=close`, body),
     assignStaff:    (id, body) => this._p(`/groups/${id}?command=assignStaff`, body),
-    unassignStaff:  (id, body) => this._p(`/groups/${id}?command=unassignStaff`, body),
+    unassignStaff:  (id, body) => this._p(`/groups/${id}?command=unassignStaff`, body || {}),
     assignRole:     (id, body) => this._p(`/groups/${id}?command=assignRole`, body),
+    updateRole:     (id, rid, body) => this._p(`/groups/${id}?command=updateRole&roleId=${rid}`, body),
     unassignRole:   (id, rid)  => this._p(`/groups/${id}?command=unassignRole&roleId=${rid}`, {}),
-    associateClients:   (id, body) => this._p(`/groups/${id}?command=associateClients`, body),
-    disassociateClients:(id, body) => this._p(`/groups/${id}?command=disassociateClients`, body),
-    transferClients:(id, body) => this._p(`/groups/${id}?command=transferClients`, body),
+    associateClients:    (id, body) => this._p(`/groups/${id}?command=associateClients`, body),
+    disassociateClients: (id, body) => this._p(`/groups/${id}?command=disassociateClients`, body),
+    transferClients:     (id, body) => this._p(`/groups/${id}?command=transferClients`, body),
+    generateCollectionSheet: (id, body) => this._p(`/groups/${id}?command=generateCollectionSheet`, body),
+    saveCollectionSheet:     (id, body) => this._p(`/groups/${id}?command=saveCollectionSheet`, body),
     accounts:       (id)       => this._g(`/groups/${id}/accounts`),
+    glimAccounts:   (id, parentLoanAccountNo) => this._g(`/groups/${id}/glimaccounts`, parentLoanAccountNo ? { parentLoanAccountNo } : undefined),
+    gsimAccounts:   (id, params) => this._g(`/groups/${id}/gsimaccounts`, params),
+    // ---- Group charges ----
+    charges:        (id, params) => this._g(`/groups/${id}/charges`, params),
+    addCharge:      (id, body)   => this._p(`/groups/${id}/charges`, body),
+    payCharge:      (id, cid, body) => this._p(`/groups/${id}/charges/${cid}?command=paycharge`, body),
+    waiveCharge:    (id, cid, body) => this._p(`/groups/${id}/charges/${cid}?command=waive`, body || {}),
+    deleteCharge:   (id, cid)    => this._d(`/groups/${id}/charges/${cid}`),
     delete:         (id)       => this._d(`/groups/${id}`)
   };
-  centers = {
-    list:     (params)   => this._g('/centers', params),
+
+ centers = {
+    list:     (params)     => this._g('/centers', params),
     get:      (id, params) => this._g(`/centers/${id}`, params),
-    template: ()         => this._g('/centers/template'),
-    create:   (body)     => this._p('/centers', body),
-    update:   (id, body) => this._u(`/centers/${id}`, body),
-    activate: (id, body) => this._p(`/centers/${id}?command=activate`, body),
-    close:    (id, body) => this._p(`/centers/${id}?command=close`, body),
+    template: (params)     => this._g('/centers/template', params),       // ← now accepts officeId/staffId/command
+    create:   (body)       => this._p('/centers', body),
+    update:   (id, body)   => this._u(`/centers/${id}`, body),
+    delete:   (id)         => this._d(`/centers/${id}`),
+    activate: (id, body)   => this._p(`/centers/${id}?command=activate`, body),
+    close:    (id, body)   => this._p(`/centers/${id}?command=close`, body),
     associateGroups:    (id, body) => this._p(`/centers/${id}?command=associateGroups`, body),
-    disassociateGroups: (id, body) => this._p(`/centers/${id}?command=disassociateGroups`, body)
+    disassociateGroups: (id, body) => this._p(`/centers/${id}?command=disassociateGroups`, body),
+    generateCollectionSheet: (id, body) => this._p(`/centers/${id}?command=generateCollectionSheet`, body),
+    saveCollectionSheet:     (id, body) => this._p(`/centers/${id}?command=saveCollectionSheet`, body),
+    accounts: (id) => this._g(`/centers/${id}/accounts`)                  // ← added for symmetry with groups
+  };
+// ============== CALENDARS (generic — entityType: groups | centers | clients | loans | offices) ==============
+  calendars = {
+    list:   (entityType, entityId, params) => this._g(`/${entityType}/${entityId}/calendars`, params),
+    get:    (entityType, entityId, calendarId) => this._g(`/${entityType}/${entityId}/calendars/${calendarId}`),
+    create: (entityType, entityId, body)   => this._p(`/${entityType}/${entityId}/calendars`, body),
+    update: (entityType, entityId, calendarId, body) => this._u(`/${entityType}/${entityId}/calendars/${calendarId}`, body),
+    delete: (entityType, entityId, calendarId)       => this._d(`/${entityType}/${entityId}/calendars/${calendarId}`)
+  };
+
+  // ============== MEETINGS (generic — entityType: groups | centers | clients) ==============
+  meetings = {
+    list:   (entityType, entityId, params) => this._g(`/${entityType}/${entityId}/meetings`, params),
+    get:    (entityType, entityId, meetingId) => this._g(`/${entityType}/${entityId}/meetings/${meetingId}`),
+    create: (entityType, entityId, body)   => this._p(`/${entityType}/${entityId}/meetings`, body),
+    update: (entityType, entityId, meetingId, body) => this._u(`/${entityType}/${entityId}/meetings/${meetingId}`, body),
+    delete: (entityType, entityId, meetingId)       => this._d(`/${entityType}/${entityId}/meetings/${meetingId}`),
+    saveAttendance: (entityType, entityId, meetingId, body) =>
+      this._p(`/${entityType}/${entityId}/meetings/${meetingId}?command=saveOrUpdateAttendance`, body)
+  };
+
+  // ============== GROUP LEVELS (read-only) ==============
+  groupLevels = {
+    list: () => this._g('/grouplevels')
   };
 
   // ============== ORGANIZATION ==============
@@ -299,17 +616,20 @@ class FineractAPI {
     update: (id, b)  => this._u(`/charges/${id}`, b),
     delete: (id)     => this._d(`/charges/${id}`)
   };
-  taxComponents = {
-    list:   () => this._g('/taxes/component'),
-    get:    (id) => this._g(`/taxes/component/${id}`),
-    create: (b) => this._p('/taxes/component', b),
-    update: (id, b) => this._u(`/taxes/component/${id}`, b)
+taxComponents = {
+    list:     () => this._g('/taxes/component'),
+    get:      (id) => this._g(`/taxes/component/${id}`),
+    template: () => this._g('/taxes/component/template'),
+    create:   (b) => this._p('/taxes/component', b),
+    update:   (id, b) => this._u(`/taxes/component/${id}`, b)
   };
+
   taxGroups = {
-    list:   () => this._g('/taxes/group'),
-    get:    (id) => this._g(`/taxes/group/${id}`),
-    create: (b) => this._p('/taxes/group', b),
-    update: (id, b) => this._u(`/taxes/group/${id}`, b)
+    list:     () => this._g('/taxes/group'),
+    get:      (id) => this._g(`/taxes/group/${id}`),
+    template: () => this._g('/taxes/group/template'),
+    create:   (b) => this._p('/taxes/group', b),
+    update:   (id, b) => this._u(`/taxes/group/${id}`, b)
   };
   codes = {
     list:    ()           => this._g('/codes'),
@@ -346,63 +666,84 @@ class FineractAPI {
   workingDays = { get: () => this._g('/workingdays'), update: (b) => this._u('/workingdays', b) };
 
   // ============== PRODUCTS ==============
-  loanProducts = {
+loanProducts = {
     list:     ()       => this._g('/loanproducts'),
     get:      (id)     => this._g(`/loanproducts/${id}`),
-    template: ()       => this._g('/loanproducts/template'),
+    template: (params) => this._g('/loanproducts/template', params),
     create:   (b)      => this._p('/loanproducts', b),
-    update:   (id, b)  => this._u(`/loanproducts/${id}`, b)
+    update:   (id, b)  => this._u(`/loanproducts/${id}`, b),
+    delete:   (id)     => this._d(`/loanproducts/${id}`)
   };
-  savingsProducts = {
+savingsProducts = {
     list:     ()       => this._g('/savingsproducts'),
     get:      (id)     => this._g(`/savingsproducts/${id}`),
-    template: ()       => this._g('/savingsproducts/template'),
+    template: (params) => this._g('/savingsproducts/template', params),
     create:   (b)      => this._p('/savingsproducts', b),
-    update:   (id, b)  => this._u(`/savingsproducts/${id}`, b)
+    update:   (id, b)  => this._u(`/savingsproducts/${id}`, b),
+    delete:   (id)     => this._d(`/savingsproducts/${id}`)
   };
+
   shareProducts = {
     list:     ()       => this._g('/products/share'),
     get:      (id)     => this._g(`/products/share/${id}`),
-    template: ()       => this._g('/products/share/template'),
+    template: (params) => this._g('/products/share/template', params),
     create:   (b)      => this._p('/products/share', b),
-    update:   (id, b)  => this._u(`/products/share/${id}`, b)
+    update:   (id, b)  => this._u(`/products/share/${id}`, b),
+    delete:   (id)     => this._d(`/products/share/${id}`)
   };
+
   fdProducts = {
     list:     ()       => this._g('/fixeddepositproducts'),
     get:      (id)     => this._g(`/fixeddepositproducts/${id}`),
-    template: ()       => this._g('/fixeddepositproducts/template'),
+    template: (params) => this._g('/fixeddepositproducts/template', params),
     create:   (b)      => this._p('/fixeddepositproducts', b),
-    update:   (id, b)  => this._u(`/fixeddepositproducts/${id}`, b)
+    update:   (id, b)  => this._u(`/fixeddepositproducts/${id}`, b),
+    delete:   (id)     => this._d(`/fixeddepositproducts/${id}`)
   };
+
   rdProducts = {
     list:     ()       => this._g('/recurringdepositproducts'),
     get:      (id)     => this._g(`/recurringdepositproducts/${id}`),
-    template: ()       => this._g('/recurringdepositproducts/template'),
+    template: (params) => this._g('/recurringdepositproducts/template', params),
     create:   (b)      => this._p('/recurringdepositproducts', b),
-    update:   (id, b)  => this._u(`/recurringdepositproducts/${id}`, b)
+    update:   (id, b)  => this._u(`/recurringdepositproducts/${id}`, b),
+    delete:   (id)     => this._d(`/recurringdepositproducts/${id}`)
   };
-  productMix = {
-    list:     (id)     => this._g(`/loanproducts/${id}/productmix`),
+productMix = {
+    list:     ()       => this._g('/loanproducts'),  // products with productMixes association
+    get:      (id)     => this._g(`/loanproducts/${id}/productmix`),
+    template: (id)     => this._g(`/loanproducts/${id}/productmix/template`),
     create:   (id, b)  => this._p(`/loanproducts/${id}/productmix`, b),
     update:   (id, b)  => this._u(`/loanproducts/${id}/productmix`, b),
     delete:   (id)     => this._d(`/loanproducts/${id}/productmix`)
   };
-  floatingRates = {
+floatingRates = {
     list:   ()        => this._g('/floatingrates'),
     get:    (id)      => this._g(`/floatingrates/${id}`),
     create: (b)       => this._p('/floatingrates', b),
-    update: (id, b)   => this._u(`/floatingrates/${id}`, b)
+    update: (id, b)   => this._u(`/floatingrates/${id}`, b),
+    delete: (id)      => this._d(`/floatingrates/${id}`)
   };
-  delinquencyBuckets = {
-    list:    () => this._g('/delinquency/buckets'),
-    create:  (b) => this._p('/delinquency/buckets', b),
-    ranges:  () => this._g('/delinquency/ranges'),
-    createRange: (b) => this._p('/delinquency/ranges', b)
+ delinquencyBuckets = {
+    list:        ()       => this._g('/delinquency/buckets'),
+    get:         (id)     => this._g(`/delinquency/buckets/${id}`),
+    create:      (b)      => this._p('/delinquency/buckets', b),
+    update:      (id, b)  => this._u(`/delinquency/buckets/${id}`, b),
+    delete:      (id)     => this._d(`/delinquency/buckets/${id}`),
+    ranges:      ()       => this._g('/delinquency/ranges'),
+    range:       (id)     => this._g(`/delinquency/ranges/${id}`),
+    createRange: (b)      => this._p('/delinquency/ranges', b),
+    updateRange: (id, b)  => this._u(`/delinquency/ranges/${id}`, b),
+    deleteRange: (id)     => this._d(`/delinquency/ranges/${id}`),
+    loanTagHistory: (loanId) => this._g(`/loans/${loanId}/delinquency-tags`)
   };
-  collateralManagement = {
-    list:   () => this._g('/collateral-management'),
-    create: (b) => this._p('/collateral-management', b),
-    update: (id, b) => this._u(`/collateral-management/${id}`, b)
+collateralManagement = {
+    list:     (params)   => this._g('/collateral-management', params),
+    get:      (id)       => this._g(`/collateral-management/${id}`),
+    template: ()         => this._g('/collateral-management/template'),
+    create:   (body)     => this._p('/collateral-management', body),
+    update:   (id, body) => this._u(`/collateral-management/${id}`, body),
+    delete:   (id)       => this._d(`/collateral-management/${id}`)
   };
 
   // ============== ACCOUNTING ==============
@@ -455,9 +796,6 @@ class FineractAPI {
     update: (id, b) => this._u(`/financialactivityaccounts/${id}`, b),
     delete: (id)   => this._d(`/financialactivityaccounts/${id}`)
   };
-  // NOTE: GL period closures are handled by glClosures above (requires officeId, confirmed
-  // against Fineract's GlClosuresApiResource). Removed a duplicate, unused, less-correct
-  // accountingClosure group that hit the same /glclosures endpoint without that requirement.
 
   // ============== REPORTS ==============
   reports = {
@@ -470,14 +808,14 @@ class FineractAPI {
   runReports = {
     // NOTE: passing parameterType=true returns the report's *parameter definitions*
     // (dropdown options etc), not actual report data — must be omitted to get real rows.
-    run: (name, params = {}, opts = {}) => {
-      const query = {
-        ...(opts.parameterType ? { parameterType: true } : { 'output-type': opts.outputType || 'JSON' }),
-        ...params
-      };
-      return this._g(`/runreports/${encodeURIComponent(name)}`, query, opts);
-    },
-    parameters: (name) => this._g(`/runreports/${encodeURIComponent(name)}`, { parameterType: true })
+    run: (name, params, opts) => this._g(`/runreports/${encodeURIComponent(name)}`,
+                                   { 'output-type': 'JSON', ...params }, opts)
+  };
+  collectionSheet = {
+    /** GET /collectionsheet — returns center→group→client→loan tree */
+    get: (params) => this._g('/collectionsheet', params),
+    /** POST /collectionsheet?command=save — bulk post repayments */
+    save: (body)  => this._p('/collectionsheet?command=save', body)
   };
   adhocQueries = {
     list:    () => this._g('/adhocquery'),
@@ -488,10 +826,25 @@ class FineractAPI {
     runAll:  () => this._p('/adhocquery?command=execute', {})
   };
 
+  // ============== ENTITY DATATABLE CHECKS ==============
+  entityDatatableChecks = {
+    list:     (params) => this._g('/entityDatatableChecks', params),
+    template: ()       => this._g('/entityDatatableChecks/template'),
+    create:   (body)   => this._p('/entityDatatableChecks', body),
+    delete:   (id)     => this._d(`/entityDatatableChecks/${id}`)
+  };
+
+  // ============== FUNDS ==============
+  funds = {
+    list:    ()       => this._g('/funds'),
+    get:     (id)     => this._g(`/funds/${id}`),
+    create:  (body)   => this._p('/funds', body),
+    update:  (id, b)  => this._u(`/funds/${id}`, b)
+  };
+
   // ============== USERS, ROLES, PERMISSIONS ==============
   users = {
     list:   ()       => this._g('/users'),
-    self:   ()       => this._g('/users/self').catch(() => this._g('/users/me')),
     get:    (id)     => this._g(`/users/${id}`),
     template:()      => this._g('/users/template'),
     create: (body)   => this._p('/users', body),
@@ -549,6 +902,42 @@ class FineractAPI {
     }
   };
 
+// ============== SURVEYS (full CRUD) ==============
+  surveysAdmin = {
+    list:       () => this._g('/surveys'),
+    get:        (id) => this._g(`/surveys/${id}`),
+    template:   () => this._g('/surveys/template'),
+    create:     (body) => this._p('/surveys', body),
+    update:     (id, b) => this._u(`/surveys/${id}`, b),
+    delete:     (id) => this._d(`/surveys/${id}`),
+    activate:   (id) => this._p(`/surveys/${id}?command=activate`, {}),
+    deactivate: (id) => this._p(`/surveys/${id}?command=deactivate`, {})
+  };
+
+
+// ============== MAKER-CHECKER TASK CONFIGURATION ==============
+  makerCheckerTasks = {
+    list:   () => this._g('/makercheckerpermissions'),
+    update: (body) => this._u('/makercheckerpermissions', body)
+  };
+
+  // ============== ENTITY-TO-ENTITY MAPPING ==============
+  entityToEntityMappings = {
+    list:     ()                  => this._g('/entitytoentitymapping'),
+    get:      (mappingTypeId)     => this._g(`/entitytoentitymapping/${mappingTypeId}`),
+    update:   (mappingTypeId, b)  => this._u(`/entitytoentitymapping/${mappingTypeId}`, b)
+  };
+
+  // ============== ACCOUNT NUMBER PREFERENCES ==============
+  accountNumberPreferences = {
+    list:     ()         => this._g('/accountnumberformats'),
+    get:      (id)       => this._g(`/accountnumberformats/${id}`),
+    template: ()         => this._g('/accountnumberformats/template'),
+    create:   (body)     => this._p('/accountnumberformats', body),
+    update:   (id, body) => this._u(`/accountnumberformats/${id}`, body),
+    delete:   (id)       => this._d(`/accountnumberformats/${id}`)
+  };
+
   // ============== NOTIFICATIONS, HOOKS, EXTERNAL SVC ==============
   notifications = {
     list:     (params) => this._g('/notifications', params),
@@ -564,16 +953,17 @@ class FineractAPI {
     delete:  (id)      => this._d(`/hooks/${id}`)
   };
   externalServices = {
-    sms:        { list: () => this._g('/externalservice/SMS'),        update: (b) => this._u('/externalservice/SMS', b) },
-    email:      { list: () => this._g('/externalservice/SMTP'),       update: (b) => this._u('/externalservice/SMTP', b) },
-    smtpEmail:  { list: () => this._g('/externalservice/SMTP'),       update: (b) => this._u('/externalservice/SMTP', b) },
-    s3:         { list: () => this._g('/externalservice/S3'),         update: (b) => this._u('/externalservice/S3', b) },
-    notification:{list: () => this._g('/externalservice/NOTIFICATION'),update: (b) => this._u('/externalservice/NOTIFICATION', b) }
+    sms:         { list: () => this._g('/externalservice/SMS'),         update: (b) => this._u('/externalservice/SMS', b) },
+    email:       { list: () => this._g('/externalservice/SMTP'),        update: (b) => this._u('/externalservice/SMTP', b) },
+    smtpEmail:   { list: () => this._g('/externalservice/SMTP'),        update: (b) => this._u('/externalservice/SMTP', b) },
+    s3:          { list: () => this._g('/externalservice/S3'),          update: (b) => this._u('/externalservice/S3', b) },
+    notification:{ list: () => this._g('/externalservice/NOTIFICATION'),update: (b) => this._u('/externalservice/NOTIFICATION', b) }
   };
-  externalEvents = {
-    list: (params) => this._g('/externalevents', params),
-    configurations: () => this._g('/externalevents/configuration'),
-    updateConfig: (b) => this._u('/externalevents/configuration', b)
+ externalEvents = {
+    list:           (params) => this._g('/externalevents', params),
+    get:            (id)     => this._g(`/externalevents/${id}`),
+    configurations: ()       => this._g('/externalevents/configuration'),
+    updateConfig:   (b)      => this._u('/externalevents/configuration', b)
   };
   smsCampaigns = {
     list: () => this._g('/smscampaigns'),
@@ -587,22 +977,43 @@ class FineractAPI {
     reactivate: (id) => this._p(`/smscampaigns/${id}?command=reactivate`, {})
   };
 
-  // ============== DATA TABLES, SURVEYS, SELF-SERVICE ==============
-  dataTables = {
-    list:       ()                 => this._g('/datatables'),
-    get:        (name)             => this._g(`/datatables/${name}`),
-    register:   (name, app, body)  => this._p(`/datatables/register/${name}/${app}`, body),
-    deregister: (name)             => this._p(`/datatables/deregister/${name}`, {}),
-    query:      (name, entityId)   => this._g(`/datatables/${name}/${entityId}`),
-    create:     (body)             => this._p('/datatables', body),
-    update:     (name, eid, body)  => this._u(`/datatables/${name}/${eid}`, body),
-    delete:     (name, eid)        => this._d(`/datatables/${name}/${eid}`),
-    deleteTable:(name)             => this._d(`/datatables/${name}`)
+  currencies = {
+    list:     () => this._g('/currencies'),
+    all:      () => this._g('/currencies?fields=selectedCurrencyOptions,currencyOptions'),
+    template: () => this._g('/currencies?fields=currencyOptions'),
+    update:   (body) => this._u('/currencies', body)
   };
-  surveys = {
-    list: () => this._g('/surveys'),
-    get:  (id) => this._g(`/surveys/${id}`),
-    fullDetail: (id) => this._g(`/surveys/${id}/scorecards`)
+
+
+  // ============== TEMPLATES (User-Generated Document templates) ==============
+  templates = {
+    list:           ()       => this._g('/templates'),
+    get:            (id)     => this._g(`/templates/${id}`),
+    template:       ()       => this._g('/templates/template'),
+    templateForEdit:(id)     => this._g(`/templates/${id}/template`),
+    create:         (body)   => this._p('/templates', body),
+    update:         (id, b)  => this._u(`/templates/${id}`, b),
+    delete:         (id)     => this._d(`/templates/${id}`),
+    // Preview/merge: POST /templates/{id} (no command needed in newer versions)
+    preview:        (id, body) => this._p(`/templates/${id}`, body || {})
+  };
+
+
+  
+
+
+  // ============== DATA TABLES, SURVEYS, SELF-SERVICE ==============
+dataTables = {
+    list:       ()                  => this._g('/datatables'),
+    get:        (name)              => this._g(`/datatables/${name}`),
+    register:   (name, app, body)   => this._p(`/datatables/register/${name}/${app}`, body),
+    deregister: (name)              => this._p(`/datatables/deregister/${name}`, {}),
+    query:      (name, entityId)    => this._g(`/datatables/${name}/${entityId}`),
+    create:     (body)              => this._p('/datatables', body),
+    updateSchema:(name, body)       => this._u(`/datatables/${name}`, body),   // ← NEW: add/change/drop columns
+    update:     (name, eid, body)   => this._u(`/datatables/${name}/${eid}`, body),
+    delete:     (name, eid)         => this._d(`/datatables/${name}/${eid}`),
+    deleteTable:(name)              => this._d(`/datatables/${name}`)
   };
   selfService = {
     users:        ()      => this._g('/self/userdetails'),
@@ -616,6 +1027,12 @@ class FineractAPI {
   };
 
   // ============== SEARCH ==============
+  search = {
+    search: (query, resource = 'clients,loans,groups') =>
+      this._g('/search', { query, resource }),
+    advanced: (body) => this._p('/search/advance', body)
+  };
+
   // ============== BATCH API ==============
   // Fineract's /batches endpoint bundles multiple requests into one HTTP call.
   // enclosingTransaction=true makes the whole batch atomic — if any single request
@@ -661,6 +1078,7 @@ class FineractAPI {
     update:   (entityType, entityId, docId, formData) => this._req('PUT', `/${entityType}/${entityId}/documents/${docId}`, { body: formData }),
     delete:   (entityType, entityId, docId)       => this._d(`/${entityType}/${entityId}/documents/${docId}`)
   };
+
   // Profile/ID photo — a separate, simpler endpoint from generic Documents above.
   // Confirmed against Fineract's own API docs: multipart field name must be "file",
   // or alternatively a raw base64 data-URI string with Content-Type: text/plain.
@@ -678,12 +1096,6 @@ class FineractAPI {
     create: (entityType, entityId, body)   => this._p(`/${entityType}/${entityId}/notes`, body),
     update: (entityType, entityId, noteId, body) => this._u(`/${entityType}/${entityId}/notes/${noteId}`, body),
     delete: (entityType, entityId, noteId) => this._d(`/${entityType}/${entityId}/notes/${noteId}`)
-  };
-
-  search = {
-    search: (query, resource = 'clients,loans,groups') =>
-      this._g('/search', { query, resource }),
-    advanced: (body) => this._p('/search/advance', body)
   };
 
   // ============== TRANSFERS, STANDING INSTRUCTIONS ==============
@@ -718,9 +1130,15 @@ class FineractAPI {
   // ============== BULK IMPORTS ==============
   // Confirmed against a real production error path (openMF/community-app#3311):
   // /{entity}/uploadtemplate and /{entity}/downloadtemplate are the real endpoints.
-  bulkImports = {
+bulkImports = {
     template: (entity)        => this._g(`/${entity}/downloadtemplate`),
-    upload:   (entity, formData) => this._req('POST', `/${entity}/uploadtemplate`, { body: formData, headers: {} })
+    upload:   (entity, formData) => this._req('POST', `/${entity}/uploadtemplate`, { body: formData, headers: {} }),
+    // ---- Generic /imports endpoints ----
+    list:     (params)        => this._g('/imports', params),
+    get:      (importId)      => this._g(`/imports/${importId}`),
+    delete:   (importId)      => this._d(`/imports/${importId}`),
+    download: (importId)      => this._req('GET', `/imports/${importId}/downloadOutputTemplate`, { raw: true }),
+    types:    ()              => this._g('/imports/getEntityTypes')
   };
 
   // ============== CATCH-ALL ==============

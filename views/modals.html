@@ -715,21 +715,18 @@
       <h3 class="modal-title">Run Report: <span id="run-report-name">—</span></h3>
       <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
     <div class="modal-body">
-      <form id="runReportForm">
-        <div class="form-grid">
-          <label><span class="form-label">From date</span><input type="date" name="R_startDate" id="rep-from" class="form-control"/></label>
-          <label><span class="form-label">To date</span><input type="date" name="R_endDate" id="rep-to" class="form-control"/></label>
-          <label><span class="form-label">Office</span>
-            <select class="form-control" name="R_officeId" data-populate="offices"></select></label>
-          <label><span class="form-label">Output format</span>
-            <select class="form-control" name="outputFormat" id="rep-fmt">
-              <option value="JSON">JSON (Preview)</option>
-              <option value="XLS">Excel (Download)</option>
-              <option value="PDF">PDF (Download)</option>
-            </select></label>
-        </div>
-        <div id="run-report-params" class="form-grid mt-3"></div>
-      </form>
+      <div class="form-grid">
+        <label><span class="form-label">From date</span><input type="date" id="rep-from" class="form-control"/></label>
+        <label><span class="form-label">To date</span><input type="date" id="rep-to" class="form-control"/></label>
+        <label><span class="form-label">Office</span>
+          <select class="form-control" data-populate="offices"></select></label>
+        <label><span class="form-label">Output format</span>
+          <select class="form-control" id="rep-fmt">
+            <option value="JSON">JSON (Preview)</option>
+            <option value="XLS">Excel (Download)</option>
+            <option value="PDF">PDF (Download)</option>
+          </select></label>
+      </div>
       <div id="rep-output" class="mt-4"></div>
     </div>
     <div class="modal-foot">

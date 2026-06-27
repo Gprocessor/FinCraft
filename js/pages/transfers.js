@@ -73,5 +73,73 @@ export async function render(c) {
         <td>${sb(s.status?.value || '—')}</td></tr>`).join('')
     : '<tr><td colspan="6"><div class="empty-state"><i class="fa-solid fa-calendar-check"></i><div>No standing instructions</div></div></td></tr>';
 
-  c.querySelector('#newSIBtn').addEventListener('click', () => openModal('newSIModal'));
+  c.querySelector('#newSIBtn').addEventListener('click', () => {
+    openStandingInstructionModal(() => render(c));
+  });
+}
+
+async function openStandingInstructionModal(onSuccess) {
+  const { render: _unused, ...rest } = await import('./organization.js').catch(() => ({}));
+  // Fallback: dynamic import the SI modal from organization.js
+  const mod = await import('./organization.js');
+  if (mod && typeof mod._openSIModal === 'function') {
+    mod._openSIModal(onSuccess);
+  } else {
+    // Inline minimal SI modal so transfers.js stays self-contained
+    const { api } = await import('../api.js');
+    const { toast } = await import('../ui.js');
+    const { LOCALE, DATE_FORMAT } = await import('../config.js');
+    const { escapeHtml } = await import('../utils.js');
+    let tpl = {};
+    try { tpl = await api.standingInstructions.template(); } catch {}
+    const recurrenceTypes = (tpl.recurrenceTypeOptions || []).map(o => `<option value="${o.id}">${escapeHtml(o.value)}</option>`).join('') || '<option value="1">Periodic</option><option value="2">Fixed</option>';
+    const mid = 'si-tr-' + Date.now();
+    const modalEl = document.createElement('div');
+    modalEl.id = mid;
+    modalEl.className = 'modal-overlay open';
+    modalEl.innerHTML = `
+      <div class="modal modal-lg">
+        <div class="modal-header"><h3>New Standing Instruction</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <label>Instruction name * <input id="si-name" class="form-control" required/></label>
+            <label>From account no * <input id="si-from" class="form-control" required/></label>
+            <label>To account no * <input id="si-to" class="form-control" required/></label>
+            <label>Amount * <input type="number" step="0.01" id="si-amount" class="form-control" required/></label>
+            <label>Recurrence type <select id="si-rec-type" class="form-control">${recurrenceTypes}</select></label>
+            <label>Frequency <input type="number" id="si-freq" class="form-control" value="1"/></label>
+            <label>Valid from * <input type="date" id="si-valid-from" class="form-control" required/></label>
+            <label>Valid to <input type="date" id="si-valid-to" class="form-control"/></label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="si-save">Create</button>
+        </div>
+      </div>`;
+    document.getElementById('modalRoot').appendChild(modalEl);
+    modalEl.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => modalEl.remove()));
+    modalEl.querySelector('#si-save').addEventListener('click', async () => {
+      const name = modalEl.querySelector('#si-name').value.trim();
+      const fromAccountNumber = modalEl.querySelector('#si-from').value.trim();
+      const toAccountNumber = modalEl.querySelector('#si-to').value.trim();
+      const amount = parseFloat(modalEl.querySelector('#si-amount').value);
+      const validFrom = modalEl.querySelector('#si-valid-from').value;
+      if (!name || !fromAccountNumber || !toAccountNumber || isNaN(amount) || !validFrom) {
+        toast('warn', 'Fill required fields', ''); return;
+      }
+      try {
+        await api.standingInstructions.create({
+          name, amount, locale: LOCALE, dateFormat: DATE_FORMAT,
+          fromAccountNumber, toAccountNumber, validFrom,
+          recurrenceType: parseInt(modalEl.querySelector('#si-rec-type').value) || 1,
+          recurrenceFrequency: parseInt(modalEl.querySelector('#si-freq').value) || 1,
+          validTo: modalEl.querySelector('#si-valid-to').value || undefined
+        });
+        toast('success', 'Standing instruction created', name);
+        modalEl.remove();
+        if (onSuccess) onSuccess();
+      } catch (e) { toast('error', 'Failed', e.message || String(e)); }
+    });
+  }
 }
