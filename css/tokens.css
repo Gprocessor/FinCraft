@@ -64,3 +64,9 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .flex-wrap{flex-wrap:wrap}
 .form-check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);cursor:pointer}
 .form-check input[type="checkbox"]{accent-color:var(--brand-teal);width:15px;height:15px;cursor:pointer}
+
+/* ---- Heading resets ---- */
+h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 700; color: var(--text-1); }
+h1 { font-size: 22px; letter-spacing: -0.4px; }
+h2 { font-size: 18px; letter-spacing: -0.3px; }
+h3 { font-size: 15px; }

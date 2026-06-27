@@ -654,3 +654,81 @@ textarea.form-control { resize: vertical; }
   .page-title  { font-size: 18px; }
   .stat-grid   { grid-template-columns: 1fr; }
 }
+
+/* ---- DASHBOARD ---- */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.kpi-card {
+  background: var(--bg-card); border: 1px solid var(--border-1);
+  border-radius: 16px; padding: 20px 22px;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+.kpi-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text-3); margin-bottom: 8px;
+}
+.kpi-value {
+  font-family: var(--font-mono); font-size: 28px; font-weight: 500;
+  color: var(--text-1); letter-spacing: -1px; line-height: 1;
+  min-height: 28px;
+}
+.kpi-foot { font-size: 11px; margin-top: 6px; }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+/* ---- SKELETON LOADING ---- */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton-bar {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--border-1) 25%, var(--bg-card-alt) 50%, var(--border-1) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* ---- TABLE alias (.table = .tbl) ---- */
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  background: var(--bg-card-alt); padding: 9px 14px;
+  text-align: left; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-3); border-bottom: 1px solid var(--border-1); white-space: nowrap;
+}
+.table td { padding: 11px 14px; border-bottom: 1px solid var(--border-1); font-size: 13px; color: var(--text-1); vertical-align: middle; }
+.table tr:last-child td { border-bottom: none; }
+.table tbody tr { transition: background 200ms ease; }
+.table tbody tr:hover { background: rgba(0,201,177,.04); }
+
+/* ---- ACTIVITY LIST (dashboard/notifications) ---- */
+.activity-list { list-style: none; padding: 0; margin: 0; }
+.activity-list li {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 18px; border-bottom: 1px solid var(--border-1);
+  font-size: 13px;
+}
+.activity-list li:last-child { border-bottom: none; }
+.activity-list li i { color: var(--text-3); margin-top: 2px; flex-shrink: 0; font-size: 12px; }
+.activity-list .avatar { flex-shrink: 0; }
+
+/* ---- USER CELL (table with avatar + name) ---- */
+.user-cell { display: flex; align-items: center; gap: 8px; }
+.user-cell .avatar { width: 28px; height: 28px; font-size: 10px; border-radius: 99px; flex-shrink: 0; }
+.user-cell a { color: var(--text-1); text-decoration: none; }
+.user-cell a:hover { color: var(--brand-teal); }
+
+/* ---- EMPTY STATE ROW ---- */
+.empty-state-row { padding: 20px; text-align: center; color: var(--text-3); font-size: 13px; }
+
+/* ---- MISC ---- */
+.small { font-size: 11px; }
+.text-error { color: #f87171; }

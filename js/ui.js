@@ -13,12 +13,18 @@ const NAV_GROUPS = [
   { title: 'Admin', items: ['products','charges','organization','system','users','datatables','templates','self-service','notifications','profile','settings'] }
 ];
 
-/** Visible if user has the page's required permission (null = always show to authenticated users). */
+/** Visible if user has the page's required permission.
+ *  If the server returned 0 permissions (empty array), we show all nav items
+ *  so authenticated users aren't left with a blank sidebar. Permission
+ *  checks on individual actions within pages still apply. */
 function _isNavVisible(pageKey) {
   const def = PAGE_REGISTRY[pageKey];
   if (!def) return false;
   const need = def.requiredPermission;
   if (need === null || need === undefined) return true;
+  const perms = store.get('perms') || [];
+  // If no permissions loaded yet, show everything to avoid blank sidebar.
+  if (perms.length === 0) return true;
   const codes = Array.isArray(need) ? need : [need];
   return codes.some(c => store.hasPermission(c));
 }
