@@ -80,23 +80,23 @@ export function mountAppShell() {
     <div class="nav-scrim" id="navScrim"></div>
 
     <header class="topbar">
-      toggle-sidebar
+      <button class="icon-btn" data-action="toggle-sidebar" title="Toggle sidebar">
         <i class="fa-solid fa-bars"></i>
       </button>
 
       <nav class="breadcrumb" id="breadcrumb"><b>Home</b></nav>
 
-      <div class="topbar-search">
+      <div class="topbar-search top-search">
         <i class="fa-solid fa-magnifying-glass"></i>
         <input id="globalSearch" type="search" placeholder="Search clients, loans, groups…" autocomplete="off" />
         <div class="search-results" id="globalSearchResults" hidden></div>
       </div>
 
-      open-cmd
+      <button class="icon-btn" data-action="open-cmd" title="Command palette (Ctrl+K)">
         <i class="fa-solid fa-keyboard"></i>
       </button>
 
-      toggle-theme
+      <button class="icon-btn" data-action="toggle-theme" title="Toggle theme">
         <i class="fa-solid fa-circle-half-stroke"></i>
       </button>
 
@@ -106,7 +106,7 @@ export function mountAppShell() {
       </button>
 
       <div class="user-menu dropdown" id="userMenu">
-        toggle-user-menu
+        <button class="icon-btn" data-action="toggle-user-menu" style="width:auto;gap:8px;padding:0 10px">
           <div class="avatar">${initials}</div>
           <div class="user-info">
             <div class="user-name">${escapeHtml(username)}</div>
@@ -119,7 +119,7 @@ export function mountAppShell() {
           <button data-modal="changePasswordModal"><i class="fa-solid fa-key"></i> Change password</button>
           <button data-nav="settings"><i class="fa-solid fa-gear"></i> Settings</button>
           <hr/>
-          logout<i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
+          <button data-action="logout"><i class="fa-solid fa-right-from-bracket"></i> Sign out</button>
         </div>
       </div>
     </header>
