@@ -103,6 +103,19 @@
 .user-role  { font-size: 10px; color: rgba(255,255,255,0.35); white-space: nowrap; }
 .sidebar.collapsed .user-info { display: none; }
 
+/* Notification filter chips */
+.nt-chip {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 999px;
+  transition: all 200ms ease;
+}
+.nt-chip.nt-chip-active {
+  background: var(--brand-teal);
+  color: var(--brand-navy);
+  border-color: var(--brand-teal);
+}
+
 /* ---- TOPBAR ---- */
 .topbar-btn {
   background: none; border: none; cursor: pointer; color: var(--text-2);
@@ -223,9 +236,9 @@
 .hero-metric-val.red   { color: #f87171; }
 .hero-metric-lbl { font-size: 10px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .8px; margin-top: 2px; }
 
-/* Compat aliases */
-.hm { } /* noop */
-.hm .val { font-family: var(--font-mono); font-size: 18px; font-weight: 500; color: white; }
+/* Compat aliases 
+.hm { } /* noop 
+.hm .val { font-family: var(--font-mono); font-size: 18px; font-weight: 500; color: white; } */
 
 /* ---- TABLES ---- */
 .tbl-wrap { overflow-x: auto; }

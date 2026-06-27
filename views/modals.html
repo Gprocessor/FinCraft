@@ -758,56 +758,106 @@
 </div>
 
 <!-- Remittance Stepper -->
+<!-- Remittance Stepper -->
 <div id="remittanceModal" class="modal-overlay">
   <div class="modal lg">
-    <div class="modal-head"><h3 class="modal-title">Send Remittance</h3>
-      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-head">
+      <h3 class="modal-title">Send Remittance</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+    </div>
     <div class="modal-body">
       <div class="stepper">
-        <div class="step active"><div class="n">1</div><div>Sender</div></div>
-        <div class="step"><div class="n">2</div><div>Beneficiary</div></div>
-        <div class="step"><div class="n">3</div><div>Transfer</div></div>
-        <div class="step"><div class="n">4</div><div>Confirm</div></div>
+        <div class="step-item"><div class="step-circle active">1</div><div class="step-label active">Sender</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle">2</div><div class="step-label">Beneficiary</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle">3</div><div class="step-label">Transfer</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle">4</div><div class="step-label">Confirm</div></div>
       </div>
+
+      <!-- Pane 1: Sender -->
       <div data-remit-pane="1">
-        <div class="form-grid">
-          <label><span class="form-label">Sender name</span><input class="form-control"/></label>
-          <label><span class="form-label">Sender phone</span><input class="form-control" type="tel"/></label>
-          <label><span class="form-label">ID type</span>
-            <select class="form-control"><option>National ID</option><option>Passport</option><option>Driver's Licence</option></select></label>
-          <label><span class="form-label">ID number</span><input class="form-control"/></label>
+        <div class="form-grid fg-2">
+          <label class="fg-span"><span class="form-label">Search sender client *</span>
+            <div class="search-field">
+              <input class="form-control client-search" placeholder="Type client name…" autocomplete="off"/>
+              <div class="client-results search-dropdown" style="display:none"></div>
+            </div>
+          </label>
+          <label class="fg-span"><span class="form-label">Source savings account *</span>
+            <select class="form-control account-select"><option value="">Pick a client first…</option></select>
+          </label>
         </div>
       </div>
+
+      <!-- Pane 2: Beneficiary -->
       <div data-remit-pane="2" style="display:none">
-        <div class="form-grid">
-          <label><span class="form-label">Beneficiary name</span><input class="form-control"/></label>
+        <div class="form-grid fg-2">
+          <label class="fg-span"><span class="form-label">Search beneficiary client *</span>
+            <div class="search-field">
+              <input class="form-control client-search" placeholder="Type client name…" autocomplete="off"/>
+              <div class="client-results search-dropdown" style="display:none"></div>
+            </div>
+          </label>
+          <label class="fg-span"><span class="form-label">Destination savings account *</span>
+            <select class="form-control account-select"><option value="">Pick a client first…</option></select>
+          </label>
           <label><span class="form-label">Country</span>
-            <select class="form-control"><option>United Kingdom</option><option>Ghana</option><option>Kenya</option><option>South Africa</option></select></label>
-          <label class="full"><span class="form-label">Account / Wallet</span><input class="form-control"/></label>
-          <label class="full"><span class="form-label">Address</span><input class="form-control"/></label>
+            <select class="form-control beneficiary-country">
+              <option value="">— Select —</option>
+              <option>Nigeria</option><option>Ghana</option><option>Kenya</option>
+              <option>South Africa</option><option>United Kingdom</option><option>United States</option>
+            </select>
+          </label>
+          <label><span class="form-label">Address</span>
+            <input class="form-control beneficiary-address" placeholder="Optional"/>
+          </label>
         </div>
       </div>
+
+      <!-- Pane 3: Transfer details -->
       <div data-remit-pane="3" style="display:none">
-        <div class="form-grid">
-          <label><span class="form-label">Amount</span><input type="number" class="form-control"/></label>
+        <div class="form-grid fg-2">
+          <label><span class="form-label">Amount *</span>
+            <input type="number" min="0.01" step="0.01" class="form-control transfer-amount" placeholder="0.00"/>
+          </label>
+          <label><span class="form-label">Transfer date *</span>
+            <input type="date" class="form-control transfer-date"/>
+          </label>
           <label><span class="form-label">Source currency</span>
-            <select class="form-control"><option>USD</option><option>NGN</option><option>EUR</option></select></label>
+            <select class="form-control transfer-source-currency">
+              <option>USD</option><option>NGN</option><option>EUR</option><option>GBP</option>
+            </select>
+          </label>
           <label><span class="form-label">Destination currency</span>
-            <select class="form-control"><option>GBP</option><option>GHS</option><option>KES</option></select></label>
+            <select class="form-control transfer-dest-currency">
+              <option>USD</option><option>GBP</option><option>GHS</option><option>KES</option><option>NGN</option>
+            </select>
+          </label>
           <label><span class="form-label">Purpose</span>
-            <select class="form-control"><option>Family support</option><option>Education</option><option>Business</option></select></label>
+            <select class="form-control transfer-purpose">
+              <option value="">— Select —</option>
+              <option>Family support</option><option>Education</option><option>Business</option>
+              <option>Medical</option><option>Investment</option><option>Other</option>
+            </select>
+          </label>
+          <label class="fg-span"><span class="form-label">Description (optional)</span>
+            <input class="form-control transfer-description" placeholder="Internal note…"/>
+          </label>
         </div>
       </div>
+
+      <!-- Pane 4: Review (rendered dynamically by remit.js) -->
       <div data-remit-pane="4" style="display:none">
-        <div class="card" style="margin:0;background:var(--bg-card-alt)">
-          <h4>Confirm transaction</h4>
-          <div class="text-muted mt-2">Review the details above, then click <b>Submit</b> to post the remittance via Fineract account transfer.</div>
-        </div>
+        <div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin empty-state-icon"></i><h3>Preparing review…</h3></div>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn-ghost" data-action="remit-back">Back</button>
-      <button class="btn-primary" data-action="remit-next">Continue</button>
+      <button classk</button>
+      remit-next
+        <i class="fa-solid fa-arrow-right"></i> Continue
+      </button>
     </div>
   </div>
 </div>

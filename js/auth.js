@@ -1,4 +1,5 @@
-/* FinCraft · auth.js — Login / Logout / Change password / Forgot / 2FA / Session bootstrap */
+/* FinCraft · auth.js — Login / Logout / Change password / Forgot / 2FA / Session bootstrap
+   Tenant-aware: remembers recent tenants per device for quick re-login. */
 import { api, configureAPI } from './api.js';
 import { store } from './store.js';
 import { FINERACT_DEMO } from './config.js';
@@ -7,10 +8,67 @@ const LOGIN_ID = 'loginScreen';
 const SHELL_ID = 'appShell';
 
 /* ------------------------------------------------------------------ */
+/* Permission extraction helper                                        */
+/* ------------------------------------------------------------------ */
+/** Extract permission codes from a payload — handles all 3 shapes:
+ *  - permissions: ["CODE", "CODE", ...]
+ *  - permissions: [{ code: "CODE" }, ...]
+ *  - roles: [{ permissions: [{ code, selected }, ...] }, ...]
+ */
+function _extractPerms(payload) {
+  const out = new Set();
+  const top = Array.isArray(payload?.permissions) ? payload.permissions : [];
+  top.forEach(p => {
+    const code = typeof p === 'string' ? p : p?.code;
+    if (code) out.add(code);
+  });
+  const roles = Array.isArray(payload?.roles) ? payload.roles : [];
+  roles.forEach(r => {
+    const rolePerms = Array.isArray(r.permissions) ? r.permissions : [];
+    rolePerms.forEach(p => {
+      const code = typeof p === 'string' ? p : p?.code;
+      const selected = typeof p === 'object' ? p.selected !== false : true;
+      if (code && selected) out.add(code);
+    });
+  });
+  return [...out];
+}
+
+/* ------------------------------------------------------------------ */
+/* Recent tenants — remembered per device                              */
+/* ------------------------------------------------------------------ */
+const RECENT_TENANTS_KEY = 'fincraft.recentTenants';
+const MAX_RECENT_TENANTS = 5;
+
+function _loadRecentTenants() {
+  try {
+    const raw = localStorage.getItem(RECENT_TENANTS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+function _saveRecentTenant(serverUrl, tenantId, username) {
+  try {
+    const all = _loadRecentTenants();
+    const filtered = all.filter(t => !(t.tenantId === tenantId && t.serverUrl === serverUrl));
+    filtered.unshift({ tenantId, serverUrl, username, lastUsed: Date.now() });
+    localStorage.setItem(RECENT_TENANTS_KEY, JSON.stringify(filtered.slice(0, MAX_RECENT_TENANTS)));
+  } catch {}
+}
+
+function _removeRecentTenant(tenantId, serverUrl) {
+  try {
+    const all = _loadRecentTenants();
+    const filtered = all.filter(t => !(t.tenantId === tenantId && t.serverUrl === serverUrl));
+    localStorage.setItem(RECENT_TENANTS_KEY, JSON.stringify(filtered));
+  } catch {}
+}
+
+/* ------------------------------------------------------------------ */
 /* Boot                                                                */
 /* ------------------------------------------------------------------ */
 export async function initAuth() {
-  // Wire global 401 handler once.
   api.onUnauthorized(() => {
     _clearSession();
     showLogin('Your session expired. Please sign in again.');
@@ -20,13 +78,23 @@ export async function initAuth() {
   if (saved?.authToken && saved?.serverUrl) {
     configureAPI(saved);
     try {
-      // Canonical session-validate call — also refreshes roles + perms.
       const me = await api.userDetails.self();
       _persistUserContext(me);
+      console.log('[auth] Restored session with', (store.get('perms') || []).length, 'permissions');
       showApp();
       return;
-    } catch {
-      _clearSession();
+    } catch (e) {
+      if (e.status === 401 || e.status === 403) {
+        _clearSession();
+      } else {
+        // Network error or transient — keep cached session
+        console.warn('[auth] /userdetails failed, using cached perms:', e.message);
+        if (Array.isArray(store.get('perms')) && store.get('perms').length) {
+          showApp();
+          return;
+        }
+        _clearSession();
+      }
     }
   }
   showLogin();
@@ -37,48 +105,78 @@ export async function initAuth() {
 /* ------------------------------------------------------------------ */
 export async function login({ serverUrl, tenantId, username, password }) {
   configureAPI({ serverUrl, tenantId });
-  const token = await api.auth(username, password);   // POST /authentication
+
+  // /authentication returns the FULL payload (token + roles + permissions)
+  const authResponse = await api.auth(username, password);
+  const token = authResponse?.base64EncodedAuthenticationKey;
   if (!token) throw new Error('Authentication failed — check credentials');
-
   configureAPI({ authToken: token });
-  store.set('auth', { serverUrl, tenantId, username, authToken: token });
 
-  // Refresh canonical profile (officeId, roles, permissions[]).
+  // Extract perms from authentication response (the reliable source)
+  const authPerms = _extractPerms(authResponse);
+
+  // Persist initial session
+  store.set('auth', {
+    serverUrl, tenantId, username, authToken: token,
+    userId:     authResponse.userId,
+    officeId:   authResponse.officeId,
+    officeName: authResponse.officeName,
+    roles:      Array.isArray(authResponse.roles) ? authResponse.roles : []
+  });
+  store.set('perms', authPerms);
+
+  // Best-effort enrichment from /userdetails — merges, never overwrites with empty
   try {
     const me = await api.userDetails.self();
-    _persistUserContext(me);
+    const auth = store.get('auth') || {};
+    store.set('auth', {
+      ...auth,
+      userId:     me.userId ?? me.id ?? auth.userId,
+      officeId:   me.officeId ?? auth.officeId,
+      officeName: me.officeName ?? auth.officeName,
+      roles:      Array.isArray(me.roles) && me.roles.length ? me.roles : auth.roles
+    });
+    const mePerms = _extractPerms(me);
+    if (mePerms.length) {
+      const merged = [...new Set([...authPerms, ...mePerms])];
+      store.set('perms', merged);
+    }
   } catch (e) {
     if (e.status === 401) {
       _clearSession();
       throw new Error('Server rejected the session token.');
     }
-    // Non-fatal — proceed with empty perms (UI will hide guarded actions).
-    store.set('perms', []);
+    // Non-fatal — keep auth-response perms
   }
 
+  console.log('[auth] Signed in with', (store.get('perms') || []).length, 'permissions');
+  _saveRecentTenant(serverUrl, tenantId, username);   // Remember for next time
   showApp();
 }
 
-/** Persist /userdetails payload into store. */
+/** Persist /userdetails enrichment — only overwrite when new payload is richer. */
 function _persistUserContext(me) {
   const auth = store.get('auth') || {};
   store.set('auth', {
     ...auth,
-    userId:     me.userId ?? me.id,
-    officeId:   me.officeId,
-    officeName: me.officeName,
-    roles:      Array.isArray(me.roles) ? me.roles : []
+    userId:     me.userId ?? me.id ?? auth.userId,
+    officeId:   me.officeId ?? auth.officeId,
+    officeName: me.officeName ?? auth.officeName,
+    roles:      Array.isArray(me.roles) && me.roles.length ? me.roles : auth.roles
   });
-  // Fineract /userdetails returns permissions either as flat strings or {code} objects — normalise.
-  const raw   = Array.isArray(me.permissions) ? me.permissions : [];
-  const perms = raw.map(p => (typeof p === 'string' ? p : p?.code)).filter(Boolean);
-  store.set('perms', perms);
+
+  // NEVER wipe perms — only merge if /userdetails actually returned some
+  const newPerms = _extractPerms(me);
+  if (newPerms.length) {
+    const existing = store.get('perms') || [];
+    const merged = [...new Set([...existing, ...newPerms])];
+    store.set('perms', merged);
+  }
 }
 
 /* ------------------------------------------------------------------ */
 /* Permission helper                                                   */
 /* ------------------------------------------------------------------ */
-/** Strict permission check — deny by default when perms are empty. */
 export function canDo(code) { return store.hasPermission(code); }
 
 /* ------------------------------------------------------------------ */
@@ -115,16 +213,16 @@ export async function forgotPassword({ username, email }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 2FA helpers (used when 2FA is enabled tenant-side)                  */
+/* 2FA helpers                                                          */
 /* ------------------------------------------------------------------ */
 export async function isTwoFactorRequired() {
   try {
     const cfg = await api.twoFactor.config.get();
-    // Fineract returns array of named config entries; "enabled" flag is one of them.
     const flag = Array.isArray(cfg) ? cfg.find(c => /enable/i.test(c.name)) : null;
     return !!(flag && (flag.value === true || flag.value === 'true' || flag.value === 1));
   } catch { return false; }
 }
+
 export const getOtpMethods = ()                                  => api.twoFactor.methods();
 export const requestOtp    = (deliveryMethod, extendedToken = false) =>
   api.twoFactor.request({ deliveryMethod, extendedToken });
@@ -155,6 +253,22 @@ function showApp() {
 }
 
 function renderLogin(container, banner) {
+  // Build the recent-tenants chip row (only if any tenants are remembered)
+  const recents = _loadRecentTenants();
+  const recentChipsHtml = recents.length ? `
+    <div class="mb-2" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text-3,#8fa8c8);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-right:4px">Recent:</span>
+      ${recents.map((t, i) => `
+        <button type="button" class="tenant-chip" data-recent-idx="${i}"
+                style="padding:4px 10px;font-size:11px;background:var(--bg-2,#0e1a2e);border:1px solid var(--border-1,#1a2d4a);border-radius:99px;color:var(--text-2,#e8f0fc);cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono,monospace);transition:all 200ms"
+                title="${t.tenantId} on ${t.serverUrl}${t.username ? ' (last user: ' + t.username + ')' : ''}">
+          <i class="fa-solid fa-server" style="font-size:9px;color:var(--brand-teal,#00c9b1)"></i>
+          ${t.tenantId}
+          <span class="tenant-chip-x" data-remove-idx="${i}" style="opacity:0.5;font-size:13px;margin-left:2px" title="Forget this tenant">×</span>
+        </button>
+      `).join('')}
+    </div>` : '';
+
   container.innerHTML = `
     <div class="login-wrap active" style="width:100%;height:100vh;display:flex">
       <div class="login-left">
@@ -185,6 +299,7 @@ function renderLogin(container, banner) {
           <div id="login-error" class="msg-banner b-danger mb-4" style="display:none"></div>
           <div class="form-group mb-3"><label class="form-label">Server URL</label>
             <input id="l-server" class="form-control" value="${FINERACT_DEMO.serverUrl}"/></div>
+          ${recentChipsHtml}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="mb-3">
             <div class="form-group"><label class="form-label">Tenant ID</label>
               <input id="l-tenant" class="form-control" value="${FINERACT_DEMO.tenantId}"/></div>
@@ -248,6 +363,47 @@ function renderLogin(container, banner) {
 
   btn.addEventListener('click', doLogin);
   pass.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  // Tenant chip clicks — fill in server URL, tenant, and username
+  container.querySelectorAll('[data-recent-idx]').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      // Ignore clicks on the × remove button
+      if (e.target.classList.contains('tenant-chip-x')) return;
+      const idx = parseInt(chip.dataset.recentIdx, 10);
+      const list = _loadRecentTenants();
+      const t = list[idx];
+      if (!t) return;
+      container.querySelector('#l-server').value = t.serverUrl;
+      container.querySelector('#l-tenant').value = t.tenantId;
+      if (t.username) container.querySelector('#l-user').value = t.username;
+      container.querySelector('#l-pass').focus();
+    });
+  });
+
+  // Tenant chip × — remove from recents and re-render
+  container.querySelectorAll('[data-remove-idx]').forEach(x => {
+    x.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(x.dataset.removeIdx, 10);
+      const list = _loadRecentTenants();
+      const t = list[idx];
+      if (!t) return;
+      _removeRecentTenant(t.tenantId, t.serverUrl);
+      renderLogin(container, banner);
+    });
+  });
+
+  // Chip hover effect
+  container.querySelectorAll('.tenant-chip').forEach(chip => {
+    chip.addEventListener('mouseenter', () => {
+      chip.style.borderColor = 'var(--brand-teal, #00c9b1)';
+      chip.style.background = 'rgba(0,201,177,0.08)';
+    });
+    chip.addEventListener('mouseleave', () => {
+      chip.style.borderColor = '';
+      chip.style.background = '';
+    });
+  });
 
   forgotLink.addEventListener('click', async (e) => {
     e.preventDefault();

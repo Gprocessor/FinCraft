@@ -79,11 +79,11 @@ class FineractAPI {
 
   /** POST /authentication with JSON body -> { base64EncodedAuthenticationKey } */
   async auth(username, password, opts = {}) {
-    const body = JSON.stringify({ username, password });
-    const r = await this._req('POST', '/authentication',
-      { body, timeoutMs: opts.timeoutMs ?? CFG.autoConnectTimeoutMs });
-    return r?.base64EncodedAuthenticationKey || '';
-  }
+  const body = JSON.stringify({ username, password });
+  const r = await this._req('POST', '/authentication',
+    { body, timeoutMs: opts.timeoutMs ?? CFG.autoConnectTimeoutMs });
+  return r || {};   // Return the FULL response — token + permissions + roles
+}
 
   // ============== USER DETAILS (authenticated user info + perms) ==============
   // GET /userdetails returns the canonical authenticated-user payload:
@@ -132,7 +132,16 @@ class FineractAPI {
     activate: (id, date)      => this._p(`/clients/${id}?command=activate`, { activationDate: date, dateFormat: DATE_FORMAT, locale: LOCALE }),
     close:    (id, body)      => this._p(`/clients/${id}?command=close`, body),
     reject:   (id, body)      => this._p(`/clients/${id}?command=reject`, body),
-    withdraw: (id, body)      => this._p(`/clients/${id}?command=withdraw`, body),
+    withdrawnByApplicant: (id, body) => this._p(`/clients/${id}?command=withdrawnByApplicant`, body),
+    undoTransfer:     (id)            => this._p(`/clients/${id}?command=undoTransfer`, {}),
+    assignStaff:      (id, body)      => this._p(`/clients/${id}?command=assignStaff`, body),
+    unassignStaff:    (id, body)      => this._p(`/clients/${id}?command=unassignStaff`, body || {}),
+    markAsFraud:      (id, body)      => this._p(`/clients/${id}?command=markAsFraud`, body || { fraud: true }),
+    collateral:       (id)            => this._g(`/clients/${id}/collaterals`),
+    transactions:     (id, params)    => this._g(`/clients/${id}/transactions`, params),
+    waiveCharge:      (id, chargeId)  => this._p(`/clients/${id}/charges/${chargeId}?command=waive`, {}),
+    payCharge:        (id, chargeId, body) => this._p(`/clients/${id}/charges/${chargeId}?command=paycharge`, body),
+    deleteCharge:     (id, chargeId)  => this._d(`/clients/${id}/charges/${chargeId}`),
     reactivate:(id, body)     => this._p(`/clients/${id}?command=reactivate`, body),
     transfer: (id, body)      => this._p(`/clients/${id}?command=proposeTransfer`, body),
     acceptTransfer: (id, body)=> this._p(`/clients/${id}?command=acceptTransfer`, body),
@@ -220,7 +229,7 @@ class FineractAPI {
     // ---- Charges ----
     addCharge:      (id, body)           => this._p(`/loans/${id}/charges`, body),
     waiveCharge:    (id, cid)            => this._p(`/loans/${id}/charges/${cid}?command=waive`, {}),
-    payCharge:      (id, cid, body)      => this._p(`/loans/${id}/charges/${cid}?command=pay`, body),
+    payCharge:      (id, cid, body)      => this._p(`/loans/${id}/charges/${cid}?command=paycharge`, body),
     chargeAdjustment: (id, cid, body)    => this._p(`/loans/${id}/charges/${cid}?command=adjustment`, body),
     listCharges:    (id)                 => this._g(`/loans/${id}/charges`),
     deleteCharge:   (id, cid)            => this._d(`/loans/${id}/charges/${cid}`),
@@ -363,7 +372,19 @@ class FineractAPI {
     unblockCredit:(id)         => this._p(`/savingsaccounts/${id}?command=unblockCredit`, {}),
     update:      (id, body)    => this._u(`/savingsaccounts/${id}`, body),
     delete:      (id)          => this._d(`/savingsaccounts/${id}`),
-    charges:     (id)          => this._g(`/savingsaccounts/${id}/charges`),
+    applyAnnualFees:    (id, body) => this._p(`/savingsaccounts/${id}?command=applyAnnualFees`, body),
+    postInterestAsOn:   (id, date) => this._p(`/savingsaccounts/${id}?command=postInterestAsOn`, { transactionDate: date, dateFormat: 'yyyy-MM-dd', locale: 'en' }),
+    onHoldTransactions: (id)       => this._g(`/savingsaccounts/${id}/onholdtransactions`),
+    assignStaff:        (id, body) => this._p(`/savingsaccounts/${id}?command=assignSavingsOfficer`, body),
+    unassignStaff:      (id, body) => this._p(`/savingsaccounts/${id}?command=unassignSavingsOfficer`, body || {}),
+    command:            (id, cmd, body) => this._p(`/savingsaccounts/${id}?command=${cmd}`, body || {}),
+    waiveCharge:        (id, cid)  => this._p(`/savingsaccounts/${id}/charges/${cid}?command=waive`, {}),
+    payCharge:          (id, cid, body) => this._p(`/savingsaccounts/${id}/charges/${cid}?command=paycharge`, body),
+    inactivateCharge:   (id, cid)  => this._p(`/savingsaccounts/${id}/charges/${cid}?command=inactivate`, {}),
+    updateCharge:       (id, cid, body) => this._u(`/savingsaccounts/${id}/charges/${cid}`, body),
+    deleteCharge:       (id, cid)  => this._d(`/savingsaccounts/${id}/charges/${cid}`),
+    adjustTransaction:  (id, txId, body) => this._p(`/savingsaccounts/${id}/transactions/${txId}?command=modify`, body),
+    undoTransaction:    (id, txId) => this._p(`/savingsaccounts/${id}/transactions/${txId}?command=undo`, {}),
     addCharge:   (id, body)    => this._p(`/savingsaccounts/${id}/charges`, body),
     transactions:(id)          => this._g(`/savingsaccounts/${id}/transactions`)
   };
@@ -811,12 +832,10 @@ collateralManagement = {
     run: (name, params, opts) => this._g(`/runreports/${encodeURIComponent(name)}`,
                                    { 'output-type': 'JSON', ...params }, opts)
   };
-  collectionSheet = {
-    /** GET /collectionsheet — returns center→group→client→loan tree */
-    get: (params) => this._g('/collectionsheet', params),
-    /** POST /collectionsheet?command=save — bulk post repayments */
-    save: (body)  => this._p('/collectionsheet?command=save', body)
-  };
+ collectionSheet = {
+  get:  (params) => this._g('/collectionsheet', params),
+  save: (body)   => this._p('/collectionsheet?command=saveCollectionSheet', body)
+};
   adhocQueries = {
     list:    () => this._g('/adhocquery'),
     get:     (id) => this._g(`/adhocquery/${id}`),
@@ -881,26 +900,28 @@ collateralManagement = {
     get:            (id)     => this._g(`/audits/${id}`),
     searchTemplate: ()       => this._g('/audits/searchtemplate')
   };
-  makerchecker = {
-    list:    (params) => this._g('/makercheckers', params),
-    template:()       => this._g('/makercheckers/searchtemplate'),
-    approve: (id)     => this._p(`/makercheckers/${id}?command=approve`, {}),
-    reject:  (id)     => this._p(`/makercheckers/${id}?command=reject`, {}),
-    delete:  (id)     => this._d(`/makercheckers/${id}`)
-  };
+ makerchecker = {
+  list:    (params) => this._g('/makercheckertasks', params),
+  template:()       => this._g('/makercheckertasks/searchtemplate'),
+  approve: (id)     => this._p(`/makercheckertasks/${id}?command=approve`, {}),
+  reject:  (id)     => this._p(`/makercheckertasks/${id}?command=reject`, {}),
+  delete:  (id)     => this._p(`/makercheckertasks/${id}?command=delete`, {})
+};
 
   // ============== CONFIGURATION ==============
-  configurations = {
-    list:   ()             => this._g('/configurations'),
-    get:    (name)         => this._g(`/configurations/name/${encodeURIComponent(name)}`),
-    update: (id, body)     => this._u(`/configurations/${id}`, body),
-    cache:  () => this._g('/configurations/cache'),
-    updateCache: (b) => this._u('/configurations/cache', b),
-    globalConfig: {
-      list:   ()           => this._g('/configurations'),
-      update: (id, body)   => this._u(`/configurations/${id}`, body)
-    }
-  };
+configurations = {
+  list:        ()         => this._g('/configurations'),
+  get:         (name)     => this._g('/configurations', { name }),
+  getById:     (id)       => this._g(`/configurations/${id}`),
+  update:      (id, body) => this._u(`/configurations/${id}`, body),
+  cache:       ()         => this._g('/configurations/cache'),
+  updateCache: (b)        => this._u('/configurations/cache', b),
+  cacheTypes:  ()         => this._g('/caches'),
+  globalConfig: {
+    list:   ()           => this._g('/configurations'),
+    update: (id, body)   => this._u(`/configurations/${id}`, body)
+  }
+};
 
 // ============== SURVEYS (full CRUD) ==============
   surveysAdmin = {
@@ -939,11 +960,12 @@ collateralManagement = {
   };
 
   // ============== NOTIFICATIONS, HOOKS, EXTERNAL SVC ==============
-  notifications = {
-    list:     (params) => this._g('/notifications', params),
-    get:      (id)     => this._g(`/notifications/${id}`),
-    markRead: (id)     => this._u(`/notifications/${id}`, { isRead: true })
-  };
+notifications = {
+  list:        (params) => this._g('/notifications', params),
+  get:         (id)     => this._g(`/notifications/${id}`),
+  markRead:    (id)     => this._u(`/notifications/${id}`, { isRead: true }),
+  markAllRead: ()       => this._u('/notifications', { isRead: true })
+};
   hooks = {
     list:    ()        => this._g('/hooks'),
     get:     (id)      => this._g(`/hooks/${id}`),

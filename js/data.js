@@ -3,6 +3,7 @@
    withDemoFallback now surfaces API errors rather than silently swallowing them.
    The offline D object contains only structural/empty defaults used for dropdowns
    before template data loads. */
+
 import { store } from './store.js';
 
 export const D = {

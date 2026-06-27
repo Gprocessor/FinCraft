@@ -1,5 +1,88 @@
 import { LOCALE, DATE_FORMAT, today } from '../config.js';
+import { api } from '../api.js';
+import { store } from '../store.js';
+import { fmt, num, escapeHtml, fmtDate, sb } from '../utils.js';
+import { toast, confirm as modalConfirm } from '../ui.js';
 
+const can = (code) => store.hasPermission(code);
+
+const TABS = [
+  'Chart of Accounts',
+  'Journal Entries',
+  'Frequent Postings',
+  'Accounting Rules',
+  'Opening Balances',
+  'Run Accruals',
+  'GL Closure',
+  'Provisioning',
+  'Financial Activities'
+];
+let _glCache = null;
+async function glList() {
+  if (!_glCache) {
+    try {
+      const r = await api.glAccounts.list();
+      _glCache = Array.isArray(r) ? r : [];
+    } catch { _glCache = []; }
+  }
+  return _glCache;
+}
+
+// ── Populate JE filter dropdowns (offices + grouped GL accounts) ───
+async function populateJEFilters(container) {
+  const offSel = container.querySelector('#je-f-office');
+  const glSel  = container.querySelector('#je-f-glacct');
+  if (!offSel && !glSel) return;
+
+  // Loading state
+  if (offSel) offSel.innerHTML = '<option value="">Loading offices…</option>';
+  if (glSel)  glSel.innerHTML  = '<option value="">Loading GL accounts…</option>';
+
+  try {
+    const [offRes, glAccounts] = await Promise.all([
+      api.offices.list().catch(() => []),
+      glList()
+    ]);
+    const offices = Array.isArray(offRes) ? offRes : [];
+
+    if (offSel) {
+      offSel.innerHTML = '<option value="">All offices</option>' +
+        offices.map(o => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('');
+    }
+
+    if (glSel) {
+      // Group GL accounts by type for usability
+      const byType = {};
+      glAccounts.forEach(g => {
+        const type = g.type?.value || g.type || 'OTHER';
+        (byType[type] ||= []).push(g);
+      });
+      const typeOrder = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'];
+      const sortedTypes = Object.keys(byType).sort((a, b) => {
+        const ai = typeOrder.indexOf(a), bi = typeOrder.indexOf(b);
+        if (ai === -1 && bi === -1) return a.localeCompare(b);
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      });
+
+      let html = '<option value="">All GL accounts</option>';
+      sortedTypes.forEach(type => {
+        html += `<optgroup label="${escapeHtml(type)}">`;
+        byType[type].forEach(g => {
+          const label = (g.glCode ? g.glCode + ' — ' : '') + (g.name || '—');
+          html += `<option value="${g.id}">${escapeHtml(label)}</option>`;
+        });
+        html += '</optgroup>';
+      });
+      glSel.innerHTML = html;
+    }
+  } catch (e) {
+    console.warn('[je-filters]', e);
+    if (offSel) offSel.innerHTML = '<option value="">Failed to load offices</option>';
+    if (glSel)  glSel.innerHTML  = '<option value="">Failed to load GL accounts</option>';
+  }
+}
 /* FinCraft · accounting.js — Full accounting (perm────────────────/* FinCraft · accounting.js — Full accounting (permission-gated, 9 sub-tabs) */
 const v  = (el, id) => el.querySelector('#' + id)?.value?.trim() || '';
 const vi = (el, id) => { const n = parseInt(v(el, id)); return isNaN(n) ? null : n; };
@@ -180,34 +263,53 @@ async function loadJournalEntries(c, params = {}) {
         <h3>Journal Entries</h3>
         ${can('CREATE_JOURNALENTRY') ? `<button class="btn-primary" id="btn-new-je"><i class="fa-solid fa-plus"></i> New Entry</button>` : ''}
       </div>
-      <div class="filter-bar mb-2" id="je-filter-bar">
-        <input id="je-f-office" class="form-control" placeholder="Office ID" type="number"/>
-        <input id="je-f-glacct" class="form-control" placeholder="GL Account ID" type="number"/>
-        <input id="je-f-txid"   class="form-control" placeholder="Transaction ID"/>
-        <input id="je-f-from"   class="form-control" type="date"/>
-        <input id="je-f-to"     class="form-control" type="date"/>
-        <button class="btn-secondary" id="je-filter-go"><i class="fa-solid fa-filter"></i> Filter</button>
-      </div>
+   <div class="filter-bar mb-2" id="je-filter-bar">
+  <select id="je-f-office" class="form-control" style="min-width:180px">
+    <option value="">All offices</option>
+  </select>
+  <select id="je-f-glacct" class="form-control" style="min-width:240px">
+    <option value="">All GL accounts</option>
+  </select>
+  <input id="je-f-txid" class="form-control" placeholder="Transaction ID" style="min-width:140px"/>
+  <input id="je-f-from" class="form-control" type="date" title="From date" style="min-width:140px"/>
+  <input id="je-f-to" class="form-control" type="date" title="To date" style="min-width:140px"/>
+  <button class="btn-secondary" id="je-filter-go"><i class="fa-solid fa-filter"></i> Filter</button>
+  <button class="btn-ghost" id="je-filter-clear" title="Clear filters"><i class="fa-solid fa-xmark"></i></button>
+</div>
       <div id="je-table-wrap"><div class="empty-state-row">Loading…</div></div>`;
 
-    el.querySelector('#je-filter-go').addEventListener('click', () => {
-      const p = {};
-      const offId = el.querySelector('#je-f-office').value.trim();
-      const glId  = el.querySelector('#je-f-glacct').value.trim();
-      const txId  = el.querySelector('#je-f-txid').value.trim();
-      const from  = el.querySelector('#je-f-from').value;
-      const to    = el.querySelector('#je-f-to').value;
-      if (offId) p.officeId      = offId;
-      if (glId)  p.glAccountId   = glId;
-      if (txId)  p.transactionId = txId;
-      if (from)  p.fromDate      = from;
-      if (to)    p.toDate        = to;
-      if (from || to) { p.dateFormat = DATE_FORMAT; p.locale = LOCALE; }
-      loadJournalEntries(c, p);
-    });
-    el.querySelector('#btn-new-je')?.addEventListener('click', () =>
-      openJournalEntryModal(() => loadJournalEntries(c)));
-  }
+   el.querySelector('#je-filter-go').addEventListener('click', () => {
+  const p = {};
+  const offId = el.querySelector('#je-f-office').value.trim();
+  const glId  = el.querySelector('#je-f-glacct').value.trim();
+  const txId  = el.querySelector('#je-f-txid').value.trim();
+  const from  = el.querySelector('#je-f-from').value;
+  const to    = el.querySelector('#je-f-to').value;
+  if (offId) p.officeId      = offId;
+  if (glId)  p.glAccountId   = glId;
+  if (txId)  p.transactionId = txId;
+  if (from)  p.fromDate      = from;
+  if (to)    p.toDate        = to;
+  if (from || to) { p.dateFormat = DATE_FORMAT; p.locale = LOCALE; }
+  loadJournalEntries(c, p);
+});
+
+// Populate filter dropdowns with real offices + GL accounts
+populateJEFilters(el);
+
+// Clear filter button
+el.querySelector('#je-filter-clear')?.addEventListener('click', () => {
+  el.querySelector('#je-f-office').value = '';
+  el.querySelector('#je-f-glacct').value = '';
+  el.querySelector('#je-f-txid').value   = '';
+  el.querySelector('#je-f-from').value   = '';
+  el.querySelector('#je-f-to').value     = '';
+  loadJournalEntries(c);
+});
+
+el.querySelector('#btn-new-je')?.addEventListener('click', () =>
+  openJournalEntryModal(() => loadJournalEntries(c)));
+}
 
   const wrap = el.querySelector('#je-table-wrap');
   wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
@@ -1159,50 +1261,6 @@ async function openFAModal(actOpts, onSuccess) {
   });
 }
 
-/* ─────────────────────────────────────────────────────────────
-   END OF FILE — js/pages/accounting.js
-   9 tabs:
-     0. Chart of Accounts (grouped + tree view)
-     1. Journal Entries (search + reverse + new)
-     2. Frequent Postings (NEW — audit gap closed)
-     3. Accounting Rules (CRUD)
-     4. Opening Balances
-     5. Run Accruals
-     6. GL Closure
-     7. Provisioning (criteria + entries)
-     8. Financial Activities (mappings CRUD)
-   ───────────────────────────────────────────────────────────── */
-import { api } from '../api.js';
-import { store } from '../store.js';
-import { fmt, num, escapeHtml, fmtDate, sb } from '../utils.js';
-import { toast, confirm as modalConfirm } from '../ui.js';
 
-const can = (code) => store.hasPermission(code);
 
-const TABS = [
-  'Chart of Accounts',
-  'Journal Entries',
-  'Frequent Postings',
-  'Accounting Rules',
-  'Opening Balances',
-  'Run Accruals',
-  'GL Closure',
-  'Provisioning',
-  'Financial Activities'
-];
 
-// ── GL account option cache ──────────────────────────────────
-let _glCache = null;
-async function glList() {
-  if (!_glCache) {
-    try {
-      const r = await api.glAccounts.list();
-      _glCache = Array.isArray(r) ? r : [];
-    } catch { _glCache = []; }
-  }
-  return _glCache;
-}
-
-async function glOpts() {
-  return (await glList()).map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${g.glCode})</option>`).join('');
-}
