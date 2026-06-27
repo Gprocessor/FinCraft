@@ -1,4 +1,4 @@
-const CACHE = 'fincraft-v3';
+const CACHE = 'fincraft-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,6 @@ const ASSETS = [
   './css/components.css',
   './css/app.css',
   './css/login.css',
-  './css/fincraft-shell.css', 
   // Core JS
   './js/app.js',
   './js/config.js',
