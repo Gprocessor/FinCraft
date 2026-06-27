@@ -637,13 +637,13 @@ class FineractAPI {
     update: (id, b)  => this._u(`/charges/${id}`, b),
     delete: (id)     => this._d(`/charges/${id}`)
   };
-taxComponents = {
-    list:     () => this._g('/taxes/component'),
-    get:      (id) => this._g(`/taxes/component/${id}`),
-    template: () => this._g('/taxes/component/template'),
-    create:   (b) => this._p('/taxes/component', b),
-    update:   (id, b) => this._u(`/taxes/component/${id}`, b)
-  };
+  taxComponents = {
+      list:     () => this._g('/taxes/component'),
+      get:      (id) => this._g(`/taxes/component/${id}`),
+      template: () => this._g('/taxes/component/template'),
+      create:   (b) => this._p('/taxes/component', b),
+      update:   (id, b) => this._u(`/taxes/component/${id}`, b)
+    };
 
   taxGroups = {
     list:     () => this._g('/taxes/group'),
@@ -687,22 +687,22 @@ taxComponents = {
   workingDays = { get: () => this._g('/workingdays'), update: (b) => this._u('/workingdays', b) };
 
   // ============== PRODUCTS ==============
-loanProducts = {
-    list:     ()       => this._g('/loanproducts'),
-    get:      (id)     => this._g(`/loanproducts/${id}`),
-    template: (params) => this._g('/loanproducts/template', params),
-    create:   (b)      => this._p('/loanproducts', b),
-    update:   (id, b)  => this._u(`/loanproducts/${id}`, b),
-    delete:   (id)     => this._d(`/loanproducts/${id}`)
-  };
-savingsProducts = {
-    list:     ()       => this._g('/savingsproducts'),
-    get:      (id)     => this._g(`/savingsproducts/${id}`),
-    template: (params) => this._g('/savingsproducts/template', params),
-    create:   (b)      => this._p('/savingsproducts', b),
-    update:   (id, b)  => this._u(`/savingsproducts/${id}`, b),
-    delete:   (id)     => this._d(`/savingsproducts/${id}`)
-  };
+  loanProducts = {
+      list:     ()       => this._g('/loanproducts'),
+      get:      (id)     => this._g(`/loanproducts/${id}`),
+      template: (params) => this._g('/loanproducts/template', params),
+      create:   (b)      => this._p('/loanproducts', b),
+      update:   (id, b)  => this._u(`/loanproducts/${id}`, b),
+      delete:   (id)     => this._d(`/loanproducts/${id}`)
+    };
+  savingsProducts = {
+      list:     ()       => this._g('/savingsproducts'),
+      get:      (id)     => this._g(`/savingsproducts/${id}`),
+      template: (params) => this._g('/savingsproducts/template', params),
+      create:   (b)      => this._p('/savingsproducts', b),
+      update:   (id, b)  => this._u(`/savingsproducts/${id}`, b),
+      delete:   (id)     => this._d(`/savingsproducts/${id}`)
+    };
 
   shareProducts = {
     list:     ()       => this._g('/products/share'),
@@ -730,21 +730,21 @@ savingsProducts = {
     update:   (id, b)  => this._u(`/recurringdepositproducts/${id}`, b),
     delete:   (id)     => this._d(`/recurringdepositproducts/${id}`)
   };
-productMix = {
-    list:     ()       => this._g('/loanproducts'),  // products with productMixes association
-    get:      (id)     => this._g(`/loanproducts/${id}/productmix`),
-    template: (id)     => this._g(`/loanproducts/${id}/productmix/template`),
-    create:   (id, b)  => this._p(`/loanproducts/${id}/productmix`, b),
-    update:   (id, b)  => this._u(`/loanproducts/${id}/productmix`, b),
-    delete:   (id)     => this._d(`/loanproducts/${id}/productmix`)
-  };
-floatingRates = {
-    list:   ()        => this._g('/floatingrates'),
-    get:    (id)      => this._g(`/floatingrates/${id}`),
-    create: (b)       => this._p('/floatingrates', b),
-    update: (id, b)   => this._u(`/floatingrates/${id}`, b),
-    delete: (id)      => this._d(`/floatingrates/${id}`)
-  };
+  productMix = {
+      list:     ()       => this._g('/loanproducts'),  // products with productMixes association
+      get:      (id)     => this._g(`/loanproducts/${id}/productmix`),
+      template: (id)     => this._g(`/loanproducts/${id}/productmix/template`),
+      create:   (id, b)  => this._p(`/loanproducts/${id}/productmix`, b),
+      update:   (id, b)  => this._u(`/loanproducts/${id}/productmix`, b),
+      delete:   (id)     => this._d(`/loanproducts/${id}/productmix`)
+    };
+  floatingRates = {
+      list:   ()        => this._g('/floatingrates'),
+      get:    (id)      => this._g(`/floatingrates/${id}`),
+      create: (b)       => this._p('/floatingrates', b),
+      update: (id, b)   => this._u(`/floatingrates/${id}`, b),
+      delete: (id)      => this._d(`/floatingrates/${id}`)
+    };
  delinquencyBuckets = {
     list:        ()       => this._g('/delinquency/buckets'),
     get:         (id)     => this._g(`/delinquency/buckets/${id}`),
@@ -758,14 +758,14 @@ floatingRates = {
     deleteRange: (id)     => this._d(`/delinquency/ranges/${id}`),
     loanTagHistory: (loanId) => this._g(`/loans/${loanId}/delinquency-tags`)
   };
-collateralManagement = {
-    list:     (params)   => this._g('/collateral-management', params),
-    get:      (id)       => this._g(`/collateral-management/${id}`),
-    template: ()         => this._g('/collateral-management/template'),
-    create:   (body)     => this._p('/collateral-management', body),
-    update:   (id, body) => this._u(`/collateral-management/${id}`, body),
-    delete:   (id)       => this._d(`/collateral-management/${id}`)
-  };
+  collateralManagement = {
+      list:     (params)   => this._g('/collateral-management', params),
+      get:      (id)       => this._g(`/collateral-management/${id}`),
+      template: ()         => this._g('/collateral-management/template'),
+      create:   (body)     => this._p('/collateral-management', body),
+      update:   (id, body) => this._u(`/collateral-management/${id}`, body),
+      delete:   (id)       => this._d(`/collateral-management/${id}`)
+    };
 
   // ============== ACCOUNTING ==============
   journalEntries = {
@@ -900,28 +900,28 @@ collateralManagement = {
     get:            (id)     => this._g(`/audits/${id}`),
     searchTemplate: ()       => this._g('/audits/searchtemplate')
   };
- makerchecker = {
-  list:    (params) => this._g('/makercheckertasks', params),
-  template:()       => this._g('/makercheckertasks/searchtemplate'),
-  approve: (id)     => this._p(`/makercheckertasks/${id}?command=approve`, {}),
-  reject:  (id)     => this._p(`/makercheckertasks/${id}?command=reject`, {}),
-  delete:  (id)     => this._p(`/makercheckertasks/${id}?command=delete`, {})
-};
+  makerchecker = {
+    list:    (params) => this._g('/makercheckertasks', params),
+    template:()       => this._g('/makercheckertasks/searchtemplate'),
+    approve: (id)     => this._p(`/makercheckertasks/${id}?command=approve`, {}),
+    reject:  (id)     => this._p(`/makercheckertasks/${id}?command=reject`, {}),
+    delete:  (id)     => this._p(`/makercheckertasks/${id}?command=delete`, {})
+  };
 
   // ============== CONFIGURATION ==============
-configurations = {
-  list:        ()         => this._g('/configurations'),
-  get:         (name)     => this._g('/configurations', { name }),
-  getById:     (id)       => this._g(`/configurations/${id}`),
-  update:      (id, body) => this._u(`/configurations/${id}`, body),
-  cache:       ()         => this._g('/configurations/cache'),
-  updateCache: (b)        => this._u('/configurations/cache', b),
-  cacheTypes:  ()         => this._g('/caches'),
-  globalConfig: {
-    list:   ()           => this._g('/configurations'),
-    update: (id, body)   => this._u(`/configurations/${id}`, body)
-  }
-};
+  configurations = {
+    list:        ()         => this._g('/configurations'),
+    get:         (name)     => this._g('/configurations', { name }),
+    getById:     (id)       => this._g(`/configurations/${id}`),
+    update:      (id, body) => this._u(`/configurations/${id}`, body),
+    cache:       ()         => this._g('/configurations/cache'),
+    updateCache: (b)        => this._u('/configurations/cache', b),
+    cacheTypes:  ()         => this._g('/caches'),
+    globalConfig: {
+      list:   ()           => this._g('/configurations'),
+      update: (id, body)   => this._u(`/configurations/${id}`, body)
+    }
+  };
 
 // ============== SURVEYS (full CRUD) ==============
   surveysAdmin = {
@@ -960,12 +960,12 @@ configurations = {
   };
 
   // ============== NOTIFICATIONS, HOOKS, EXTERNAL SVC ==============
-notifications = {
-  list:        (params) => this._g('/notifications', params),
-  get:         (id)     => this._g(`/notifications/${id}`),
-  markRead:    (id)     => this._u(`/notifications/${id}`, { isRead: true }),
-  markAllRead: ()       => this._u('/notifications', { isRead: true })
-};
+  notifications = {
+    list:        (params) => this._g('/notifications', params),
+    get:         (id)     => this._g(`/notifications/${id}`),
+    markRead:    (id)     => this._u(`/notifications/${id}`, { isRead: true }),
+    markAllRead: ()       => this._u('/notifications', { isRead: true })
+  };
   hooks = {
     list:    ()        => this._g('/hooks'),
     get:     (id)      => this._g(`/hooks/${id}`),
@@ -1025,18 +1025,18 @@ notifications = {
 
 
   // ============== DATA TABLES, SURVEYS, SELF-SERVICE ==============
-dataTables = {
-    list:       ()                  => this._g('/datatables'),
-    get:        (name)              => this._g(`/datatables/${name}`),
-    register:   (name, app, body)   => this._p(`/datatables/register/${name}/${app}`, body),
-    deregister: (name)              => this._p(`/datatables/deregister/${name}`, {}),
-    query:      (name, entityId)    => this._g(`/datatables/${name}/${entityId}`),
-    create:     (body)              => this._p('/datatables', body),
-    updateSchema:(name, body)       => this._u(`/datatables/${name}`, body),   // ← NEW: add/change/drop columns
-    update:     (name, eid, body)   => this._u(`/datatables/${name}/${eid}`, body),
-    delete:     (name, eid)         => this._d(`/datatables/${name}/${eid}`),
-    deleteTable:(name)              => this._d(`/datatables/${name}`)
-  };
+  dataTables = {
+      list:       ()                  => this._g('/datatables'),
+      get:        (name)              => this._g(`/datatables/${name}`),
+      register:   (name, app, body)   => this._p(`/datatables/register/${name}/${app}`, body),
+      deregister: (name)              => this._p(`/datatables/deregister/${name}`, {}),
+      query:      (name, entityId)    => this._g(`/datatables/${name}/${entityId}`),
+      create:     (body)              => this._p('/datatables', body),
+      updateSchema:(name, body)       => this._u(`/datatables/${name}`, body),   // ← NEW: add/change/drop columns
+      update:     (name, eid, body)   => this._u(`/datatables/${name}/${eid}`, body),
+      delete:     (name, eid)         => this._d(`/datatables/${name}/${eid}`),
+      deleteTable:(name)              => this._d(`/datatables/${name}`)
+    };
   selfService = {
     users:        ()      => this._g('/self/userdetails'),
     register:     (body)  => this._p('/self/registration', body),
@@ -1152,16 +1152,16 @@ dataTables = {
   // ============== BULK IMPORTS ==============
   // Confirmed against a real production error path (openMF/community-app#3311):
   // /{entity}/uploadtemplate and /{entity}/downloadtemplate are the real endpoints.
-bulkImports = {
-    template: (entity)        => this._g(`/${entity}/downloadtemplate`),
-    upload:   (entity, formData) => this._req('POST', `/${entity}/uploadtemplate`, { body: formData, headers: {} }),
-    // ---- Generic /imports endpoints ----
-    list:     (params)        => this._g('/imports', params),
-    get:      (importId)      => this._g(`/imports/${importId}`),
-    delete:   (importId)      => this._d(`/imports/${importId}`),
-    download: (importId)      => this._req('GET', `/imports/${importId}/downloadOutputTemplate`, { raw: true }),
-    types:    ()              => this._g('/imports/getEntityTypes')
-  };
+  bulkImports = {
+      template: (entity)        => this._g(`/${entity}/downloadtemplate`),
+      upload:   (entity, formData) => this._req('POST', `/${entity}/uploadtemplate`, { body: formData, headers: {} }),
+      // ---- Generic /imports endpoints ----
+      list:     (params)        => this._g('/imports', params),
+      get:      (importId)      => this._g(`/imports/${importId}`),
+      delete:   (importId)      => this._d(`/imports/${importId}`),
+      download: (importId)      => this._req('GET', `/imports/${importId}/downloadOutputTemplate`, { raw: true }),
+      types:    ()              => this._g('/imports/getEntityTypes')
+    };
 
   // ============== CATCH-ALL ==============
   any(method, path, params, body) { return this._req(method, path, { params, body }); }

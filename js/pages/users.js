@@ -498,13 +498,6 @@ function openResetPasswordModal(userId, username) {
   });
 }
 
-// ════════════════════════════════════════════════════════════
-// STUBS — populated in Installment 2
-// ════════════════════════════════════════════════════════════
-async function loadRoles(c)             { c.querySelector('#usr-1').innerHTML = '<div class="empty-state-row">Loading… (Installment 2)</div>'; }
-async function renderRoleDetail(c, id)  { c.innerHTML = '<div class="empty-state-row">Loading role detail… (Installment 2)</div>'; }
-async function loadPasswordPolicy(c)    { c.querySelector('#usr-2').innerHTML = '<div class="empty-state-row">Loading… (Installment 2)</div>'; }
-async function loadTwoFactorConfig(c)   { c.querySelector('#usr-3').innerHTML = '<div class="empty-state-row">Loading… (Installment 2)</div>'; }
 
 
 // ════════════════════════════════════════════════════════════

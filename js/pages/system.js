@@ -1807,7 +1807,7 @@ async function loadSystemInfo(c) {
   } catch {}
 
   try {
-    const cacheRes = await api.configurations.cacheTypes?.() || await api.cache?.list?.();
+    const cacheRes = await api.configurations.cacheTypes?.();
     if (cacheRes) {
       const cacheArr = Array.isArray(cacheRes) ? cacheRes : (cacheRes?.cacheTypes || []);
       if (cacheArr.length) {

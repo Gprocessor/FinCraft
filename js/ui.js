@@ -101,7 +101,10 @@ export function mountAppShell() {
 
     <div class="main-area">
       <header class="topbar">
-        <button class="topbar-btn" data-action="toggle-sidebar" title="Toggle sidebar"      <div class="topbar-breadcrumb">
+        <button class="topbar-btn" data-action="toggle-sidebar" title="Toggle sidebar">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="topbar-breadcrumb">
           <span class="text-muted">FinCraft</span>
           <i class="fa-solid fa-chevron-right" style="font-size:9px;opacity:.4"></i>
           <span class="crumb-current" id="breadcrumb">Dashboard</span>
@@ -118,7 +121,7 @@ export function mountAppShell() {
           <span class="tenant-id">${escapeHtml(tenant)}</span>
         </div>
         <div class="flex gap-1">
-          open-cmd
+          <button class="topbar-btn" data-action="open-cmd" title="Command palette (Ctrl+K)">
             <i class="fa-solid fa-terminal"></i>
           </button>
           <button class="topbar-btn" data-modal="quickModal" title="Quick action">
@@ -128,10 +131,11 @@ export function mountAppShell() {
             <i class="fa-solid fa-bell"></i>
             <div class="topbar-badge" id="notifBadgeDot" hidden></div>
           </button>
-          <button class="topbar-btn" id="themeBtn" data-actionre.get('theme') === 'light' ? 'sun' : 'moon'}"></i>
+          <button class="topbar-btn" id="themeBtn" data-action="toggle-theme" title="Toggle theme">
+            <i class="fa-solid fa-${store.get('theme') === 'light' ? 'sun' : 'moon'}"></i>
           </button>
           <div class="dropdown" id="userMenu">
-            toggle-user-menu
+            <button class="topbar-btn" data-action="toggle-user-menu" title="Account">
               <i class="fa-solid fa-circle-user" style="font-size:17px"></i>
             </button>
             <div class="dropdown-menu">
@@ -139,7 +143,7 @@ export function mountAppShell() {
               <button class="dropdown-item" data-nav="profile"><i class="fa-solid fa-id-card"></i> My Profile</button>
               <button class="dropdown-item" data-nav="settings"><i class="fa-solid fa-gear"></i> Settings</button>
               <div class="dropdown-divider"></div>
-              logout<i class="fa-solid fa-right-from-bracket"></i> Sign Out</button>
+              <button class="dropdown-item danger" data-action="logout"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button>
             </div>
           </div>
         </div>
