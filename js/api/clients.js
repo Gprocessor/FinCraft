@@ -1,0 +1,47 @@
+/* FinCraft · api/clients.js — Client (customer) records.
+   Auto-split from the original monolithic api.js for maintainability. */
+
+import { DATE_FORMAT, LOCALE } from '../config.js';
+
+export function makeClientsAPI(self) {
+  return {
+    list:     (params)        => self._g('/clients', params),
+    get:      (id, params)    => self._g(`/clients/${id}`, params),
+    template: ()              => self._g('/clients/template'),
+    create:   (body)          => self._p('/clients', body),
+    update:   (id, body)      => self._u(`/clients/${id}`, body),
+    activate: (id, date)      => self._p(`/clients/${id}?command=activate`, { activationDate: date, dateFormat: DATE_FORMAT, locale: LOCALE }),
+    close:    (id, body)      => self._p(`/clients/${id}?command=close`, body),
+    reject:   (id, body)      => self._p(`/clients/${id}?command=reject`, body),
+    withdrawnByApplicant: (id, body) => self._p(`/clients/${id}?command=withdrawnByApplicant`, body),
+    undoTransfer:     (id)            => self._p(`/clients/${id}?command=undoTransfer`, {}),
+    assignStaff:      (id, body)      => self._p(`/clients/${id}?command=assignStaff`, body),
+    unassignStaff:    (id, body)      => self._p(`/clients/${id}?command=unassignStaff`, body || {}),
+    markAsFraud:      (id, body)      => self._p(`/clients/${id}?command=markAsFraud`, body || { fraud: true }),
+    collateral:       (id)            => self._g(`/clients/${id}/collaterals`),
+    transactions:     (id, params)    => self._g(`/clients/${id}/transactions`, params),
+    waiveCharge:      (id, chargeId)  => self._p(`/clients/${id}/charges/${chargeId}?command=waive`, {}),
+    payCharge:        (id, chargeId, body) => self._p(`/clients/${id}/charges/${chargeId}?command=paycharge`, body),
+    deleteCharge:     (id, chargeId)  => self._d(`/clients/${id}/charges/${chargeId}`),
+    reactivate:(id, body)     => self._p(`/clients/${id}?command=reactivate`, body),
+    transfer: (id, body)      => self._p(`/clients/${id}?command=proposeTransfer`, body),
+    acceptTransfer: (id, body)=> self._p(`/clients/${id}?command=acceptTransfer`, body),
+    rejectTransfer: (id, body)=> self._p(`/clients/${id}?command=rejectTransfer`, body),
+    delete:   (id)            => self._d(`/clients/${id}`),
+    accounts: (id)            => self._g(`/clients/${id}/accounts`),
+    charges:  (id)            => self._g(`/clients/${id}/charges`),
+    addCharge:(id, body)      => self._p(`/clients/${id}/charges`, body),
+    images:   (id)            => self._g(`/clients/${id}/images`),
+    documents:(id)            => self._g(`/clients/${id}/documents`),
+    identifiers:        (id)       => self._g(`/clients/${id}/identifiers`),
+    createIdentifier:   (id, body) => self._p(`/clients/${id}/identifiers`, body),
+    deleteIdentifier:   (id, iid)  => self._d(`/clients/${id}/identifiers/${iid}`),
+    addresses:          (id)       => self._g(`/clients/${id}/addresses`),
+    createAddress:      (id, body) => self._p(`/clients/${id}/addresses`, body),
+    addressTemplate:    ()         => self._g('/clients/addresses/template'),
+    familyMembers:      (id)       => self._g(`/clients/${id}/familymembers`),
+    createFamilyMember: (id, body) => self._p(`/clients/${id}/familymembers`, body),
+    deleteFamilyMember: (id, mid)  => self._d(`/clients/${id}/familymembers/${mid}`),
+    obligeeDetails:     (id)       => self._g(`/clients/${id}/obligeedetails`)
+  };
+}

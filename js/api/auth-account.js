@@ -1,0 +1,41 @@
+/* FinCraft · api/auth-account.js — User session details, password management, two-factor auth, and tenant SSO/OIDC config.
+   Auto-split from the original monolithic api.js for maintainability. */
+
+export function makeUserDetailsAPI(self) {
+  return {
+    self: () => self._g('/userdetails')
+  };
+}
+
+export function makePasswordAPI(self) {
+  return {
+    /** Trigger a password-reset email; payload depends on tenant config. */
+    forgot:      (body)         => self._p('/password', body),
+    /** Change a user's password — also used for self change-password. */
+    change:      (userId, body) => self._u(`/users/${userId}`, body),
+    /** Active password policy. */
+    preferences: ()             => self._g('/passwordpreferences'),
+    updatePreferences: (body)   => self._u('/passwordpreferences', body)
+  };
+}
+
+export function makeTwoFactorAPI(self) {
+  return {
+    methods:  ()       => self._g('/twofactor'),
+    request:  (params) => self._req('POST', '/twofactor',          { params }),
+    validate: (token)  => self._req('POST', '/twofactor/validate', { params: { token } }),
+    config:   {
+      get:    ()  => self._g('/twofactor/configure'),
+      update: (b) => self._u('/twofactor/configure', b)
+    }
+  };
+}
+
+export function makeTenantOidcAPI(self) {
+  return {
+    get:    (tenantId)    => self._g(`/tenants/${tenantId}/oidc-config`),
+    create: (tenantId, b) => self._p(`/tenants/${tenantId}/oidc-config`, b),
+    update: (tenantId, b) => self._u(`/tenants/${tenantId}/oidc-config`, b),
+    delete: (tenantId)    => self._d(`/tenants/${tenantId}/oidc-config`)
+  };
+}

@@ -1,4 +1,5 @@
-const CACHE = 'fincraft-v3';
+const CACHE = 'fincraft-v4'; // bumped: js/api.js and js/ui.js are now barrels over
+                              // js/api/*.js and js/ui/*.js — new users get a clean cache.
 const ASSETS = [
   './',
   './index.html',
