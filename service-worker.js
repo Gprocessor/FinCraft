@@ -1,5 +1,7 @@
-const CACHE = 'fincraft-v4'; // bumped: js/api.js and js/ui.js are now barrels over
-                              // js/api/*.js and js/ui/*.js — new users get a clean cache.
+const CACHE = 'fincraft-v7'; // bumped again: 12 more page files split (shares, users,
+                              // centers, notifications, datatables, tasks, charges,
+                              // reports, collateral, templates, self-service, misc),
+                              // plus several broken account-detail links fixed.
 const ASSETS = [
   './',
   './index.html',

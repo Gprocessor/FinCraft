@@ -1,0 +1,94 @@
+/* FinCraft · pages/clients/detail/identity.js — identifiers, family members, addresses, and photo tab loaders.
+   Auto-split from the original monolithic pages/clients/detail.js for maintainability. */
+
+import { api } from '../../../api.js';
+import { confirm, toast } from '../../../ui.js';
+import { escapeHtml, fmtDate, sb } from '../../../utils.js';
+import { can } from '../shared.js';
+
+export async function loadClientIdentifiers(c, id) {
+  const listEl = c.querySelector('#cl-identifier-list'); if (!listEl) return;
+  listEl.innerHTML = '<div class="empty-state-row">Loading…</div>';
+  try {
+    const items = await api.clients.identifiers(id);
+    const list = Array.isArray(items) ? items : [];
+    listEl.innerHTML = list.length ? `
+      <table class="table">
+        <thead><tr><th>Type</th><th>Document Key</th><th>Status</th><th>Description</th><th></th></tr></thead>
+        <tbody>${list.map(i => `
+          <tr>
+            <td>${escapeHtml(i.documentType?.name || i.documentTypeName || '—')}</td>
+            <td>${escapeHtml(i.documentKey || '—')}</td>
+            <td>${sb(i.status?.value || '—')}</td>
+            <td>${escapeHtml(i.description || '—')}</td>
+            <td>${can('DELETE_CLIENTIDENTIFIER') ? `<button class="btn-mini btn-danger" data-del-id="${i.id}">Delete</button>` : ''}</td>
+          </tr>`).join('')}</tbody>
+      </table>` : '<div class="empty-state-row">No identifiers on file</div>';
+
+    listEl.querySelectorAll('[data-del-id]').forEach(b => b.addEventListener('click', async () => {
+      if (!await confirm({ title: 'Delete identifier?', danger: true, confirmText: 'Delete' })) return;
+      try { await api.clients.deleteIdentifier(id, b.dataset.delId); toast('success', 'Identifier deleted', ''); loadClientIdentifiers(c, id); }
+      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+    }));
+  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
+}
+
+export async function loadClientFamilyMembers(c, id) {
+  const listEl = c.querySelector('#cl-family-list'); if (!listEl) return;
+  listEl.innerHTML = '<div class="empty-state-row">Loading…</div>';
+  try {
+    const res = await api.clients.familyMembers(id);
+    const list = Array.isArray(res) ? res : (res?.pageItems || []);
+    listEl.innerHTML = list.length ? `
+      <table class="table">
+        <thead><tr><th>Name</th><th>Relationship</th><th>Gender</th><th>Date of Birth</th><th>Dependent</th><th></th></tr></thead>
+        <tbody>${list.map(m => `
+          <tr>
+            <td>${escapeHtml((m.firstName || '') + (m.lastName ? ' ' + m.lastName : '')) || '—'}</td>
+            <td>${escapeHtml(m.relationship?.name || m.relationshipType?.value || '—')}</td>
+            <td>${escapeHtml(m.gender?.name || '—')}</td>
+            <td>${fmtDate(m.dateOfBirth) || '—'}</td>
+            <td>${m.isDependent ? 'Yes' : 'No'}</td>
+            <td>${can('DELETE_CLIENTFAMILYMEMBER') ? `<button class="btn-mini btn-danger" data-del-fam="${m.id}">Remove</button>` : ''}</td>
+          </tr>`).join('')}</tbody>
+      </table>` : '<div class="empty-state-row">No family members on file</div>';
+
+    listEl.querySelectorAll('[data-del-fam]').forEach(b => b.addEventListener('click', async () => {
+      if (!await confirm({ title: 'Remove family member?', danger: true, confirmText: 'Remove' })) return;
+      try { await api.clients.deleteFamilyMember(id, b.dataset.delFam); toast('success', 'Removed', ''); loadClientFamilyMembers(c, id); }
+      catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+    }));
+  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
+}
+
+export async function loadClientAddresses(c, id) {
+  const listEl = c.querySelector('#cl-address-list'); if (!listEl) return;
+  listEl.innerHTML = '<div class="empty-state-row">Loading…</div>';
+  try {
+    const res = await api.clients.addresses(id);
+    const list = Array.isArray(res) ? res : [];
+    listEl.innerHTML = list.length ? `
+      <table class="table">
+        <thead><tr><th>Type</th><th>Street</th><th>City</th><th>Postal</th><th>Country</th><th>Active</th></tr></thead>
+        <tbody>${list.map(a => `
+          <tr>
+            <td>${escapeHtml(a.addressType || a.addressTypeId || '—')}</td>
+            <td>${escapeHtml(a.street || '—')}</td>
+            <td>${escapeHtml(a.city || '—')}</td>
+            <td>${escapeHtml(a.postalCode || '—')}</td>
+            <td>${escapeHtml(a.countryName || a.country || '—')}</td>
+            <td>${a.isActive ? 'Yes' : 'No'}</td>
+          </tr>`).join('')}</tbody>
+      </table>` : '<div class="empty-state-row">No addresses on file</div>';
+  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
+}
+
+export async function loadClientPhoto(c, id) {
+  const wrap = c.querySelector('#cl-photo-wrap'); if (!wrap) return;
+  try {
+    const res = await api.images.get('clients', id);
+    if (!res.ok) throw new Error('No photo');
+    const blob = await res.blob();
+    wrap.innerHTML = `<img src="${URL.createObjectURL(blob)}" alt="Client photo" class="client-photo"/>`;
+  } catch { /* leave placeholder */ }
+}

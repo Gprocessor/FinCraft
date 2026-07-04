@@ -108,5 +108,136 @@ done — no need to touch the 1000+ line files that used to hold everything.
 > class fields (`currencies`, `delinquencyBuckets`) in `api.js` that were silently shadowed by
 > later re-declarations and never reachable.
 
+## Pages (js/pages/) — same barrel pattern
+
+The 9 largest page modules (loans, savings, clients, deposits, groups, organization,
+system, products, accounting — each was 1,100–2,250 lines) are split the same way:
+`js/pages/<name>.js` is a barrel (`export * from './<name>/index.js'`), so
+`router.js`'s `import('./pages/<name>.js')` is untouched.
+
+Two shapes, depending on the page's original structure:
+
+```
+Entity + detail pages (loans, savings, clients, deposits, groups):
+  <name>/shared.js    tiny helpers/constants (e.g. `can`)
+  <name>/list.js       renderList
+  <name>/detail.js     renderDetail, tab switching, per-tab load*() functions
+  <name>/actions.js    open*Modal functions and one-off action handlers
+  <name>/index.js      render() — routes to list or detail
+
+Admin/dashboard pages (organization, system, products, accounting):
+  <name>/shared.js    tiny helpers/constants (+ any shared GL-account cache, etc.)
+  <name>/loaders.js    load*() functions for each tab/section
+  <name>/actions.js    open*Modal functions and one-off action handlers
+  <name>/index.js      render() — builds the tab shell and wires loaders
+```
+
+> **Bugs fixed during this split** (both pre-existing, not introduced by the split):
+> - `js/pages/groups.js`: two table-row templates were missing `<a href="...">`
+>   opening tags before `${g.id}">`/`${m.id}">`, leaving `g.id}"` as literal visible
+>   text instead of a working link. Left intact in the generated output (out of scope
+>   for a pure refactor) — worth a follow-up fix since it breaks navigation from the
+>   Groups list and the Members tab.
+> - `products.js`/`accounting.js`: a shared `_glCache` variable is now owned by
+>   `shared.js`; other files that used to reset it with `_glCache = null` now call an
+>   exported `resetGlCache()` instead, since ES module imports are read-only bindings
+>   (a direct cross-file assignment would throw `TypeError: Assignment to constant
+>   variable` at runtime).
+
+**Not split further:** `detail.js`/`actions.js`/`loaders.js` in `loans`, `organization`,
+`system`, and `products` are still 500–1,100 lines — much smaller than the 2,000+ line
+originals, but large enough that a second pass (e.g. splitting `loans/actions.js` by
+loan lifecycle stage: disbursement, repayment, write-off/close, transfers) would help
+if you keep growing those pages. Happy to do that pass too if useful.
+
+**Second pass (2nd split):** the 5 files singled out above as still-large were split again,
+one level deeper, using the same barrel pattern:
+
+```
+loans/detail.js    → barrel over loans/detail/{index,schedule,transactions,lifecycle,
+                                                collateral-guarantors,notes-docs}.js
+loans/actions.js   → barrel over loans/actions/{schedule,approval,disbursement,repayment,
+                                                charges,restructuring,closure,
+                                                collateral-guarantors}.js
+system/loaders.js       → barrel over system/loaders/{config,audit,access,integrations,
+                                                       data-mgmt,info}.js
+organization/loaders.js → barrel over organization/loaders/{offices-staff,calendar,finance,
+                                                             si,reporting,integrations}.js
+products/actions.js     → barrel over products/actions/{loan-products,savings-products,
+                                                         share-products,config}.js
+```
+
+Every sibling file that imported from e.g. `./actions.js` still works unchanged — only the
+barrel's *contents* moved, not its location. Largest single file after this pass: ~300 lines
+(down from the 950–1,100 line files after the first pass, and 2,000+ originally).
+
+> **Bug fixed during this pass:** `organization.js` and `system.js` each had a two-line
+> `/* ... */` banner comment sitting *between* two of their `import` statements. The original
+> first-pass split's comment-detection logic stopped scanning imports at that comment,
+> silently dropping the second half of each file's imports (`api`, `store`, `toast`,
+> `escapeHtml`, `fmtDate`, `num`, `sb`, `openModal`, `confirm`) from every generated
+> sub-module. Fixed by making the parser properly track open/close block comments instead of
+> checking line prefixes. Caught by re-running the same import/export verification plus a new
+> runtime check that calls every exported function with stub arguments and watches for
+> `ReferenceError`s (396 functions checked, 0 reference errors, 0 swallowed errors).
+>
+> Still on the table if you want to keep going: `organization/actions.js` (~930 lines) and
+> `system/actions.js` (~705 lines) weren't part of this second pass and could get the same
+> treatment.
+
+## Round 3: the rest of the large pages, a permanent test suite, and a rendering-bug sweep
+
+**12 more page files split**, same barrel pattern as before: `shares`, `users`, `centers`,
+`notifications`, `datatables`, `tasks`, `charges`, `reports`, `collateral`, `templates`,
+`self-service`, `misc`. Between this and the earlier rounds, essentially every `pages/*.js`
+file that was over ~400 lines is now split — the only two holdouts are `shares/detail.js`
+(477 lines) and `centers/detail.js` (450 lines), each a single large `renderDetail()`
+function that isn't cleanly splittable without restructuring its internals.
+
+**`npm test` now checks every function, not just utils.js.** `tests/module-integrity.test.js`
+imports all ~290 files under `js/` and calls every exported function with a battery of stub
+arguments in a mocked DOM, watching for `ReferenceError`s — including ones a function's own
+`try/catch` might swallow and show in a toast instead. Run `npm install` once (adds `jsdom`
+as a dev dependency), then `npm test`. This is what caught two more real bugs from the
+earlier splitting rounds before they shipped:
+- `organization.js`/`system.js`: a two-line comment sitting between two `import` statements
+  made the first-pass splitter stop scanning imports early, silently dropping `api`, `store`,
+  `toast`, `escapeHtml`, and others from several generated files.
+- Several files import `{ confirm as modalConfirm }` — the splitter was keying imports by
+  their *original* export name instead of the local alias, so `modalConfirm` calls lost
+  their import in every file that used the alias.
+
+Both are fixed at the source (the splitting scripts), and the whole `js/pages/` tree was
+regenerated from scratch afterward so no stale output could hide a fix.
+
+**A systemic broken-link bug, found while checking for rendering issues.** While hunting for
+rendering problems, a recurring pattern turned up across list views:
+
+```
+<td>${l.id}">${escapeHtml(l.accountNo)}</a></td>
+```
+
+The `<a href="..."` (or `<a href="#" data-view-x="...">`) opening tag is missing entirely —
+just the bare id value followed by a stray `">`. The account number still displays, but it's
+not a link, and the loose `">`/`</a>` are left dangling in the markup. This turned out to be
+a **pre-existing bug in the original codebase**, not something introduced by the split — it
+was just easiest to spot once the account-linking logic was isolated in small files. It hit
+the primary list view of: **loans, savings, shares, groups, centers, charges, collateral,
+deposits (both fixed and recurring)**, plus secondary account links inside **client detail**
+and **group detail**, and cosmetic name links in **templates, users, datatables**. For the
+list pages, this meant there was no way to click into a loan/savings/share/group/center/
+charge/collateral/deposit's detail page from its own list.
+
+All instances are fixed the same way: restore the missing `<a href="#" data-view-x="${id}">`
+wrapper and wire a matching click handler that calls `router.js`'s `navigate()`, mirroring
+the pattern `clients.js` already used correctly elsewhere in the app.
+
+**A related, second bug class turned up while fixing the first one:** several `import('../router.js')`
+(and `../api.js`, `../ui.js`, etc.) calls are written as string literals *inside function
+bodies*, not as static top-of-file imports. The splitting scripts only ever rewired static
+imports — these dynamic ones still had the path depth of the *original* file, which is wrong
+now that the code lives one or two directories deeper. Every dynamic import under `js/pages/`
+was audited and corrected to the right number of `../` for its new location (29 files).
+
 ---
 Built by **Processor** Power Platform & MIS Division

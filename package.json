@@ -4,5 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "node test-runner/run-tests.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
   }
 }
