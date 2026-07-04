@@ -12,7 +12,7 @@ export async function openDisburseModal(id) {
   try { paymentTypes = await api.paymentTypes.list(); } catch {}
   const mid = `ln-disb-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Disburse Loan</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -49,7 +49,7 @@ export async function openDisburseModal(id) {
       await api.loans.disburse(id, payload);
       el.remove();
       toast('success', 'Loan disbursed', `#${id}`);
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Disburse failed', e.detail?.defaultUserMessage || e.message); }
   });
 }

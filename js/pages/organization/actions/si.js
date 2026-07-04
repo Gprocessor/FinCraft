@@ -17,6 +17,8 @@ export async function openStandingInstructionModal(onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-lg">
       <div class="modal-header"><h3>New Standing Instruction</h3><button data-close-modal>&times;</button></div>

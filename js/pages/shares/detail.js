@@ -159,7 +159,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     }));
     c.querySelector('#btn-sh-undo-approval')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo approval?', confirmText: 'Undo' })) return;
-      try { await api.shares.undoApproval(id); toast('success', 'Approval undone', ''); location.reload(); }
+      try { await api.shares.undoApproval(id); toast('success', 'Approval undone', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-sh-reject')?.addEventListener('click', () => openShareSimpleCmd({

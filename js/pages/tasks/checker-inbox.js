@@ -286,6 +286,8 @@ function openTaskDetailModal(task) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
 
   // Pretty-print JSON of pending change
   let jsonPreview = '—';

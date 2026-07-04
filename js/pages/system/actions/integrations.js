@@ -8,7 +8,7 @@ import { escapeHtml } from '../../../utils.js';
 export function viewServiceConfig(group, label) {
   const mid = 'svc-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>${escapeHtml(label)} Configuration</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body" id="svc-cfg-body">
@@ -78,7 +78,7 @@ export async function openWebhookModal(hookId, onSuccess) {
 
   const mid = 'hook-modal-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-lg">
         <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} Webhook</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

@@ -7,7 +7,8 @@ class Store {
     this.state = {
       auth: null, theme: 'dark', sidebar: 'expanded',
       currentPage: 'dashboard', currentParams: {}, cache: {}, offline: false,
-      perms: []          // Fineract permission codes for current user
+      perms: [],          // Fineract permission codes for current user
+      defaultCurrency: null // tenant's configured currency, fetched at login; fmt() falls back to this
     };
     this.subs = {};
   }
@@ -38,7 +39,8 @@ class Store {
           roles:     this.state.auth.roles  || [],
           officeId:  this.state.auth.officeId || null,
           officeName:this.state.auth.officeName || null,
-          perms:     this.state.perms || []      // persist perms WITH session
+          perms:     this.state.perms || [],     // persist perms WITH session
+          defaultCurrency: this.state.defaultCurrency || null
         }));
       } else {
         sessionStorage.removeItem(SS_KEY);
@@ -55,6 +57,7 @@ class Store {
       if (ss && ss.authToken) {
         this.state.auth  = ss;
         this.state.perms = Array.isArray(ss.perms) ? ss.perms : [];
+        this.state.defaultCurrency = ss.defaultCurrency || null;
       }
     } catch {}
     document.documentElement.setAttribute('data-theme', this.state.theme);

@@ -127,6 +127,8 @@ async function openReportFormModal(reportId, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-xl">
       <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} Report Definition</h3><button data-close-modal>&times;</button></div>

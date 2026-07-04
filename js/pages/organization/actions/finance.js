@@ -19,6 +19,8 @@ export async function openCurrencyEditModal(onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>Edit Currencies</h3><button data-close-modal>&times;</button></div>
@@ -62,6 +64,8 @@ export function openPaymentTypeModal(existing, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} Payment Type</h3><button data-close-modal>&times;</button></div>
@@ -103,6 +107,8 @@ export function openFundModal(existing, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} Fund</h3><button data-close-modal>&times;</button></div>

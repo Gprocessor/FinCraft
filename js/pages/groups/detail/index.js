@@ -172,13 +172,13 @@ function switchTab(name) {
     c.querySelector('#grp-back').addEventListener('click', () => {
       import('../../../router.js').then(r => r.navigate('groups'));
     });
-    c.querySelector('#grp-edit')?.addEventListener('click', () => openEditGroupModal(g, () => location.reload()));
+    c.querySelector('#grp-edit')?.addEventListener('click', () => openEditGroupModal(g, () => document.dispatchEvent(new CustomEvent('fc:reload'))));
     c.querySelector('#grp-activate')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Activate group?', confirmText: 'Activate' })) return;
       try {
         await api.groups.activate(id, { activationDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Group activated', g.name);
-        location.reload();
+        document.dispatchEvent(new CustomEvent('fc:reload'));
       } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#grp-close')?.addEventListener('click', () => openCloseGroupModal(id));

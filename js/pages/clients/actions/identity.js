@@ -15,7 +15,7 @@ export async function openAddIdentifierModal(clientId, onSuccess) {
   } catch {}
   const mid = `cl-id-modal-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Add Identifier</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -61,7 +61,7 @@ export async function openAddFamilyModal(clientId, onSuccess) {
   } catch {}
   const mid = `cl-fam-modal-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Add Family Member</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -126,7 +126,7 @@ export async function openAddAddressModal(clientId, onSuccess) {
   } catch {}
   const mid = `cl-addr-modal-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Add Address</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

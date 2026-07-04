@@ -5,7 +5,7 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { escapeHtml, fmtDate, sb } from '../../../utils.js';
 import { confirm as modalConfirm, openModal, toast } from '../../../ui.js';
-import { openAllocateCashierModal, openEditOfficeModal, openEditStaffModal, openSettleCashierModal } from '../actions.js';
+import { openAllocateCashierModal, openCashInModal, openEditOfficeModal, openEditStaffModal, openSettleCashierModal } from '../actions.js';
 
 export function loadOffices(c, officeList) {
   const el = c.querySelector('#og-0');
@@ -147,6 +147,7 @@ export async function loadTellers(c) {
                   <td>${fmtDate(cx.endDate) || '—'}</td>
                   <td>${escapeHtml(cx.type || '—')}</td>
                   <td class="text-right">
+                    ${can('ALLOCATE_CASHIERS_TELLER') ? `<button class="btn-mini" data-cashin-teller="${tid}" data-cashin-cashier="${cx.id}" data-cashin-name="${escapeHtml(cx.staffName || cx.name || '')}">Cash In</button>` : ''}
                     ${can('SETTLE_CASHIERS_TELLER') ? `<button class="btn-mini" data-settle-teller="${tid}" data-settle-cashier="${cx.id}">Settle</button>` : ''}
                   </td>
                 </tr>`).join('')}</tbody>
@@ -154,6 +155,9 @@ export async function loadTellers(c) {
 
         body.querySelector('[data-alloc-teller]')?.addEventListener('click', () =>
           openAllocateCashierModal(tid, b.dataset.tellerName, () => { row.style.display = 'none'; loadTellers(c); }));
+        body.querySelectorAll('[data-cashin-teller]').forEach(cb =>
+          cb.addEventListener('click', () =>
+            openCashInModal(cb.dataset.cashinTeller, cb.dataset.cashinCashier, cb.dataset.cashinName, () => { row.style.display = 'none'; loadTellers(c); })));
         body.querySelectorAll('[data-settle-teller]').forEach(sb2 =>
           sb2.addEventListener('click', () =>
             openSettleCashierModal(sb2.dataset.settleTeller, sb2.dataset.settleCashier, () => { row.style.display = 'none'; loadTellers(c); })));

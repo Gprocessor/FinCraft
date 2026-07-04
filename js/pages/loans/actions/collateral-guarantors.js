@@ -18,7 +18,7 @@ export async function openAddLoanCollateralModal(loanId, clientId, onSuccess) {
 
   const mid = `ln-col-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Add Collateral to Loan</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -82,7 +82,7 @@ export async function openAddGuarantorModal(loanId, onSuccess) {
 
   const mid = `ln-guar-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Add Guarantor</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -197,7 +197,7 @@ export async function openAttachOriginatorModal(loanId, onSuccess) {
   } catch {}
   const mid = `ln-attorig-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Attach Originator</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -251,7 +251,7 @@ export async function openEAOTransferModal(loanId, mode, onSuccess) {
   const isBuyback = mode === 'buyback';
   const mid = `ln-eao-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${isBuyback ? 'Buy-back Loan' : 'Transfer to External Asset Owner'}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

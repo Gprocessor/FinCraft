@@ -18,7 +18,7 @@ export async function openTrancheEditorModal(loanId, existing, onSuccess) {
   const isEdit = !!existing;
   const mid = `ln-tranche-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${isEdit ? 'Edit' : 'Add'} Tranche</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -53,7 +53,7 @@ export async function openTrancheEditorModal(loanId, existing, onSuccess) {
 export async function openDelinquencyActionModal(loanId, onSuccess) {
   const mid = `ln-delq-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Delinquency Action</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

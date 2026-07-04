@@ -10,7 +10,7 @@ import { openSimpleLoanCmdModal } from './closure.js';
 export function openWaiveInterestModal(id) {
   const mid = `ln-waive-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Waive Interest</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -39,7 +39,7 @@ export function openWaiveInterestModal(id) {
       });
       el.remove();
       toast('success', 'Interest waived', `${transactionAmount}`);
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -54,7 +54,7 @@ export function openRecoverPaymentModal(id) {
 export async function openAdjustTransactionModal(loanId, txId, onSuccess) {
   const mid = `tx-adjust-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Adjust Transaction #${txId}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -92,7 +92,7 @@ export async function openChargebackModal(loanId, txId, onSuccess) {
   try { paymentTypes = await api.paymentTypes.list(); } catch {}
   const mid = `tx-cb-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Chargeback Transaction #${txId}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -151,7 +151,7 @@ export function openChargeRefundModal(loanId, onSuccess) {
 export function openSimpleTxModal({ loanId, label, apiCall, onSuccess }) {
   const mid = `tx-simple-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${escapeHtml(label)}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

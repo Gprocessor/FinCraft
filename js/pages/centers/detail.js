@@ -159,13 +159,13 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#ctr-back').addEventListener('click', () => {
       import('../../router.js').then(r => r.navigate('centers'));
     });
-    c.querySelector('#ctr-edit')?.addEventListener('click', () => openEditCenterModal(ctr, () => location.reload()));
+    c.querySelector('#ctr-edit')?.addEventListener('click', () => openEditCenterModal(ctr, () => document.dispatchEvent(new CustomEvent('fc:reload'))));
     c.querySelector('#ctr-activate')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Activate center?', confirmText: 'Activate' })) return;
       try {
         await api.centers.activate(id, { activationDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Center activated', ctr.name);
-        location.reload();
+        document.dispatchEvent(new CustomEvent('fc:reload'));
       } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#ctr-close')?.addEventListener('click', () => openCloseCenterModal(id));
@@ -183,7 +183,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
     });
 
-    c.querySelector('#ctr-add-groups')?.addEventListener('click', () => openAddGroupsModal(id, ctr, () => location.reload()));
+    c.querySelector('#ctr-add-groups')?.addEventListener('click', () => openAddGroupsModal(id, ctr, () => document.dispatchEvent(new CustomEvent('fc:reload'))));
     c.querySelector('#ctr-remove-groups')?.addEventListener('click', () => disassociateSelectedGroups(c, id));
     c.querySelector('#ctr-add-meeting')?.addEventListener('click', () => openScheduleMeetingModal(id, () => loadMeetings(c, id)));
 

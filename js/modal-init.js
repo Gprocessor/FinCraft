@@ -329,7 +329,7 @@ function addJERow(tbodyId, optHtml) {
   tr.innerHTML = `
     <td><select class="form-control" data-je-account>${optHtml}</select></td>
     <td><input type="number" min="0" step="0.01" class="form-control" data-je-amount/></td>
-    <td><button type="button" class="btn-ghost btn-sm" onclick="this.closest('tr').remove()"><i class="fa-solid fa-trash"></i></button></td>`;
+    <td><button type="button" class="btn-ghost btn-sm" data-remove-row><i class="fa-solid fa-trash"></i></button></td>`;
   tbody.appendChild(tr);
 }
 

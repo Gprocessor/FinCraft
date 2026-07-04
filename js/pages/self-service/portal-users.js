@@ -144,6 +144,8 @@ function openResetPortalPasswordModal(userId, username) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = '<div class="modal modal-md">' +
     '<div class="modal-header"><h3>Reset Password — @' + escapeHtml(username) + '</h3><button data-close-modal>&times;</button></div>' +
     '<div class="modal-body">' +
@@ -189,6 +191,8 @@ function openSelfServiceInfoModal() {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = '<div class="modal modal-md">' +
     '<div class="modal-header"><h3>About Self-Service</h3><button data-close-modal>&times;</button></div>' +
     '<div class="modal-body">' +

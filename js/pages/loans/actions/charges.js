@@ -14,7 +14,7 @@ export async function openApplyLoanChargeModal(loanId, onSuccess) {
   } catch {}
   const mid = `ln-applycharge-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Apply Charge</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -60,7 +60,7 @@ export async function openPayLoanChargeModal(loanId, chargeId, onSuccess) {
   try { paymentTypes = await api.paymentTypes.list(); } catch {}
   const mid = `ln-paycharge-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Pay Charge</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -101,7 +101,7 @@ export async function openPayLoanChargeModal(loanId, chargeId, onSuccess) {
 export async function openAdjustLoanChargeModal(loanId, chargeId, onSuccess) {
   const mid = `ln-adjcharge-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Adjust Charge</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

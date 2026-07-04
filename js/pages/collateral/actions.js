@@ -16,7 +16,7 @@ export async function openCollateralFormModal(existing, onSuccess) {
   const mid = 'col-form-' + Date.now();
 
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>${isEdit ? 'Edit Collateral Type' : 'New Collateral Type'}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

@@ -214,7 +214,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-approve')?.addEventListener('click', () => openApproveModal(id));
     c.querySelector('#btn-undo-approval')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo approval?', message: 'Return this loan to pending state.', confirmText: 'Undo Approval' })) return;
-      try { await api.loans.undoApproval(id); toast('success', 'Approval undone', `#${id}`); location.reload(); }
+      try { await api.loans.undoApproval(id); toast('success', 'Approval undone', `#${id}`); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-reject')?.addEventListener('click', () => openSimpleLoanCmdModal({
@@ -227,7 +227,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-disburse-savings')?.addEventListener('click', () => openDisburseToSavingsModal(id));
     c.querySelector('#btn-undo-disburse')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo disbursal?', message: 'Loan returns to Approved status.', danger: true, confirmText: 'Undo' })) return;
-      try { await api.loans.undoDisbursal(id); toast('success', 'Disbursal undone', ''); location.reload(); }
+      try { await api.loans.undoDisbursal(id); toast('success', 'Disbursal undone', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-repay')?.addEventListener('click', () => {
@@ -238,7 +238,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-recover')?.addEventListener('click', () => openRecoverPaymentModal(id));
     c.querySelector('#btn-recover-guar')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Recover guarantees?', confirmText: 'Recover' })) return;
-      try { await api.loans.recoverGuarantees(id); toast('success', 'Guarantees recovered', ''); location.reload(); }
+      try { await api.loans.recoverGuarantees(id); toast('success', 'Guarantees recovered', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-reage')?.addEventListener('click', () => openReageModal(id));
@@ -261,7 +261,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-assign-officer')?.addEventListener('click', () => openAssignOfficerModal(id, l.loanOfficerName));
     c.querySelector('#btn-mark-fraud')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Toggle fraud flag?', message: 'This flags or unflags the loan as fraudulent.', danger: true, confirmText: 'Toggle' })) return;
-      try { await api.loans.markAsFraud(id, { fraud: !l.fraud }); toast('warn', 'Fraud flag toggled', ''); location.reload(); }
+      try { await api.loans.markAsFraud(id, { fraud: !l.fraud }); toast('warn', 'Fraud flag toggled', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
 

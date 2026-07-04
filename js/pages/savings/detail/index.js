@@ -185,7 +185,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       (typeof openApproveSavingsModal === 'function') && openApproveSavingsModal(id));
     c.querySelector('#btn-sv-undo-approval')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo approval?', confirmText: 'Undo Approval' })) return;
-      try { await api.savings.undoApproval(id); toast('success', 'Approval undone', ''); location.reload(); }
+      try { await api.savings.undoApproval(id); toast('success', 'Approval undone', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-sv-reject')?.addEventListener('click', () =>
@@ -197,7 +197,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       try {
         await api.savings.activate(id, { activatedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Account activated', `#${id}`);
-        location.reload();
+        document.dispatchEvent(new CustomEvent('fc:reload'));
       } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
     });
 
@@ -222,19 +222,19 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     blockBtns.forEach(([sel, method, successMsg]) => {
       c.querySelector(sel)?.addEventListener('click', async () => {
         if (!await confirm({ title: 'Confirm action?', confirmText: 'Confirm' })) return;
-        try { await api.savings[method](id); toast('success', successMsg, ''); location.reload(); }
+        try { await api.savings[method](id); toast('success', successMsg, ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
         catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
       });
     });
 
     // -------- Toolbar (interest / fees / staff) --------
     c.querySelector('#btn-sv-calc-int')?.addEventListener('click', async () => {
-      try { await api.savings.calculateInterest(id); toast('success', 'Interest calculated', ''); location.reload(); }
+      try { await api.savings.calculateInterest(id); toast('success', 'Interest calculated', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-sv-post-int')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Post interest today?', confirmText: 'Post' })) return;
-      try { await api.savings.postInterest(id); toast('success', 'Interest posted', ''); location.reload(); }
+      try { await api.savings.postInterest(id); toast('success', 'Interest posted', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-sv-post-int-asof')?.addEventListener('click', () =>

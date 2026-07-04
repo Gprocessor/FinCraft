@@ -14,7 +14,7 @@ export async function openApplyChargeModal(groupId, onSuccess) {
   } catch {}
   const mid = `grp-charge-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Apply Charge</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -60,7 +60,7 @@ export async function openPayChargeModal(groupId, chargeId, onSuccess) {
   try { paymentTypes = await api.paymentTypes.list(); } catch {}
   const mid = `grp-pay-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Pay Charge</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

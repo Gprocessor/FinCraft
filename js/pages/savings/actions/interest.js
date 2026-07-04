@@ -8,7 +8,7 @@ import { toast } from '../../../ui.js';
 export function openPostInterestAsOnModal(id) {
   const mid = `sv-pi-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Post Interest As-On</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -30,7 +30,7 @@ export function openPostInterestAsOnModal(id) {
       await api.savings.postInterestAsOn(id, transactionDate);
       el.remove();
       toast('success', 'Interest posted as-on', transactionDate);
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -38,7 +38,7 @@ export function openPostInterestAsOnModal(id) {
 export function openAnnualFeesModal(id) {
   const mid = `sv-af-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Apply Annual Fees</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -61,7 +61,7 @@ export function openAnnualFeesModal(id) {
       });
       el.remove();
       toast('success', 'Annual fees applied', '');
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Apply failed', e.detail?.defaultUserMessage || e.message); }
   });
 }

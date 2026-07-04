@@ -21,7 +21,7 @@ export function openCloseLoanModal(id) {
 export function openSimpleLoanCmdModal({ id, command, label, dateField = 'transactionDate', isTransaction = false, amountRequired = false }) {
   const mid = `lncmd-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${escapeHtml(label)}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -65,7 +65,7 @@ if (methodName && typeof api.loans[methodName] === 'function') {
       }
       el.remove();
       toast('success', `${label} successful`, `Loan #${id}`);
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', `${label} failed`, e.detail?.defaultUserMessage || e.message); }
   });
 }

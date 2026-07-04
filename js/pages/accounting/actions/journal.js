@@ -10,7 +10,7 @@ import { dynModal, glList, v, vi } from '../shared.js';
 export function openReverseJEModal(transactionId, onSuccess) {
   const mid = 'je-rev-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Reverse Journal Entry</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -51,7 +51,7 @@ export async function openFrequentPostingModal(ruleId, rule, onSuccess) {
 
   const mid = 'fp-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Post: ${escapeHtml(rule?.name || '')}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

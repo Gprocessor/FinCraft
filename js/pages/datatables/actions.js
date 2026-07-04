@@ -11,6 +11,8 @@ export function openCreateDataTableModal(onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
 
   const columnRow = (idx) => `
     <tr class="dt-col-row" data-row-idx="${idx}">
@@ -160,6 +162,8 @@ export function openAddColumnModal(tableName, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>Add Column to ${escapeHtml(tableName)}</h3><button data-close-modal>&times;</button></div>
@@ -232,6 +236,8 @@ export function openRegisterModal(tableName, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>Register ${escapeHtml(tableName)}</h3><button data-close-modal>&times;</button></div>

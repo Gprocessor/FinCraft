@@ -10,7 +10,7 @@ export async function openScheduleMeetingModal(groupId, onSuccess, existingCal) 
   const mid = `grp-meet-${Date.now()}`;
   const isEdit = !!existingCal;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${isEdit ? 'Edit' : 'Schedule'} Meeting</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -67,7 +67,7 @@ export async function openAttendanceModal(groupId, meetingId, onSuccess) {
   } catch {}
   const mid = `grp-att-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Save Attendance</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

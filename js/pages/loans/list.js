@@ -67,6 +67,30 @@ export async function renderList(c) {
   let allLoans = [], totalRecords = 0, currentOffset = 0;
   const PAGE_SIZE = 50;
 
+  // Portfolio-wide KPI counts — independent of the current page/search, so they stay accurate
+  // no matter how many pages the portfolio spans. Uses limit:1 requests purely to read
+  // totalFilteredRecords (cheap — no record bodies are fetched), same technique as analytics.js.
+  async function loadKpis() {
+    const results = await Promise.allSettled([
+      api.loans.list({ limit: 1, status: 'active' }),
+      api.loans.list({ limit: 1, status: 'pending' }),
+      api.loans.list({ limit: 1, status: 'approved' }),
+      api.runReports.run('ActiveLoansInArrears', { genericResultSet: true })
+    ]);
+    const count = (r) => r.status === 'fulfilled' ? (r.value?.totalFilteredRecords ?? 0) : null;
+    const activeCount  = count(results[0]);
+    const pendingCount = count(results[1]);
+    const approvedCount = count(results[2]);
+    const arrearsCount = results[3].status === 'fulfilled' ? (results[3].value?.data?.length ?? null) : null;
+
+    const activeEl = c.querySelector('#ln-active');
+    const pendingEl = c.querySelector('#ln-pending');
+    const overdueEl = c.querySelector('#ln-overdue');
+    if (activeEl) activeEl.textContent = activeCount != null ? num(activeCount) : '—';
+    if (pendingEl) pendingEl.textContent = (pendingCount != null && approvedCount != null) ? num(pendingCount + approvedCount) : '—';
+    if (overdueEl) overdueEl.textContent = arrearsCount != null ? num(arrearsCount) : '—';
+  }
+
   async function load(offset = 0) {
     c.querySelector('#loans-rows').innerHTML =
       '<tr><td colspan="9" class="empty-state-row">Loading…</td></tr>';
@@ -105,10 +129,7 @@ export async function renderList(c) {
       allLoans = list;
       currentOffset = offset;
 
-      c.querySelector('#ln-total').textContent   = num(totalRecords);
-      c.querySelector('#ln-active').textContent  = num(list.filter(l => l.status === 'Active').length);
-      c.querySelector('#ln-pending').textContent = num(list.filter(l => ['Submitted and pending approval', 'Approved'].includes(l.status)).length);
-      c.querySelector('#ln-overdue').textContent = num(list.filter(l => l.totalOverdue > 0).length);
+      c.querySelector('#ln-total').textContent = num(totalRecords);
 
       draw(list);
       drawPagination();
@@ -163,6 +184,7 @@ export async function renderList(c) {
         });
         toast('success', 'Loan approved', `#${b.dataset.loanApprove}`);
         load(currentOffset);
+        loadKpis();
       } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
     }));
     c.querySelectorAll('[data-loan-repay]').forEach(b => b.addEventListener('click', () => {
@@ -171,7 +193,7 @@ export async function renderList(c) {
     }));
   }
 
-  await load();
+  await Promise.all([load(), loadKpis()]);
 
   let t;
   c.querySelector('#lf-search').addEventListener('input', () => {

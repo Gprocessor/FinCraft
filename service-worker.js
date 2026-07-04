@@ -1,7 +1,7 @@
-const CACHE = 'fincraft-v7'; // bumped again: 12 more page files split (shares, users,
-                              // centers, notifications, datatables, tasks, charges,
-                              // reports, collateral, templates, self-service, misc),
-                              // plus several broken account-detail links fixed.
+const CACHE = 'fincraft-v8'; // bumped: removed legacy fincraft-shell.css (was corrupting
+                              // theme rendering with undefined CSS vars), fixed modal
+                              // size classes (modal md/lg -> modal-md/modal-lg) that
+                              // caused Quick Actions and other modals to render full-width.
 const ASSETS = [
   './',
   './index.html',
@@ -10,7 +10,6 @@ const ASSETS = [
   './css/components.css',
   './css/app.css',
   './css/login.css',
-  './css/fincraft-shell.css', 
   // Core JS
   './js/app.js',
   './js/config.js',

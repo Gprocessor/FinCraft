@@ -17,13 +17,14 @@ export async function loadUsersList(c) {
     const list = Array.isArray(users) ? users : [];
     const officeList = Array.isArray(offices) ? offices : [];
 
-    const activeCount = list.filter(u => !u.passwordNeverExpires === false ? true : true).length; // server doesn't expose
+    const activeCount = list.filter(u => u.accountNonLocked !== false && !u.passwordExpired).length;
     const lockedCount = list.filter(u => u.accountNonLocked === false).length;
     const expiredCount = list.filter(u => u.passwordExpired).length;
 
     el.innerHTML = `
       <div class="kpi-grid mb-3">
         <div class="kpi-card"><div class="kpi-label">Total Users</div><div class="kpi-value">${num(list.length)}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Active</div><div class="kpi-value">${num(activeCount)}</div></div>
         <div class="kpi-card"><div class="kpi-label">Locked</div><div class="kpi-value">${num(lockedCount)}</div></div>
         <div class="kpi-card"><div class="kpi-label">Password Expired</div><div class="kpi-value">${num(expiredCount)}</div></div>
         <div class="kpi-card"><div class="kpi-label">Offices</div><div class="kpi-value">${num(officeList.length)}</div></div>

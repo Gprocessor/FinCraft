@@ -189,7 +189,7 @@ export async function loadAuditTrails(c) {
 export async function openAuditDetailModal(auditId) {
   const mid = 'aud-mod-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div id="${mid}" class="modal-overlay open">
+    <div id="${mid}" class="modal-overlay open" role="dialog" aria-modal="true">
       <div class="modal modal-lg">
         <div class="modal-head">
           <h3 class="modal-title">Audit Entry #${escapeHtml(String(auditId))}</h3>

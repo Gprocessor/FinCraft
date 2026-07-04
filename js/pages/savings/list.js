@@ -64,6 +64,32 @@ export async function renderList(c) {
   let allAccounts = [], totalRecords = 0, currentOffset = 0;
   const PAGE_SIZE = 50;
 
+  // Portfolio-wide KPIs — Total Accounts / Total Balance / Avg Balance must reflect the whole
+  // filtered portfolio, not just the current 50-row page. Fetched as one large, unpaginated
+  // request (same status/product filters as the table) purely to compute these aggregates.
+  async function loadKpis() {
+    try {
+      const status = c.querySelector('#sv-status')?.value;
+      const prod   = c.querySelector('#sv-product')?.value;
+      const params = { limit: 10000 };
+      if (status) params.status = status;
+      if (prod)   params.productId = prod;
+
+      const res = await api.savings.list(params);
+      const all = Array.isArray(res) ? res : (res?.pageItems || []);
+      const total = all.reduce((sum, a) => sum + (a.summary?.accountBalance || 0), 0);
+
+      c.querySelector('#sv-count').textContent   = num(all.length);
+      c.querySelector('#sv-balance').textContent = fmt(total);
+      c.querySelector('#sv-avg').textContent     = fmt(all.length ? total / all.length : 0);
+    } catch (e) {
+      ['#sv-count', '#sv-balance', '#sv-avg'].forEach(id => {
+        const el = c.querySelector(id);
+        if (el) el.textContent = '—';
+      });
+    }
+  }
+
   async function load(offset = 0) {
     c.querySelector('#sv-rows').innerHTML =
       '<tr><td colspan="6" class="empty-state-row">Loading…</td></tr>';
@@ -83,14 +109,10 @@ export async function renderList(c) {
         (s.accountNo || '').toLowerCase().includes(q) ||
         (s.clientName || '').toLowerCase().includes(q));
 
-      const total = list.reduce((sum, a) => sum + (a.summary?.accountBalance || 0), 0);
       allAccounts = list;
       currentOffset = offset;
 
-      c.querySelector('#sv-count').textContent   = num(list.length);
       c.querySelector('#sv-total').textContent   = num(totalRecords);
-      c.querySelector('#sv-balance').textContent = fmt(total);
-      c.querySelector('#sv-avg').textContent     = fmt(list.length ? total / list.length : 0);
 
       draw(list);
       drawPagination();
@@ -150,7 +172,7 @@ export async function renderList(c) {
           approvedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
         });
         toast('success', 'Account approved', `#${b.dataset.svApprove}`);
-        load(currentOffset);
+        load(currentOffset); loadKpis();
       } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
     }));
     c.querySelectorAll('[data-sv-activate]').forEach(b => b.addEventListener('click', async () => {
@@ -159,19 +181,19 @@ export async function renderList(c) {
           activatedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
         });
         toast('success', 'Account activated', `#${b.dataset.svActivate}`);
-        load(currentOffset);
+        load(currentOffset); loadKpis();
       } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
     }));
   }
 
-  await load();
+  await Promise.all([load(), loadKpis()]);
 
   let t;
   c.querySelector('#sv-search').addEventListener('input', () => {
     clearTimeout(t); t = setTimeout(() => load(0), 400);
   });
   ['#sv-status', '#sv-product'].forEach(sel => {
-    c.querySelector(sel)?.addEventListener('change', () => load(0));
+    c.querySelector(sel)?.addEventListener('change', () => { load(0); loadKpis(); });
   });
 
   c.querySelector('#sv-export').addEventListener('click', () => {

@@ -22,7 +22,7 @@ export async function openApplyDepositChargeModal(apiObj, id, onSuccess) {
 
   const mid = 'dep-applycharge-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Apply Charge</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -68,7 +68,7 @@ export async function openPayDepositChargeModal(apiObj, id, chargeId, onSuccess)
   try { paymentTypes = await api.paymentTypes.list(); } catch {}
   const mid = 'dep-paycharge-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Pay Charge</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

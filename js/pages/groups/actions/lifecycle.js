@@ -9,7 +9,7 @@ import { escapeHtml } from '../../../utils.js';
 export async function openEditGroupModal(g, onSuccess) {
   const mid = `grp-edit-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Edit Group</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -51,7 +51,7 @@ export async function openCloseGroupModal(id) {
   } catch {}
   const mid = `grp-close-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Close Group</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -96,7 +96,7 @@ export async function openAssignStaffModal(id, g) {
   const mid = `grp-assign-${Date.now()}`;
   const hasStaff = !!g.staffId;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${hasStaff ? 'Reassign / Unassign Staff' : 'Assign Staff'}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -123,7 +123,7 @@ export async function openAssignStaffModal(id, g) {
       else         await api.groups.unassignStaff(id, { staffId: g.staffId });
       el.remove();
       toast('success', 'Staff updated', '');
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
   });
 }

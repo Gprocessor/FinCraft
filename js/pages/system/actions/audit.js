@@ -7,7 +7,7 @@ import { escapeHtml, fmtDate } from '../../../utils.js';
 export async function openAuditDetail(auditId) {
   const mid = 'audit-detail-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-lg">
         <div class="modal-header"><h3>Audit Entry #${escapeHtml(String(auditId))}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body" id="${mid}-body">

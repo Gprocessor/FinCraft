@@ -48,6 +48,7 @@ export async function renderList(c) {
           </tr></thead>
           <tbody id="fd-rows"><tr><td colspan="8" class="empty-state-row">Loading…</td></tr></tbody>
         </table>
+        <div id="fd-pagination" class="pagination-bar"></div>
       </div>
 
       <!-- RD Panel -->
@@ -71,6 +72,7 @@ export async function renderList(c) {
           </tr></thead>
           <tbody id="rd-rows"><tr><td colspan="7" class="empty-state-row">Loading…</td></tr></tbody>
         </table>
+        <div id="rd-pagination" class="pagination-bar"></div>
       </div>
     </div>`;
 
@@ -81,15 +83,36 @@ export async function renderList(c) {
   }));
 
   let fdRows = [], rdRows = [];
+  const PAGE_SIZE = 50;
+  let fdTotal = 0, fdOffset = 0;
+  let rdTotal = 0, rdOffset = 0;
 
-  async function loadFD() {
+  function drawPagination(elId, total, offset, onPage) {
+    const pageEl = c.querySelector(`#${elId}`);
+    if (!pageEl) return;
+    if (total <= PAGE_SIZE) { pageEl.innerHTML = ''; return; }
+    const from = total ? offset + 1 : 0;
+    const to = Math.min(offset + PAGE_SIZE, total);
+    pageEl.innerHTML = `
+      <span class="text-muted">Showing ${from}–${to} of ${num(total)}</span>
+      <div class="pagination-actions">
+        <button class="btn-secondary" id="${elId}-prev" ${offset > 0 ? '' : 'disabled'}>Prev</button>
+        <button class="btn-secondary" id="${elId}-next" ${offset + PAGE_SIZE < total ? '' : 'disabled'}>Next</button>
+      </div>`;
+    pageEl.querySelector(`#${elId}-prev`)?.addEventListener('click', () => onPage(Math.max(0, offset - PAGE_SIZE)));
+    pageEl.querySelector(`#${elId}-next`)?.addEventListener('click', () => onPage(offset + PAGE_SIZE));
+  }
+
+  async function loadFD(offset = 0) {
     c.querySelector('#fd-rows').innerHTML = '<tr><td colspan="8" class="empty-state-row">Loading…</td></tr>';
     try {
-      const params = { limit: 100 };
+      const params = { limit: PAGE_SIZE, offset };
       const status = c.querySelector('#fd-status')?.value;
       if (status) params.status = status;
       const res = await api.fixedDeposits.list(params);
       let list = Array.isArray(res) ? res : (res?.pageItems || []);
+      fdTotal = Array.isArray(res) ? list.length : (res?.totalFilteredRecords ?? list.length);
+      fdOffset = offset;
       const q = c.querySelector('#fd-search')?.value?.toLowerCase() || '';
       if (q) list = list.filter(d =>
         (d.accountNo || '').toLowerCase().includes(q) ||
@@ -114,6 +137,8 @@ export async function renderList(c) {
           </tr>`;
       }).join('') : '<tr><td colspan="8" class="empty-state-row">No fixed deposits</td></tr>';
 
+      drawPagination('fd-pagination', fdTotal, fdOffset, loadFD);
+
       c.querySelectorAll('[data-view-fd]').forEach(b => b.addEventListener('click', (e) => {
         e.preventDefault();
         import('../../router.js').then(r => r.navigate('deposits', { id: b.dataset.viewFd, type: 'fd' }));
@@ -124,7 +149,7 @@ export async function renderList(c) {
             approvedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
           });
           toast('success', 'FD approved', '#' + b.dataset.fdApprove);
-          loadFD();
+          loadFD(fdOffset);
         } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
       }));
       c.querySelectorAll('[data-fd-activate]').forEach(b => b.addEventListener('click', async () => {
@@ -133,7 +158,7 @@ export async function renderList(c) {
             activatedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
           });
           toast('success', 'FD activated', '#' + b.dataset.fdActivate);
-          loadFD();
+          loadFD(fdOffset);
         } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
       }));
     } catch (e) {
@@ -141,14 +166,16 @@ export async function renderList(c) {
     }
   }
 
-  async function loadRD() {
+  async function loadRD(offset = 0) {
     c.querySelector('#rd-rows').innerHTML = '<tr><td colspan="7" class="empty-state-row">Loading…</td></tr>';
     try {
-      const params = { limit: 100 };
+      const params = { limit: PAGE_SIZE, offset };
       const status = c.querySelector('#rd-status')?.value;
       if (status) params.status = status;
       const res = await api.recurringDeposits.list(params);
       let list = Array.isArray(res) ? res : (res?.pageItems || []);
+      rdTotal = Array.isArray(res) ? list.length : (res?.totalFilteredRecords ?? list.length);
+      rdOffset = offset;
       const q = c.querySelector('#rd-search')?.value?.toLowerCase() || '';
       if (q) list = list.filter(d =>
         (d.accountNo || '').toLowerCase().includes(q) ||
@@ -172,6 +199,8 @@ export async function renderList(c) {
           </tr>`;
       }).join('') : '<tr><td colspan="7" class="empty-state-row">No recurring deposits</td></tr>';
 
+      drawPagination('rd-pagination', rdTotal, rdOffset, loadRD);
+
       c.querySelectorAll('[data-view-rd]').forEach(b => b.addEventListener('click', (e) => {
         e.preventDefault();
         import('../../router.js').then(r => r.navigate('deposits', { id: b.dataset.viewRd, type: 'rd' }));
@@ -182,7 +211,7 @@ export async function renderList(c) {
             approvedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
           });
           toast('success', 'RD approved', '#' + b.dataset.rdApprove);
-          loadRD();
+          loadRD(rdOffset);
         } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
       }));
       c.querySelectorAll('[data-rd-activate]').forEach(b => b.addEventListener('click', async () => {
@@ -191,7 +220,7 @@ export async function renderList(c) {
             activatedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
           });
           toast('success', 'RD activated', '#' + b.dataset.rdActivate);
-          loadRD();
+          loadRD(rdOffset);
         } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
       }));
     } catch (e) {
@@ -202,10 +231,10 @@ export async function renderList(c) {
   await Promise.all([loadFD(), loadRD()]);
 
   let ft, rt;
-  c.querySelector('#fd-search').addEventListener('input', () => { clearTimeout(ft); ft = setTimeout(loadFD, 400); });
-  c.querySelector('#fd-status').addEventListener('change', loadFD);
-  c.querySelector('#rd-search').addEventListener('input', () => { clearTimeout(rt); rt = setTimeout(loadRD, 400); });
-  c.querySelector('#rd-status').addEventListener('change', loadRD);
+  c.querySelector('#fd-search').addEventListener('input', () => { clearTimeout(ft); ft = setTimeout(() => loadFD(0), 400); });
+  c.querySelector('#fd-status').addEventListener('change', () => loadFD(0));
+  c.querySelector('#rd-search').addEventListener('input', () => { clearTimeout(rt); rt = setTimeout(() => loadRD(0), 400); });
+  c.querySelector('#rd-status').addEventListener('change', () => loadRD(0));
 
   c.querySelector('#fd-export').addEventListener('click', () => {
     const rows = fdRows.map(d =>

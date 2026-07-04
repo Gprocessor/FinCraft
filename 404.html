@@ -2,13 +2,8 @@
 <html>
 <head>
   <meta charset="UTF-8"/>
-  <script>
-    // SPA 404 redirect for GitHub Pages
-    // Stores the full path, then redirects to index.html which reads it back
-    var path = window.location.pathname;
-    sessionStorage.setItem('_spa_redirect', path);
-    window.location.href = window.location.origin + window.location.pathname.split('/').slice(0, 2).join('/') + '/';
-  </script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self'; object-src 'none'"/>
+  <script src="./js/spa-404-redirect.js"></script>
 </head>
 <body></body>
 </html>

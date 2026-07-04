@@ -11,7 +11,7 @@ export async function openApproveModal(id) {
   try { tpl = await api.loans.approvalTemplate(id); } catch {}
   const mid = `ln-app-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Approve Loan</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -41,7 +41,7 @@ export async function openApproveModal(id) {
       await api.loans.approve(id, payload);
       el.remove();
       toast('success', 'Loan approved', `#${id}`);
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -54,7 +54,7 @@ export async function openAssignOfficerModal(loanId, currentOfficer) {
   } catch {}
   const mid = `ln-officer-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Assign Loan Officer</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -93,7 +93,7 @@ export async function openAssignOfficerModal(loanId, currentOfficer) {
       }
       el.remove();
       toast('success', 'Officer updated', '');
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
   });
 }

@@ -176,7 +176,7 @@ export async function renderDetail(c, apiGroup, id, initialTab) {
     }));
     c.querySelector('#btn-dep-undo-approval')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo approval?', confirmText: 'Undo' })) return;
-      try { await apiObj.undoApproval(id); toast('success', 'Approval undone', ''); location.reload(); }
+      try { await apiObj.undoApproval(id); toast('success', 'Approval undone', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-dep-reject')?.addEventListener('click', () => openDepositSimpleCmd({
@@ -195,12 +195,12 @@ export async function renderDetail(c, apiGroup, id, initialTab) {
 
     // Interest
     c.querySelector('#btn-dep-calc')?.addEventListener('click', async () => {
-      try { await apiObj.calculateInterest(id); toast('success', 'Interest calculated', ''); location.reload(); }
+      try { await apiObj.calculateInterest(id); toast('success', 'Interest calculated', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-dep-post')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Post interest?', confirmText: 'Post' })) return;
-      try { await apiObj.postInterest(id); toast('success', 'Interest posted', ''); location.reload(); }
+      try { await apiObj.postInterest(id); toast('success', 'Interest posted', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
     });
 

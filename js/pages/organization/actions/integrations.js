@@ -23,6 +23,8 @@ export async function openLoanOriginatorModal(existing, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} Loan Originator</h3><button data-close-modal>&times;</button></div>
@@ -121,6 +123,8 @@ export async function openExternalAssetOwnerModal(existing, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} External Asset Owner</h3><button data-close-modal>&times;</button></div>
@@ -218,6 +222,8 @@ export async function openSmsCampaignModal(existing, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-lg">
       <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} SMS Campaign</h3><button data-close-modal>&times;</button></div>

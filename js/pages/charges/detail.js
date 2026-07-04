@@ -113,14 +113,14 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#back-to-charges').addEventListener('click', () => {
       import('../../router.js').then(r => r.navigate('charges'));
     });
-    c.querySelector('#btn-ch-edit')?.addEventListener('click', () => openChargeFormModal(ch, () => location.reload()));
+    c.querySelector('#btn-ch-edit')?.addEventListener('click', () => openChargeFormModal(ch, () => document.dispatchEvent(new CustomEvent('fc:reload'))));
     c.querySelector('#btn-ch-activate')?.addEventListener('click', async () => {
-      try { await api.charges.update(id, { active: true }); toast('success', 'Activated', ''); location.reload(); }
+      try { await api.charges.update(id, { active: true }); toast('success', 'Activated', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Activate failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-ch-deactivate')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Deactivate charge?', confirmText: 'Deactivate' })) return;
-      try { await api.charges.update(id, { active: false }); toast('success', 'Deactivated', ''); location.reload(); }
+      try { await api.charges.update(id, { active: false }); toast('success', 'Deactivated', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
       catch (e) { toast('error', 'Deactivate failed', e.detail?.defaultUserMessage || e.message); }
     });
     c.querySelector('#btn-ch-delete')?.addEventListener('click', async () => {

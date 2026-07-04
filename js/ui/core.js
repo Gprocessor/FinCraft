@@ -139,7 +139,7 @@ export function confirm({ title = 'Are you sure?', message = '', confirmText = '
     const id = 'cfm_' + Date.now();
     const root = document.getElementById('modalRoot') || document.body;
     root.insertAdjacentHTML('beforeend', `
-      <div id="${id}" class="modal-overlay open">
+      <div id="${id}" class="modal-overlay open" role="dialog" aria-modal="true">
         <div class="modal modal-sm">
           <div class="modal-head">
             <h3 class="modal-title">${escapeHtml(title)}</h3>

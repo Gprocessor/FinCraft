@@ -17,14 +17,14 @@ export async function disassociateSelectedGroups(c, id) {
   try {
     await api.centers.disassociateGroups(id, { groupMembers: checked });
     toast('success', 'Groups disassociated', '');
-    location.reload();
+    document.dispatchEvent(new CustomEvent('fc:reload'));
   } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
 }
 
 export async function openAddGroupsModal(centerId, center, onSuccess) {
   const mid = `ctr-addgrp-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Associate Groups</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -104,7 +104,7 @@ export async function openScheduleMeetingModal(centerId, onSuccess, existingCal)
   const mid = `ctr-meet-${Date.now()}`;
   const isEdit = !!existingCal;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${isEdit ? 'Edit' : 'Schedule'} Meeting</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -152,7 +152,7 @@ export async function openScheduleMeetingModal(centerId, onSuccess, existingCal)
 export async function openEditCenterModal(ctr, onSuccess) {
   const mid = `ctr-edit-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Edit Center</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -190,7 +190,7 @@ export async function openCloseCenterModal(id) {
   } catch {}
   const mid = `ctr-close-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Close Center</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

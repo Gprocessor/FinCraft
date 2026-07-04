@@ -124,6 +124,8 @@ export async function openUserFormModal(userId, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-lg">
       <div class="modal-header"><h3>${isEdit ? 'Edit User' : 'New User'}</h3><button data-close-modal>&times;</button></div>
@@ -246,6 +248,8 @@ function openResetPasswordModal(userId, username) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>Reset Password — @${escapeHtml(username)}</h3><button data-close-modal>&times;</button></div>

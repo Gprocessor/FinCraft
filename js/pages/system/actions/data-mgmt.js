@@ -41,7 +41,7 @@ export async function openAccountNumberPrefModal(prefId, onSuccess) {
 
   const mid = 'anp-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} Account Number Preference</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -107,7 +107,7 @@ export async function openAccountNumberPrefModal(prefId, onSuccess) {
 export async function openEntityMappingDetail(mapId, mapName) {
   const mid = 'map-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-lg">
         <div class="modal-header"><h3>${escapeHtml(mapName)} — Mapping Details</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body" id="map-body">
@@ -175,7 +175,7 @@ export async function openSurveyFormModal(surveyId, onSuccess) {
 
   const mid = 'survey-form-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-xl">
         <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} Survey</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

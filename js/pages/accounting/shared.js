@@ -94,7 +94,7 @@ export const vf = (el, id) => { const n = parseFloat(v(el, id)); return isNaN(n)
 
 export function dynModal(mid, title, body, wide = false) {
   document.getElementById('modalRoot')?.insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal ${wide ? 'modal-lg' : 'modal-md'}">
         <div class="modal-header"><h3>${title}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">${body}</div>

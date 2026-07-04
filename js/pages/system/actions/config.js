@@ -10,7 +10,7 @@ import { can } from '../shared.js';
 export function openNewCodeModal(onSuccess) {
   const mid = 'code-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>New Code</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -43,7 +43,7 @@ export function openNewCodeModal(onSuccess) {
 export async function openCodeValuesModal(codeId, codeName) {
   const mid = 'cv-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-lg">
         <div class="modal-header"><h3>${escapeHtml(codeName)} — Values</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -134,7 +134,7 @@ export async function openCodeValuesModal(codeId, codeName) {
 export function openSetBusinessDateModal() {
   const mid = 'bdate-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Set Business Date</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

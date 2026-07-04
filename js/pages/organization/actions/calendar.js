@@ -18,6 +18,8 @@ export async function openHolidayModal(officeList, onSuccess) {
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>New Holiday</h3><button data-close-modal>&times;</button></div>

@@ -9,7 +9,7 @@ import { escapeHtml, fmt, num } from '../../utils.js';
 export function openEditShareModal(s) {
   const mid = 'sh-edit-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Edit Share Account</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -43,7 +43,7 @@ export function openEditShareModal(s) {
       await api.shares.update(s.id, payload);
       el.remove();
       toast('success', 'Account updated', '');
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -51,7 +51,7 @@ export function openEditShareModal(s) {
 export function openApplyAdditionalSharesModal(id, unitPrice) {
   const mid = 'sh-apply-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Apply Additional Shares</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -86,7 +86,7 @@ export function openApplyAdditionalSharesModal(id, unitPrice) {
       });
       el.remove();
       toast('success', 'Application submitted', shares + ' additional shares');
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Application failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -94,7 +94,7 @@ export function openApplyAdditionalSharesModal(id, unitPrice) {
 export function openRedeemSharesModal(id, maxShares, unitPrice) {
   const mid = 'sh-redeem-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Redeem Shares</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -131,7 +131,7 @@ export function openRedeemSharesModal(id, maxShares, unitPrice) {
       });
       el.remove();
       toast('success', 'Redemption submitted', shares + ' shares');
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Redemption failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -139,7 +139,7 @@ export function openRedeemSharesModal(id, maxShares, unitPrice) {
 export function openCloseShareModal(id) {
   const mid = 'sh-close-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Close Share Account</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -188,7 +188,7 @@ export async function openApplyShareChargeModal(id, onSuccess) {
 
   const mid = 'sh-applycharge-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Apply Charge</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -232,7 +232,7 @@ export async function openPayShareChargeModal(id, chargeId, onSuccess) {
   try { paymentTypes = await api.paymentTypes.list(); } catch {}
   const mid = 'sh-paycharge-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Pay Charge</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -275,7 +275,7 @@ export async function openPayShareChargeModal(id, chargeId, onSuccess) {
 export function openShareSimpleCmd({ id, command, label, dateField }) {
   const mid = 'sh-cmd-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${escapeHtml(label)}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -316,7 +316,7 @@ export function openShareSimpleCmd({ id, command, label, dateField }) {
       }
       el.remove();
       toast('success', label + ' successful', '#' + id);
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', label + ' failed', e.detail?.defaultUserMessage || e.message); }
   });
 }

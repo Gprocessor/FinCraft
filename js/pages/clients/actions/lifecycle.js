@@ -10,7 +10,7 @@ export async function openEditClientModal(cl, onSuccess) {
   const mid = `cl-edit-modal-${Date.now()}`;
   const isEntity = cl.legalForm?.id === 2;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Edit Client</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -65,7 +65,7 @@ export async function openCloseClientModal(id) {
   } catch {}
   const mid = `cl-close-modal-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Close Client</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -112,7 +112,7 @@ export async function openRejectClientModal(id) {
   } catch {}
   const mid = `cl-reject-modal-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Reject Application</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -156,7 +156,7 @@ export async function openTransferModal(id, displayName) {
   try { offices = await api.offices.list(); } catch {}
   const mid = `cl-transfer-modal-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Transfer Client</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -202,7 +202,7 @@ export async function openAssignStaffModal(id, cl) {
   const mid = `cl-assign-modal-${Date.now()}`;
   const hasStaff = !!cl.staffId;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${hasStaff ? 'Reassign / Unassign Staff' : 'Assign Staff'}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

@@ -1,8 +1,11 @@
 /* FinCraft · utils.js */
-export const fmt = (n, ccy = 'USD') => {
+import { store } from './store.js';
+
+export const fmt = (n, ccy) => {
   if (n == null || isNaN(n)) return '—';
-  try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: ccy, maximumFractionDigits: 2 }).format(n); }
-  catch { return ccy + ' ' + num(n); }
+  const currency = ccy || store.get('defaultCurrency') || 'USD';
+  try { return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(n); }
+  catch { return currency + ' ' + num(n); }
 };
 export const num = n => (n == null || isNaN(n)) ? '—' : new Intl.NumberFormat().format(n);
 export const ini = name => {

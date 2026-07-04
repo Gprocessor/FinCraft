@@ -151,7 +151,20 @@ export async function login({ serverUrl, tenantId, username, password }) {
 
   console.log('[auth] Signed in with', (store.get('perms') || []).length, 'permissions');
   _saveRecentTenant(serverUrl, tenantId, username);   // Remember for next time
+  await _loadDefaultCurrency();
   showApp();
+}
+
+/** Best-effort fetch of the tenant's configured currency, used as the fallback in fmt(). */
+async function _loadDefaultCurrency() {
+  try {
+    const res = await api.currencies.all();
+    const selected = res?.selectedCurrencyOptions;
+    const code = Array.isArray(selected) && selected.length ? selected[0].code : null;
+    if (code) store.set('defaultCurrency', code);
+  } catch (e) {
+    // Non-fatal — fmt() falls back to USD if this isn't available
+  }
 }
 
 /** Persist /userdetails enrichment — only overwrite when new payload is richer. */
@@ -231,7 +244,19 @@ export const validateOtp   = (token)                             => api.twoFacto
 /* ------------------------------------------------------------------ */
 /* Screens                                                             */
 /* ------------------------------------------------------------------ */
+/** True if this page is at meaningful risk of sending Basic-auth credentials over plaintext HTTP. */
+function _isInsecureContext() {
+  const proto = window.location.protocol;
+  const host  = window.location.hostname;
+  const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.localhost');
+  return proto !== 'https:' && !isLocal;
+}
+
 function showLogin(banner) {
+  if (_isInsecureContext()) {
+    const httpsWarning = 'This page is not served over HTTPS. Login credentials are sent in plaintext and can be intercepted — do not sign in until this is served over HTTPS.';
+    banner = banner ? `${httpsWarning} ${banner}` : httpsWarning;
+  }
   const s = document.getElementById(SHELL_ID);
   const l = document.getElementById(LOGIN_ID);
   if (s) s.setAttribute('hidden', '');
@@ -304,12 +329,12 @@ function renderLogin(container, banner) {
             <div class="form-group"><label class="form-label">Tenant ID</label>
               <input id="l-tenant" class="form-control" value="${FINERACT_DEMO.tenantId}"/></div>
             <div class="form-group"><label class="form-label">Username</label>
-              <input id="l-user" class="form-control" value="mifos" autocomplete="username"/></div>
+              <input id="l-user" class="form-control" value="" autocomplete="username"/></div>
           </div>
           <div class="form-group mb-4"><label class="form-label">Password</label>
             <div class="input-group">
-              <input id="l-pass" class="form-control" type="password" value="password" autocomplete="current-password"/>
-              <button class="btn btn-secondary" style="border-radius:0 6px 6px 0;border-left:none" onclick="const p=document.getElementById('l-pass');p.type=p.type==='password'?'text':'password'"><i class="fa-solid fa-eye"></i></button>
+              <input id="l-pass" class="form-control" type="password" value="" autocomplete="current-password"/>
+              <button class="btn btn-secondary" style="border-radius:0 6px 6px 0;border-left:none" type="button" data-toggle-password="l-pass"><i class="fa-solid fa-eye"></i></button>
             </div>
           </div>
           <button class="btn btn-primary btn-full" id="l-btn">

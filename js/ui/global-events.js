@@ -8,9 +8,20 @@ import { handleAction } from './handlers/index.js';
 
 // ════════════════════════════════════════════════════════════
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-nav],[data-modal],[data-close-modal],[data-action],[data-tab]');
+  const t = e.target.closest('[data-nav],[data-modal],[data-close-modal],[data-action],[data-tab],[data-remove-row],[data-toggle-password]');
   if (!t) {
     if (!e.target.closest('.dropdown')) closeAllDropdowns();
+    return;
+  }
+
+  // Remove closest row (replaces inline onclick="this.closest('tr').remove()")
+  if (t.hasAttribute('data-remove-row')) { t.closest('tr')?.remove(); return; }
+
+  // Toggle a password field's visibility (replaces inline onclick password-eye toggle)
+  if (t.hasAttribute('data-toggle-password')) {
+    const targetId = t.dataset.togglePassword;
+    const input = targetId ? document.getElementById(targetId) : t.closest('.input-group')?.querySelector('input[type="password"], input[type="text"].pw-revealed');
+    if (input) input.type = input.type === 'password' ? 'text' : 'password';
     return;
   }
 

@@ -8,7 +8,7 @@ import { escapeHtml, ini } from '../../../utils.js';
 export async function openAddMembersModal(groupId, group, onSuccess) {
   const mid = `grp-addmem-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Add Members</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -88,7 +88,7 @@ export async function openTransferMembersModal(groupId, group) {
   } catch {}
   const mid = `grp-xfer-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Transfer ${checked.length} Member(s)</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -121,7 +121,7 @@ export async function openTransferMembersModal(groupId, group) {
       });
       el.remove();
       toast('success', 'Members transferred', `${checked.length} client(s)`);
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Transfer failed', e.detail?.defaultUserMessage || e.message); }
   });
 }

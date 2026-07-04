@@ -73,7 +73,7 @@ export function provRow(glOptsHtml, idx) {
       <td><input type="number" step="0.01" class="form-control" placeholder="0"/></td>
       <td><select class="form-control"><option value="">— GL —</option>${glOptsHtml}</select></td>
       <td><select class="form-control"><option value="">— GL —</option>${glOptsHtml}</select></td>
-      <td><button class="btn-mini btn-danger" onclick="this.closest('tr').remove()">&times;</button></td>
+      <td><button class="btn-mini btn-danger" data-remove-row>&times;</button></td>
     </tr>`;
 }
 

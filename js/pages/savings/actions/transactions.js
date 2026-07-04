@@ -9,7 +9,7 @@ import { escapeHtml, fmt } from '../../../utils.js';
 export function openSavingsTransactionModal({ id, type, label }) {
   const mid = `sv-tx-modal-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${escapeHtml(label)}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -57,7 +57,7 @@ export function openSavingsTransactionModal({ id, type, label }) {
       else                       await api.savings.withdrawal(id, payload);
       el.remove();
       toast('success', `${label} successful`, fmt(transactionAmount));
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', `${label} failed`, e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -65,7 +65,7 @@ export function openSavingsTransactionModal({ id, type, label }) {
 export function openHoldModal(id) {
   const mid = `sv-hold-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Hold Amount</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -93,7 +93,7 @@ export function openHoldModal(id) {
       });
       el.remove();
       toast('success', 'Amount held', fmt(amount));
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Hold failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -101,7 +101,7 @@ export function openHoldModal(id) {
 export function openAdjustSavingsTxModal(id, txId, onSuccess) {
   const mid = `sv-adj-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Adjust Transaction #${txId}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">

@@ -2,6 +2,7 @@
 
 /* ---- LAYOUT ---- */
 .app-shell { display: flex; height: 100vh; overflow: hidden; }
+.app-shell[hidden] { display: none !important; }
 .sidebar {
   width: 260px;
   background: var(--sidebar-bg);
@@ -353,6 +354,56 @@ textarea.form-control { resize: vertical; }
 .tab-btn.active { color: var(--brand-teal); border-bottom-color: var(--brand-teal); font-weight: 600; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; animation: fadeIn 150ms ease; }
+
+/* ---- Ported from legacy fincraft-shell.css (removed — see index.html) ---- */
+.tab { padding: 9px 16px; background: none; border: none; font-family: var(--font-ui); font-size: 13px; font-weight: 500; color: var(--text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color var(--t-fast), border-color var(--t-fast); white-space: nowrap; }
+.tab:hover { color: var(--text-1); }
+.tab.active { color: var(--brand-teal); border-bottom-color: var(--brand-teal); font-weight: 600; }
+
+.btn-mini { padding: 4px 10px; font-size: 11px; border-radius: var(--r-sm); border: 1px solid var(--border-1); background: var(--bg-hover); color: var(--text-2); cursor: pointer; transition: all var(--t-fast); }
+.btn-mini:hover { color: var(--text-1); border-color: var(--brand-teal); }
+.btn-mini.btn-danger { background: rgba(248,113,113,0.1); color: var(--c-danger); border-color: rgba(248,113,113,0.2); }
+.btn-mini.btn-success { background: rgba(16,185,129,0.1); color: var(--c-success); border-color: rgba(16,185,129,0.2); }
+
+.btn-warning { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--r-md); border: 1px solid rgba(251,191,36,0.2); cursor: pointer; font-family: var(--font-ui); font-size: 13px; font-weight: 600; transition: all var(--t-fast); white-space: nowrap; text-decoration: none; background: rgba(251,191,36,0.12); color: var(--brand-amber); }
+.btn-warning:hover:not(:disabled) { background: rgba(251,191,36,0.2); }
+
+.dropdown-header { padding: 8px 14px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-3); }
+
+.mb-1 { margin-bottom: 4px; }
+.p-0 { padding: 0; }
+
+.nav-scrim { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
+
+.section-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.section-header h3 { font-size: 15px; font-weight: 700; color: var(--text-1); }
+
+.topbar-tenant { display: flex; align-items: center; gap: 6px; background: var(--bg-hover); border: 1px solid var(--border-1); border-radius: var(--r-sm); padding: 5px 10px; font-size: 12px; color: var(--text-2); cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+.topbar-tenant .tenant-id { font-weight: 600; color: var(--brand-teal); }
+
+.table-wrap { overflow-x: auto; }
+.table .mono { font-family: var(--font-mono); font-size: 12px; }
+.table tbody tr.clickable { cursor: pointer; }
+
+.form-check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.form-check input[type=checkbox],
+.form-check input[type=radio] { accent-color: var(--brand-teal); width: 14px; height: 14px; cursor: pointer; }
+
+[data-close-modal] { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 20px; padding: 4px 8px; }
+[data-close-modal]:hover { color: var(--text-1); }
+
+kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-radius: 4px; padding: 2px 5px; font-size: 10px; font-family: var(--font-mono); }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+
+.text-secondary { color: var(--text-2); }
+.mr-2 { margin-right: 8px; }
+.mr-auto { margin-right: auto; }
+.w-auto { width: auto; }
+.items-start { align-items: flex-start; }
+.justify-center { justify-content: center; }
+
+.sidebar.collapsed .brand-text { display: none; }
 
 /* ---- MODALS ---- */
 .modal-overlay {

@@ -14,7 +14,7 @@ export async function openEditOfficeModal(officeId, allOffices, onSuccess) {
   try { office = await api.offices.get(officeId); } catch { toast('error', 'Failed to load office', ''); return; }
 
   el.insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Edit Office</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -72,7 +72,7 @@ export async function openEditStaffModal(staffId, onSuccess) {
   const offList = Array.isArray(offices) ? offices : [];
 
   mr.insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Edit Staff</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -127,6 +127,8 @@ export async function openAllocateCashierModal(tellerId, tellerName, onSuccess) 
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>Allocate Cash — ${escapeHtml(tellerName || 'Teller')}</h3><button data-close-modal>&times;</button></div>
@@ -171,11 +173,57 @@ export async function openAllocateCashierModal(tellerId, tellerName, onSuccess) 
   });
 }
 
+export async function openCashInModal(tellerId, cashierId, cashierName, onSuccess) {
+  const mid = 'cashin-' + Date.now();
+  const modalEl = document.createElement('div');
+  modalEl.id = mid;
+  modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
+  modalEl.innerHTML = `
+    <div class="modal modal-md">
+      <div class="modal-header"><h3>Cash In — ${escapeHtml(cashierName || 'Cashier')}</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <div class="text-muted mb-3">Record a cash allocation transaction to this cashier's till (start-of-day float).</div>
+        <div class="form-grid">
+          <label>Transaction date * <input type="date" id="cashin-date" class="form-control" value="${today()}" required/></label>
+          <label>Amount * <input type="number" step="0.01" min="0" id="cashin-amount" class="form-control" required/></label>
+          <label class="full">Note <textarea id="cashin-note" class="form-control" rows="2"></textarea></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close-modal>Cancel</button>
+        <button class="btn-primary" id="cashin-confirm">Cash In</button>
+      </div>
+    </div>`;
+  document.getElementById('modalRoot').appendChild(modalEl);
+
+  modalEl.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => modalEl.remove()));
+  modalEl.querySelector('#cashin-confirm').addEventListener('click', async () => {
+    const txnDate = modalEl.querySelector('#cashin-date').value;
+    const txnAmount = parseFloat(modalEl.querySelector('#cashin-amount').value);
+    const txnNote = modalEl.querySelector('#cashin-note').value.trim();
+    if (!txnDate || isNaN(txnAmount) || txnAmount <= 0) { toast('warn', 'Fill required fields', 'Enter a valid amount'); return; }
+
+    const payload = { txnDate, txnAmount, dateFormat: DATE_FORMAT, locale: LOCALE };
+    if (txnNote) payload.txnNote = txnNote;
+
+    try {
+      await api.tellers.allocateCashTo(tellerId, cashierId, payload);
+      modalEl.remove();
+      toast('success', 'Cash allocated', fmt(txnAmount));
+      onSuccess();
+    } catch (e) { toast('error', 'Cash-in failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
 export async function openSettleCashierModal(tellerId, cashierId, onSuccess) {
   const mid = 'settle-' + Date.now();
   const modalEl = document.createElement('div');
   modalEl.id = mid;
   modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
       <div class="modal-header"><h3>Settle Cash</h3><button data-close-modal>&times;</button></div>

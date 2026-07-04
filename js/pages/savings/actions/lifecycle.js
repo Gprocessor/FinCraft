@@ -16,7 +16,7 @@ export function openSavingsSimpleCmd({ id, command, label, dateField }) {
 
   const mid = 'sv-cmd-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${escapeHtml(label)}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -47,7 +47,7 @@ export function openSavingsSimpleCmd({ id, command, label, dateField }) {
       await api.savings.command(id, command, payload);
       el.remove();
       toast('success', label + ' successful', '#' + id);
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) {
       toast('error', label + ' failed', e.detail?.defaultUserMessage || e.message);
     }
@@ -57,7 +57,7 @@ export function openSavingsSimpleCmd({ id, command, label, dateField }) {
 export function openSavingsCloseModal(id) {
   const mid = `sv-close-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Close Savings Account</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -104,7 +104,7 @@ export function openSavingsCloseModal(id) {
 export async function openEditSavingsModal(s) {
   const mid = `sv-edit-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-md">
         <div class="modal-header"><h3>Edit Savings Account</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -153,7 +153,7 @@ export async function openEditSavingsModal(s) {
       await api.savings.update(s.id, payload);
       el.remove();
       toast('success', 'Account updated', '');
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -161,7 +161,7 @@ export async function openEditSavingsModal(s) {
 export function openApproveSavingsModal(id) {
   const mid = `sv-app-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>Approve Savings Account</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -187,7 +187,7 @@ export function openApproveSavingsModal(id) {
       await api.savings.approve(id, payload);
       el.remove();
       toast('success', 'Account approved', `#${id}`);
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
@@ -204,7 +204,7 @@ export async function openSavingsAssignStaffModal(id, s) {
   const hasStaff = !!currentId;
   const mid = `sv-as-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
         <div class="modal-header"><h3>${hasStaff ? 'Reassign / Unassign Staff' : 'Assign Staff'}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">
@@ -243,7 +243,7 @@ export async function openSavingsAssignStaffModal(id, s) {
       }
       el.remove();
       toast('success', 'Staff updated', '');
-      location.reload();
+      document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
   });
 }

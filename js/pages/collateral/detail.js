@@ -115,7 +115,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       import('../../router.js').then(r => r.navigate('collaterals'));
     });
     c.querySelector('#btn-col-edit')?.addEventListener('click', () =>
-      openCollateralFormModal(col, () => location.reload()));
+      openCollateralFormModal(col, () => document.dispatchEvent(new CustomEvent('fc:reload'))));
     c.querySelector('#btn-col-delete')?.addEventListener('click', async () => {
       if (!await confirm({
         title: 'Delete collateral type?',

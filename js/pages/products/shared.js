@@ -39,7 +39,7 @@ export async function populateGl(el) {
 
 export function modal(mid, title, bodyHtml, wide = false) {
   document.getElementById('modalRoot')?.insertAdjacentHTML('beforeend', `
-    <div class="modal-overlay open" id="${mid}">
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal ${wide ? 'modal-lg' : 'modal-md'}">
         <div class="modal-header"><h3>${title}</h3><button data-close-modal>&times;</button></div>
         <div class="modal-body">${bodyHtml}</div>
