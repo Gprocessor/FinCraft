@@ -10,9 +10,12 @@ export function makeUserDetailsAPI(self) {
 export function makePasswordAPI(self) {
   return {
     /** Trigger a password-reset email; payload depends on tenant config. */
-    forgot:      (body)         => self._p('/password', body),
-    /** Change a user's password — also used for self change-password. */
-    change:      (userId, body) => self._u(`/users/${userId}`, body),
+    forgot:      (body)         => self._p('/password/forgot', body),
+    /** Change a user's password — also used for self change-password.
+     *  Fineract exposes a dedicated POST /users/{userId}/pwd for this; the
+     *  generic PUT /users/{userId} update endpoint is a different resource
+     *  and is not guaranteed to accept/validate a password change the same way. */
+    change:      (userId, body) => self._p(`/users/${userId}/pwd`, body),
     /** Active password policy. */
     preferences: ()             => self._g('/passwordpreferences'),
     updatePreferences: (body)   => self._u('/passwordpreferences', body)

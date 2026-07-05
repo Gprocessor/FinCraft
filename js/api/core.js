@@ -55,7 +55,16 @@ export class FineractAPI {
       const r = await fetch(url, opts);
       clearTimeout(t);
       if (!r.ok) {
-        let detail; try { detail = await r.json(); } catch { detail = await r.text(); }
+        // Read the body ONCE as text, then try to parse it as JSON. Calling
+        // r.json() and, on failure, r.text() on the same Response reads the
+        // body stream twice — the second read throws "Failed to execute
+        // 'text' on 'Response': body stream already read", which was masking
+        // the real error on every non-JSON error response (plain-text/HTML
+        // error pages, empty bodies, etc.) — including several password/login
+        // failure responses from Fineract.
+        const rawBody = await r.text();
+        let detail;
+        try { detail = rawBody ? JSON.parse(rawBody) : rawBody; } catch { detail = rawBody; }
         // Global 401 → notify auth layer (skip the /authentication endpoint itself).
         if (r.status === 401 && typeof this._onUnauthorized === 'function' && path !== '/authentication') {
           try { this._onUnauthorized(); } catch {}
