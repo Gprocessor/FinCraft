@@ -1,5 +1,4 @@
-/* FinCraft · css/tables.css — data table base styles, legacy .table alias, and the
-   avatar+name user-cell pattern used across list views. Split out of components.css (audit item 9). */
+
 
 /* ---- TABLES ---- */
 .tbl-wrap { overflow-x: auto; }
