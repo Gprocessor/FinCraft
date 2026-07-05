@@ -5,6 +5,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../config.js';
 import { api } from '../../api.js';
 import { escapeHtml, fmt, fmtDate, num, sb } from '../../utils.js';
 import { toast } from '../../ui.js';
+import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
 export async function renderList(c) {
@@ -83,30 +84,21 @@ export async function renderList(c) {
   }));
 
   let fdRows = [], rdRows = [];
-  const PAGE_SIZE = 50;
+  let pageSize = DEFAULT_PAGE_SIZE;
   let fdTotal = 0, fdOffset = 0;
   let rdTotal = 0, rdOffset = 0;
 
   function drawPagination(elId, total, offset, onPage) {
-    const pageEl = c.querySelector(`#${elId}`);
-    if (!pageEl) return;
-    if (total <= PAGE_SIZE) { pageEl.innerHTML = ''; return; }
-    const from = total ? offset + 1 : 0;
-    const to = Math.min(offset + PAGE_SIZE, total);
-    pageEl.innerHTML = `
-      <span class="text-muted">Showing ${from}–${to} of ${num(total)}</span>
-      <div class="pagination-actions">
-        <button class="btn-secondary" id="${elId}-prev" ${offset > 0 ? '' : 'disabled'}>Prev</button>
-        <button class="btn-secondary" id="${elId}-next" ${offset + PAGE_SIZE < total ? '' : 'disabled'}>Next</button>
-      </div>`;
-    pageEl.querySelector(`#${elId}-prev`)?.addEventListener('click', () => onPage(Math.max(0, offset - PAGE_SIZE)));
-    pageEl.querySelector(`#${elId}-next`)?.addEventListener('click', () => onPage(offset + PAGE_SIZE));
+    renderPagination(c.querySelector(`#${elId}`), {
+      total, offset, pageSize,
+      onChange: (newOffset, newSize) => { pageSize = newSize; onPage(newOffset); }
+    });
   }
 
   async function loadFD(offset = 0) {
     c.querySelector('#fd-rows').innerHTML = '<tr><td colspan="8" class="empty-state-row">Loading…</td></tr>';
     try {
-      const params = { limit: PAGE_SIZE, offset };
+      const params = { limit: pageSize, offset };
       const status = c.querySelector('#fd-status')?.value;
       if (status) params.status = status;
       const res = await api.fixedDeposits.list(params);
@@ -169,7 +161,7 @@ export async function renderList(c) {
   async function loadRD(offset = 0) {
     c.querySelector('#rd-rows').innerHTML = '<tr><td colspan="7" class="empty-state-row">Loading…</td></tr>';
     try {
-      const params = { limit: PAGE_SIZE, offset };
+      const params = { limit: pageSize, offset };
       const status = c.querySelector('#rd-status')?.value;
       if (status) params.status = status;
       const res = await api.recurringDeposits.list(params);

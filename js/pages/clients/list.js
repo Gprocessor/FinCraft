@@ -5,6 +5,7 @@ import { api } from '../../api.js';
 import { escapeHtml, fmtDate, ini, num, sb } from '../../utils.js';
 import { toast } from '../../ui.js';
 import { today } from '../../config.js';
+import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
 export async function renderList(c) {
@@ -58,8 +59,7 @@ export async function renderList(c) {
     });
   }).catch(() => {});
 
-  let allClients = [], totalRecords = 0, currentOffset = 0;
-  const PAGE_SIZE = 50;
+  let allClients = [], totalRecords = 0, currentOffset = 0, pageSize = DEFAULT_PAGE_SIZE;
 
   async function loadClients(offset = 0) {
     c.querySelector('#clients-rows').innerHTML =
@@ -68,7 +68,7 @@ export async function renderList(c) {
       const q       = c.querySelector('#cf-search')?.value?.trim() || '';
       const status  = c.querySelector('#cf-status')?.value || '';
       const officeId = c.querySelector('#cf-office')?.value || '';
-      const params = { limit: PAGE_SIZE, offset };
+      const params = { limit: pageSize, offset };
       if (q) params.displayName = q;
       if (status) params.status = status.toLowerCase();
       if (officeId) params.officeId = officeId;
@@ -87,18 +87,10 @@ export async function renderList(c) {
   }
 
   function drawPagination() {
-    const pageEl = c.querySelector('#cf-pagination');
-    if (totalRecords <= PAGE_SIZE) { pageEl.innerHTML = ''; return; }
-    const from = totalRecords ? currentOffset + 1 : 0;
-    const to = Math.min(currentOffset + PAGE_SIZE, totalRecords);
-    pageEl.innerHTML = `
-      <span class="text-muted">Showing ${from}–${to} of ${num(totalRecords)}</span>
-      <div class="pagination-actions">
-        <button class="btn-secondary" id="cf-prev" ${currentOffset > 0 ? '' : 'disabled'}>Prev</button>
-        <button class="btn-secondary" id="cf-next" ${currentOffset + PAGE_SIZE < totalRecords ? '' : 'disabled'}>Next</button>
-      </div>`;
-    c.querySelector('#cf-prev')?.addEventListener('click', () => loadClients(Math.max(0, currentOffset - PAGE_SIZE)));
-    c.querySelector('#cf-next')?.addEventListener('click', () => loadClients(currentOffset + PAGE_SIZE));
+    renderPagination(c.querySelector('#cf-pagination'), {
+      total: totalRecords, offset: currentOffset, pageSize,
+      onChange: (newOffset, newSize) => { pageSize = newSize; loadClients(newOffset); }
+    });
   }
 
   function draw(rows) {

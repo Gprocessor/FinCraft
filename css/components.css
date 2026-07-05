@@ -389,6 +389,21 @@ textarea.form-control { resize: vertical; }
 .form-check input[type=checkbox],
 .form-check input[type=radio] { accent-color: var(--brand-teal); width: 14px; height: 14px; cursor: pointer; }
 
+.checkbox-row { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 0; font-size: 13px; color: var(--text-2); }
+.checkbox-row input[type=checkbox] { accent-color: var(--brand-teal); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+
+.tenant-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-hover); border: 1px solid var(--border-1); border-radius: var(--r-full);
+  padding: 5px 10px 5px 12px; font-size: 12px; color: var(--text-2); cursor: pointer;
+  transition: all var(--t-fast);
+}
+.tenant-chip:hover { border-color: var(--brand-teal); color: var(--text-1); }
+.tenant-chip-x { color: var(--text-3); cursor: pointer; }
+.tenant-chip-x:hover { color: var(--c-danger); }
+
+.perm-group { background: var(--bg-card-alt); border: 1px solid var(--border-1); border-radius: var(--r-md); padding: 10px 14px; }
+
 [data-close-modal] { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 20px; padding: 4px 8px; }
 [data-close-modal]:hover { color: var(--text-1); }
 
@@ -519,6 +534,8 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
 .toast.warning .toast-icon { color: #fbbf24; }
 .toast-title { font-weight: 700; font-size: 13px; }
 .toast-msg   { font-size: 12px; color: var(--text-2); margin-top: 1px; }
+.toast-close { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 14px; padding: 2px 4px; margin-left: auto; flex-shrink: 0; }
+.toast-close:hover { color: var(--text-1); }
 /* Compat: old .ttl inside toast */
 .toast .ttl { font-weight: 700; font-size: 13px; }
 
@@ -803,17 +820,23 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-1);
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text-2);
   flex-wrap: wrap;
   gap: 8px;
 }
+.pagination-info { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.pagination-size { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.pagination-size select { padding: 4px 8px; font-size: 12px; width: auto; }
 .pagination-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
+.pagination-ellipsis { padding: 0 4px; color: var(--text-3); }
+.pagination-actions .btn-mini.active { background: var(--brand-teal); color: #fff; border-color: var(--brand-teal); }
+.pagination-actions .btn-mini { min-width: 28px; text-align: center; }
 
 /* ── REPORT CARDS ────────────────────────────────────────────────── */
 .report-grid {
@@ -823,32 +846,32 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
 }
 .report-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-lg);
   padding: 18px;
   cursor: pointer;
-  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .report-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--teal-500);
+  box-shadow: var(--shadow-2);
+  border-color: var(--brand-teal);
 }
 .report-card-icon {
   width: 36px; height: 36px;
-  border-radius: var(--radius-md);
+  border-radius: var(--r-md);
   background: rgba(0,201,177,0.1);
-  color: var(--teal-500);
+  color: var(--brand-teal);
   display: flex; align-items: center; justify-content: center;
   font-size: 15px;
   flex-shrink: 0;
 }
 .report-card-body { flex: 1; }
-.report-card-body strong { font-size: 13px; font-weight: 600; color: var(--text-primary); display: block; margin-bottom: 3px; }
-.report-card-body span  { font-size: 11px; color: var(--text-muted); }
+.report-card-body strong { font-size: 13px; font-weight: 600; color: var(--text-1); display: block; margin-bottom: 3px; }
+.report-card-body span  { font-size: 11px; color: var(--text-3); }
 .report-card-actions { display: flex; gap: 6px; margin-top: 4px; }
 
 /* ── DL GRID (detail list key/value pairs) ───────────────────────── */
@@ -862,13 +885,13 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: var(--text-muted);
+  color: var(--text-3);
   margin-bottom: 2px;
 }
 .dl-grid dd {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-1);
   margin: 0;
 }
 @media (max-width: 480px) {
@@ -886,26 +909,26 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
   font-size: 11px;
   font-weight: 600;
   background: var(--bg-hover);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
+  color: var(--text-2);
+  border: 1px solid var(--border-1);
   cursor: default;
   white-space: nowrap;
 }
-.chip.active   { background: rgba(0,201,177,0.1);   color: var(--teal-500);  border-color: rgba(0,201,177,0.3); }
-.chip.danger   { background: rgba(248,113,113,0.1); color: var(--red-400);   border-color: rgba(248,113,113,0.3); }
-.chip.warning  { background: rgba(251,191,36,0.1);  color: var(--amber-400); border-color: rgba(251,191,36,0.3); }
+.chip.active   { background: rgba(0,201,177,0.1);   color: var(--brand-teal);  border-color: rgba(0,201,177,0.3); }
+.chip.danger   { background: rgba(248,113,113,0.1); color: var(--c-danger);   border-color: rgba(248,113,113,0.3); }
+.chip.warning  { background: rgba(251,191,36,0.1);  color: var(--brand-amber); border-color: rgba(251,191,36,0.3); }
 .chip.removable { cursor: pointer; }
-.chip.removable:hover { border-color: var(--teal-500); }
+.chip.removable:hover { border-color: var(--brand-teal); }
 
 /* ── ADDITIONAL BUTTON VARIANTS ──────────────────────────────────── */
 .btn-success, .btn.btn-success {
   background: rgba(74,222,128,0.12);
-  color: var(--green-400);
+  color: #4ade80;
   border: 1px solid rgba(74,222,128,0.2);
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 16px; border-radius: var(--radius-md);
+  padding: 8px 16px; border-radius: var(--r-md);
   cursor: pointer; font-family: var(--font-ui); font-size: 13px;
-  font-weight: 600; transition: all var(--transition); white-space: nowrap;
+  font-weight: 600; transition: all var(--t-fast); white-space: nowrap;
   text-decoration: none;
 }
 .btn-success:hover:not(:disabled) { background: rgba(74,222,128,0.2); }
@@ -916,14 +939,14 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
   border-radius: 0;
   border-right-width: 0;
 }
-.btn-group > :first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
-.btn-group > :last-child  { border-radius: 0 var(--radius-md) var(--radius-md) 0; border-right-width: 1px; }
+.btn-group > :first-child { border-radius: var(--r-md) 0 0 var(--r-md); }
+.btn-group > :last-child  { border-radius: 0 var(--r-md) var(--r-md) 0; border-right-width: 1px; }
 
 /* ── CARD INSET ──────────────────────────────────────────────────── */
 .card-inset {
   background: var(--bg-card-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
   padding: 14px 18px;
 }
 
@@ -938,7 +961,7 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
   border-radius: 99px;
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--teal-500), var(--navy-700));
+  background: linear-gradient(135deg, var(--brand-teal), var(--brand-navy-2));
   color: white;
 }
 .avatar-xl {
@@ -946,15 +969,15 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
   border-radius: 99px;
   display: inline-flex; align-items: center; justify-content: center;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--teal-500), var(--navy-700));
+  background: linear-gradient(135deg, var(--brand-teal), var(--brand-navy-2));
   color: white;
 }
 
 /* ── CALENDAR / SCHEDULE SUMMARY ─────────────────────────────────── */
 .calendar-summary {
   background: var(--bg-card-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
   padding: 12px 16px;
   font-size: 13px;
 }
@@ -968,9 +991,9 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
   top: 100%;
   left: 0; right: 0;
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-1);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-3);
   z-index: 400;
   max-height: 280px;
   overflow-y: auto;
@@ -979,12 +1002,12 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
   display: flex; align-items: center; gap: 10px;
   padding: 9px 14px;
   cursor: pointer;
-  border-bottom: 1px solid var(--border);
-  transition: background var(--transition);
+  border-bottom: 1px solid var(--border-1);
+  transition: background var(--t-fast);
 }
 .search-result:last-child { border-bottom: none; }
 .search-result:hover { background: var(--bg-hover); }
-.search-empty { padding: 14px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.search-empty { padding: 14px; text-align: center; color: var(--text-3); font-size: 13px; }
 
 /* ── LABEL / VALUE UTILITY ───────────────────────────────────────── */
 .label {
@@ -992,22 +1015,22 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: var(--text-muted);
+  color: var(--text-3);
   display: block;
   margin-bottom: 3px;
 }
 .value {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-1);
 }
 
 /* ── CLIENT PHOTO ────────────────────────────────────────────────── */
 .client-photo, .photo-frame {
   width: 80px; height: 80px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--r-lg);
   object-fit: cover;
-  border: 2px solid var(--border);
+  border: 2px solid var(--border-1);
   background: var(--bg-card-alt);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;

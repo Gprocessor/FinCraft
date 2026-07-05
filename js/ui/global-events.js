@@ -80,8 +80,8 @@ document.addEventListener('click', (e) => {
     case 'toggle-theme':     theme.toggle();              break;
     case 'toggle-sidebar':   sidebar.toggle();            break;
     case 'toggle-user-menu': dropdownToggle('userMenu');  break;
-    case 'open-cmd':         import('./cmd.js').then(m => m.openCmd()); break;
-    case 'logout':           import('./auth.js').then(m => m.logout()); break;
+    case 'open-cmd':         import('../cmd.js').then(m => m.openCmd()); break;
+    case 'logout':           import('../auth.js').then(m => m.logout()); break;
     case 'dismiss-toast':    t.closest('.toast')?.remove(); break;
     default:
       // All submit-* and other form actions handled by handleAction
@@ -100,14 +100,14 @@ document.addEventListener('keydown', (e) => {
   // Ctrl+K — command palette
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
-    import('./cmd.js').then(m => m.openCmd());
+    import('../cmd.js').then(m => m.openCmd());
     return;
   }
   // ESC — close everything
   if (e.key === 'Escape') {
     closeAllModals();
     closeAllDropdowns();
-    import('./cmd.js').then(m => m.closeCmd?.());
+    import('../cmd.js').then(m => m.closeCmd?.());
     return;
   }
   // Ctrl+Shift+N — New Client

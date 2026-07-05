@@ -7,8 +7,8 @@
 .search-field { position: relative; }
 .search-dropdown {
   position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
-  background: var(--bg-modal); border: 1px solid var(--border-1);
-  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  background: var(--bg-card); border: 1px solid var(--border-1);
+  border-radius: var(--r-md); box-shadow: var(--shadow-3);
   max-height: 220px; overflow-y: auto;
 }
 .search-result-item:hover { background: var(--bg-hover); }
@@ -30,12 +30,12 @@
 
 /* ---- Msg banner ---- */
 .msg-banner {
-  padding: 10px 14px; border-radius: var(--radius);
+  padding: 10px 14px; border-radius: var(--r-md);
   display: flex; align-items: flex-start; gap: 10px; font-size: 14px;
 }
 .msg-banner.b-info    { background: color-mix(in srgb, var(--brand-teal) 12%, transparent); border-left: 3px solid var(--brand-teal); }
-.msg-banner.b-danger  { background: color-mix(in srgb, var(--clr-danger) 12%, transparent); border-left: 3px solid var(--clr-danger); }
-.msg-banner.b-warn    { background: color-mix(in srgb, var(--clr-warn) 12%, transparent); border-left: 3px solid var(--clr-warn); }
+.msg-banner.b-danger  { background: color-mix(in srgb, var(--c-danger) 12%, transparent); border-left: 3px solid var(--c-danger); }
+.msg-banner.b-warn    { background: color-mix(in srgb, var(--c-warning) 12%, transparent); border-left: 3px solid var(--c-warning); }
 
 /* ---- Full width helper ---- */
 .w-full { width: 100%; }

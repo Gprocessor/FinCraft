@@ -5,6 +5,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../config.js';
 import { api } from '../../api.js';
 import { escapeHtml, num, sb } from '../../utils.js';
 import { toast } from '../../ui.js';
+import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
 export async function renderList(c) {
@@ -53,8 +54,7 @@ export async function renderList(c) {
     });
   }).catch(() => {});
 
-  let allGroups = [], totalRecords = 0, currentOffset = 0;
-  const PAGE_SIZE = 50;
+  let allGroups = [], totalRecords = 0, currentOffset = 0, pageSize = DEFAULT_PAGE_SIZE;
 
   async function load(offset = 0) {
     c.querySelector('#grp-rows').innerHTML =
@@ -63,7 +63,7 @@ export async function renderList(c) {
       const officeId = c.querySelector('#grp-office')?.value;
       const status   = c.querySelector('#grp-status')?.value;
       const q        = c.querySelector('#grp-search')?.value?.trim();
-      const params   = { limit: PAGE_SIZE, offset, paged: true };
+      const params   = { limit: pageSize, offset, paged: true };
       if (officeId) params.officeId = officeId;
       if (q) params.name = q;
 
@@ -84,18 +84,10 @@ export async function renderList(c) {
   }
 
   function drawPagination() {
-    const pageEl = c.querySelector('#grp-pagination');
-    if (totalRecords <= PAGE_SIZE) { pageEl.innerHTML = ''; return; }
-    const from = totalRecords ? currentOffset + 1 : 0;
-    const to = Math.min(currentOffset + PAGE_SIZE, totalRecords);
-    pageEl.innerHTML = `
-      <span class="text-muted">Showing ${from}–${to} of ${num(totalRecords)}</span>
-      <div class="pagination-actions">
-        <button class="btn-secondary" id="grp-prev" ${currentOffset > 0 ? '' : 'disabled'}>Prev</button>
-        <button class="btn-secondary" id="grp-next" ${currentOffset + PAGE_SIZE < totalRecords ? '' : 'disabled'}>Next</button>
-      </div>`;
-    c.querySelector('#grp-prev')?.addEventListener('click', () => load(Math.max(0, currentOffset - PAGE_SIZE)));
-    c.querySelector('#grp-next')?.addEventListener('click', () => load(currentOffset + PAGE_SIZE));
+    renderPagination(c.querySelector('#grp-pagination'), {
+      total: totalRecords, offset: currentOffset, pageSize,
+      onChange: (newOffset, newSize) => { pageSize = newSize; load(newOffset); }
+    });
   }
 
   function draw(rows) {

@@ -42,6 +42,7 @@ export function makeSavingsAPI(self) {
     adjustTransaction:  (id, txId, body) => self._p(`/savingsaccounts/${id}/transactions/${txId}?command=modify`, body),
     undoTransaction:    (id, txId) => self._p(`/savingsaccounts/${id}/transactions/${txId}?command=undo`, {}),
     addCharge:   (id, body)    => self._p(`/savingsaccounts/${id}/charges`, body),
+    charges:     (id)          => self._g(`/savingsaccounts/${id}/charges`),
     transactions:(id)          => self._g(`/savingsaccounts/${id}/transactions`)
   };
 }

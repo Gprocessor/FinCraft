@@ -5,6 +5,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../config.js';
 import { api } from '../../api.js';
 import { escapeHtml, fmt, num, sb } from '../../utils.js';
 import { openModal, toast } from '../../ui.js';
+import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
 export async function renderList(c) {
@@ -61,8 +62,7 @@ export async function renderList(c) {
     });
   }).catch(() => {});
 
-  let allAccounts = [], totalRecords = 0, currentOffset = 0;
-  const PAGE_SIZE = 50;
+  let allAccounts = [], totalRecords = 0, currentOffset = 0, pageSize = DEFAULT_PAGE_SIZE;
 
   // Portfolio-wide KPIs — Total Accounts / Total Balance / Avg Balance must reflect the whole
   // filtered portfolio, not just the current 50-row page. Fetched as one large, unpaginated
@@ -96,7 +96,7 @@ export async function renderList(c) {
     try {
       const status = c.querySelector('#sv-status')?.value;
       const prod   = c.querySelector('#sv-product')?.value;
-      const params = { limit: PAGE_SIZE, offset };
+      const params = { limit: pageSize, offset };
       if (status) params.status = status;
       if (prod)   params.productId = prod;
 
@@ -123,18 +123,10 @@ export async function renderList(c) {
   }
 
   function drawPagination() {
-    const pageEl = c.querySelector('#sv-pagination');
-    if (totalRecords <= PAGE_SIZE) { pageEl.innerHTML = ''; return; }
-    const from = totalRecords ? currentOffset + 1 : 0;
-    const to = Math.min(currentOffset + PAGE_SIZE, totalRecords);
-    pageEl.innerHTML = `
-      <span class="text-muted">Showing ${from}–${to} of ${num(totalRecords)}</span>
-      <div class="pagination-actions">
-        <button class="btn-secondary" id="sv-prev" ${currentOffset > 0 ? '' : 'disabled'}>Prev</button>
-        <button class="btn-secondary" id="sv-next" ${currentOffset + PAGE_SIZE < totalRecords ? '' : 'disabled'}>Next</button>
-      </div>`;
-    c.querySelector('#sv-prev')?.addEventListener('click', () => load(Math.max(0, currentOffset - PAGE_SIZE)));
-    c.querySelector('#sv-next')?.addEventListener('click', () => load(currentOffset + PAGE_SIZE));
+    renderPagination(c.querySelector('#sv-pagination'), {
+      total: totalRecords, offset: currentOffset, pageSize,
+      onChange: (newOffset, newSize) => { pageSize = newSize; load(newOffset); }
+    });
   }
 
   function draw(rows) {

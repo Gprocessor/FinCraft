@@ -5,6 +5,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../config.js';
 import { api } from '../../api.js';
 import { escapeHtml, fmt, fmtDate, num, sb } from '../../utils.js';
 import { openModal, toast } from '../../ui.js';
+import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
 export async function renderList(c) {
@@ -64,8 +65,7 @@ export async function renderList(c) {
     });
   }).catch(() => {});
 
-  let allLoans = [], totalRecords = 0, currentOffset = 0;
-  const PAGE_SIZE = 50;
+  let allLoans = [], totalRecords = 0, currentOffset = 0, pageSize = DEFAULT_PAGE_SIZE;
 
   // Portfolio-wide KPI counts — independent of the current page/search, so they stay accurate
   // no matter how many pages the portfolio spans. Uses limit:1 requests purely to read
@@ -97,7 +97,7 @@ export async function renderList(c) {
     try {
       const status   = c.querySelector('#lf-status')?.value;
       const productId = c.querySelector('#lf-product')?.value;
-      const params = { limit: PAGE_SIZE, offset };
+      const params = { limit: pageSize, offset };
       if (status)    params.status = status;
       if (productId) params.loanProductId = productId;
 
@@ -140,18 +140,10 @@ export async function renderList(c) {
   }
 
   function drawPagination() {
-    const pageEl = c.querySelector('#lf-pagination');
-    if (totalRecords <= PAGE_SIZE) { pageEl.innerHTML = ''; return; }
-    const from = totalRecords ? currentOffset + 1 : 0;
-    const to = Math.min(currentOffset + PAGE_SIZE, totalRecords);
-    pageEl.innerHTML = `
-      <span class="text-muted">Showing ${from}–${to} of ${num(totalRecords)}</span>
-      <div class="pagination-actions">
-        <button class="btn-secondary" id="lf-prev" ${currentOffset > 0 ? '' : 'disabled'}>Prev</button>
-        <button class="btn-secondary" id="lf-next" ${currentOffset + PAGE_SIZE < totalRecords ? '' : 'disabled'}>Next</button>
-      </div>`;
-    c.querySelector('#lf-prev')?.addEventListener('click', () => load(Math.max(0, currentOffset - PAGE_SIZE)));
-    c.querySelector('#lf-next')?.addEventListener('click', () => load(currentOffset + PAGE_SIZE));
+    renderPagination(c.querySelector('#lf-pagination'), {
+      total: totalRecords, offset: currentOffset, pageSize,
+      onChange: (newOffset, newSize) => { pageSize = newSize; load(newOffset); }
+    });
   }
 
   function draw(rows) {

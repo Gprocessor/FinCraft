@@ -5,6 +5,7 @@ import { api } from '../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../config.js';
 import { toast } from '../../ui.js';
 import { escapeHtml, fmt, num, sb } from '../../utils.js';
+import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
 export async function renderList(c) {
@@ -65,14 +66,13 @@ export async function renderList(c) {
     });
   }).catch(() => {});
 
-  let allAccounts = [], totalRecords = 0, currentOffset = 0;
-  const PAGE_SIZE = 50;
+  let allAccounts = [], totalRecords = 0, currentOffset = 0, pageSize = DEFAULT_PAGE_SIZE;
 
   async function load(offset = 0) {
     c.querySelector('#sh-rows').innerHTML =
       '<tr><td colspan="7" class="empty-state-row">Loading…</td></tr>';
     try {
-      const params = { limit: PAGE_SIZE, offset };
+      const params = { limit: pageSize, offset };
       const status = c.querySelector('#sh-status')?.value;
       const prod = c.querySelector('#sh-product')?.value;
       if (status) params.status = status;
@@ -109,18 +109,10 @@ export async function renderList(c) {
   }
 
   function drawPagination() {
-    const pageEl = c.querySelector('#sh-pagination');
-    if (totalRecords <= PAGE_SIZE) { pageEl.innerHTML = ''; return; }
-    const from = totalRecords ? currentOffset + 1 : 0;
-    const to = Math.min(currentOffset + PAGE_SIZE, totalRecords);
-    pageEl.innerHTML = `
-      <span class="text-muted">Showing ${from}–${to} of ${num(totalRecords)}</span>
-      <div class="pagination-actions">
-        <button class="btn-secondary" id="sh-prev" ${currentOffset > 0 ? '' : 'disabled'}>Prev</button>
-        <button class="btn-secondary" id="sh-next" ${currentOffset + PAGE_SIZE < totalRecords ? '' : 'disabled'}>Next</button>
-      </div>`;
-    c.querySelector('#sh-prev')?.addEventListener('click', () => load(Math.max(0, currentOffset - PAGE_SIZE)));
-    c.querySelector('#sh-next')?.addEventListener('click', () => load(currentOffset + PAGE_SIZE));
+    renderPagination(c.querySelector('#sh-pagination'), {
+      total: totalRecords, offset: currentOffset, pageSize,
+      onChange: (newOffset, newSize) => { pageSize = newSize; load(newOffset); }
+    });
   }
 
   function draw(rows) {

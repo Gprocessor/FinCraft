@@ -65,17 +65,19 @@ export function escapeHtml(s) {
 }
 export function parseHash() {
   const h = (location.hash || '#dashboard').replace(/^#\/?/, '');
-  const [page, ...rest] = h.split('/');
+  const qIdx = h.indexOf('?');
+  const page = qIdx >= 0 ? h.slice(0, qIdx) : h;
+  const query = qIdx >= 0 ? h.slice(qIdx + 1) : '';
   const params = {};
-  if (rest.length === 1 && rest[0]) params.id = decodeURIComponent(rest[0]);
-  else if (rest.length > 1) for (let i = 0; i < rest.length; i += 2) params[rest[i]] = decodeURIComponent(rest[i + 1] || '');
+  new URLSearchParams(query).forEach((v, k) => { params[k] = v; });
   return { page: page || 'dashboard', params };
 }
 export function buildHash(page, params = {}) {
-  const keys = Object.keys(params);
+  const keys = Object.keys(params).filter(k => params[k] !== undefined && params[k] !== null && params[k] !== '');
   if (!keys.length) return `#${page}`;
-  if (keys.length === 1 && 'id' in params) return `#${page}/${encodeURIComponent(params.id)}`;
-  return `#${page}/` + keys.map(k => `${k}/${encodeURIComponent(params[k])}`).join('/');
+  const qs = new URLSearchParams();
+  keys.forEach(k => qs.set(k, params[k]));
+  return `#${page}?${qs.toString()}`;
 }
 export function timeout(promise, ms) {
   return new Promise((resolve, reject) => {
