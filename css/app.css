@@ -1,5 +1,11 @@
-/* FinCraft — CSS entry point. Imports token design system then components. */
+/* FinCraft — CSS entry point. Imports token design system then components.
+   cards/tables/forms/modals load before components.css so the latter's
+   mobile @media overrides (audit item 4) still win at narrow widths. */
 @import './tokens.css';
+@import './cards.css';
+@import './tables.css';
+@import './forms.css';
+@import './modals.css';
 @import './components.css';
 @import './login.css';
 

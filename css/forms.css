@@ -1,0 +1,65 @@
+/* FinCraft · css/forms.css — form-grid layout, labels/inputs/selects, and the multi-step
+   stepper component used by wizards (remittance, config wizard). Split out of components.css (audit item 9). */
+
+/* ---- FORMS ---- */
+.form-grid { display: grid; gap: 14px; }
+.fg-2 { grid-template-columns: 1fr 1fr; }
+.fg-3 { grid-template-columns: 1fr 1fr 1fr; }
+.fg-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.fg-span { grid-column: 1 / -1; }
+/* Compat: old 2-col form grid */
+.form-grid.full { grid-column: 1 / -1; }
+.form-group  { display: flex; flex-direction: column; gap: 5px; }
+.form-label  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-3); }
+.form-label .req { color: #f87171; }
+.form-control {
+  background: var(--input-bg); border: 1px solid var(--border-1);
+  border-radius: 6px; padding: 9px 12px;
+  font-family: var(--font-ui); font-size: 13px; color: var(--text-1);
+  outline: none; width: 100%;
+  transition: border-color 200ms, box-shadow 200ms;
+}
+.form-control:focus { border-color: var(--brand-teal); box-shadow: 0 0 0 3px rgba(0,201,177,.15); }
+.form-control::placeholder { color: var(--text-3); }
+.form-control:disabled { opacity: .5; cursor: not-allowed; }
+select.form-control { cursor: pointer; }
+textarea.form-control { resize: vertical; }
+.form-hint  { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.form-error { font-size: 11px; color: #f87171; margin-top: 2px; }
+.input-group { display: flex; }
+.input-group .form-control { border-radius: 6px 0 0 6px; }
+.input-group .btn { border-radius: 0 6px 6px 0; }
+.input-addon {
+  background: var(--bg-card-alt); border: 1px solid var(--border-1); border-right: none;
+  padding: 9px 12px; font-size: 12px; color: var(--text-3);
+  border-radius: 6px 0 0 6px; white-space: nowrap; display: flex; align-items: center;
+}
+.switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border-1); border-radius: 99px; transition: 200ms; }
+.switch-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 200ms; }
+.switch input:checked + .switch-slider { background: var(--brand-teal); }
+.switch input:checked + .switch-slider::before { transform: translateX(18px); }
+/* Compat: old .slider class */
+.slider { position: absolute; cursor: pointer; inset: 0; background: var(--border-1); border-radius: 99px; transition: 200ms; }
+.slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 200ms; }
+.switch input:checked + .slider { background: var(--brand-teal); }
+.switch input:checked + .slider::before { transform: translateX(18px); }
+
+
+/* ---- STEPPER ---- */
+.stepper { display: flex; align-items: center; margin-bottom: 24px; }
+.step-item  { flex: 1; text-align: center; }
+.step-circle {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--border-1); color: var(--text-3);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 6px; font-weight: 700; font-size: 13px; transition: all 200ms;
+}
+.step-circle.active { background: var(--brand-teal); color: var(--brand-navy); box-shadow: 0 0 12px rgba(0,201,177,.3); }
+.step-circle.done   { background: #4ade80; color: var(--brand-navy); }
+.step-label { font-size: 11px; color: var(--text-3); font-weight: 500; }
+.step-label.active { color: var(--brand-teal); font-weight: 600; }
+.step-label.done   { color: #4ade80; }
+.step-line { flex: 1; height: 2px; background: var(--border-1); margin-bottom: 22px; }
+.step-line.done { background: var(--brand-teal); }

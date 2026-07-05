@@ -1,0 +1,85 @@
+/* FinCraft · css/cards.css — stat cards, generic cards, entity detail hero, hero metrics strip, org cards.
+   Split out of components.css (audit item 9) for maintainability; loaded before components.css so the
+   mobile @media overrides in components.css still take precedence at narrow widths. */
+
+/* ---- STAT CARDS ---- */
+.stat-card {
+  background: var(--bg-card); border: 1px solid var(--border-1);
+  border-radius: 16px; padding: 20px; position: relative; overflow: hidden;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+.stat-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 0 2px 2px 0; }
+.stat-card.c-teal::before   { background: var(--brand-teal);  box-shadow: 0 0 10px var(--brand-teal); }
+.stat-card.c-amber::before  { background: #fbbf24; box-shadow: 0 0 10px #fbbf24; }
+.stat-card.c-green::before  { background: #4ade80; box-shadow: 0 0 10px #4ade80; }
+.stat-card.c-red::before    { background: #f87171; box-shadow: 0 0 10px #f87171; }
+.stat-card.c-blue::before   { background: #60a5fa; box-shadow: 0 0 10px #60a5fa; }
+.stat-card.c-purple::before { background: #a78bfa; box-shadow: 0 0 10px #a78bfa; }
+.stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 14px; }
+.stat-icon.c-teal   { background: rgba(0,201,177,.1);  color: var(--brand-teal); }
+.stat-icon.c-amber  { background: rgba(251,191,36,.1); color: #fbbf24; }
+.stat-icon.c-green  { background: rgba(74,222,128,.1); color: #4ade80; }
+.stat-icon.c-red    { background: rgba(248,113,113,.1);color: #f87171; }
+.stat-icon.c-blue   { background: rgba(96,165,250,.1); color: #60a5fa; }
+.stat-icon.c-purple { background: rgba(167,139,250,.1);color: #a78bfa; }
+.stat-value { font-family: var(--font-mono); font-size: 26px; font-weight: 500; color: var(--text-1); letter-spacing: -1px; line-height: 1; }
+.stat-label { font-size: 10px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; }
+.stat-delta { margin-top: 10px; font-size: 11px; display: flex; align-items: center; gap: 4px; }
+.stat-delta.up   { color: #4ade80; }
+.stat-delta.down { color: #f87171; }
+
+/* Compat: old .stat-grid */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 16px; margin-bottom: 20px; }
+
+/* ---- CARDS ---- */
+.card { background: var(--bg-card); border: 1px solid var(--border-1); border-radius: 16px; overflow: hidden; }
+.card:hover { box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.card-header { padding: 14px 18px; border-bottom: 1px solid var(--border-1); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.card-title  { font-size: 13px; font-weight: 700; color: var(--text-1); letter-spacing: -0.1px; }
+.card-body   { padding: 18px; }
+.card-footer { padding: 12px 18px; border-top: 1px solid var(--border-1); }
+.card-link   { cursor: pointer; }
+.card-link:hover { border-color: var(--brand-teal); box-shadow: 0 0 0 1px var(--brand-teal); }
+
+/* ---- DETAIL HERO ---- */
+.detail-hero {
+  background: linear-gradient(135deg, #0f2040, #0a1628);
+  border-radius: 16px; padding: 22px; margin-bottom: 18px;
+  border: 1px solid var(--border-1);
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.detail-avatar {
+  width: 60px; height: 60px; border-radius: 16px;
+  background: linear-gradient(135deg, var(--brand-teal), #5fedd8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: var(--brand-navy); font-weight: 900;
+  font-family: var(--font-brand); box-shadow: 0 0 20px rgba(0,201,177,.25); flex-shrink: 0;
+}
+.detail-info  { flex: 1; min-width: 0; }
+.detail-name  { font-size: 20px; font-weight: 700; color: white; letter-spacing: -0.4px; }
+.detail-meta  { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 3px; }
+.detail-meta .hl { color: #00e5cc; font-family: var(--font-mono); }
+.detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---- HERO METRICS STRIP ---- */
+.hero-metrics {
+  background: linear-gradient(135deg, #0f2040, #0a1628);
+  border-bottom: 1px solid var(--border-1);
+  padding: 14px 22px; display: flex; flex-wrap: wrap;
+}
+.hero-metric { flex: 1; text-align: center; padding: 6px 14px; border-right: 1px solid rgba(255,255,255,.08); min-width: 80px; }
+.hero-metric:last-child { border-right: none; }
+.hero-metric-val { font-family: var(--font-mono); font-size: 18px; font-weight: 500; color: white; }
+.hero-metric-val.teal  { color: #00e5cc; }
+.hero-metric-val.amber { color: #fbbf24; }
+.hero-metric-val.red   { color: #f87171; }
+.hero-metric-lbl { font-size: 10px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .8px; margin-top: 2px; }
+
+
+/* ---- ORG CARDS ---- */
+.org-card { background: var(--bg-card); border: 1px solid var(--border-1); border-radius: 16px; padding: 20px; cursor: pointer; text-align: center; transition: all 200ms ease; }
+.org-card:hover { border-color: var(--brand-teal); transform: translateY(-2px); box-shadow: 0 0 0 1px var(--brand-teal), 0 4px 16px rgba(0,0,0,.3); }
+.org-card-icon  { font-size: 26px; margin-bottom: 10px; }
+.org-card-title { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.org-card-desc  { font-size: 11px; color: var(--text-3); }

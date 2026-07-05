@@ -56,7 +56,7 @@ async function loadModule(name) {
 }
 
 /** Strict permission check — denies when perms array is empty for non-public pages. */
-function isAllowed(def) {
+export function isAllowed(def) {
   if (!def) return false;
   const need = def.requiredPermission;
   if (need === null || need === undefined) return true;            // public-to-authenticated

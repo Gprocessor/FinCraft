@@ -240,4 +240,17 @@ now that the code lives one or two directories deeper. Every dynamic import unde
 was audited and corrected to the right number of `../` for its new location (29 files).
 
 ---
+
+## Backlog — newer Fineract modules (not implemented)
+
+Per the July 2026 technical audit (item 11): Working Capital Loans, Credit Bureau Integration,
+Email Campaigns, and MIX/PPI reporting are **not implemented** in FinCraft. This is a
+deliberate scope decision, not an oversight — these modules are also absent from Apache
+Fineract's own official reference web-app, reflecting where Fineract's feature adoption
+currently stands rather than a FinCraft gap. They're tracked here as backlog and should only
+be picked up if a specific self-hosted Fineract tenant actually has the corresponding modules
+enabled server-side; building UI against endpoints most deployments don't expose isn't a good
+use of effort right now.
+
+---
 Built by **Processor** Power Platform & MIS Division

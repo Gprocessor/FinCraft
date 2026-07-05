@@ -62,6 +62,13 @@ export async function runTests({ assert: a = assert } = {}) {
   global.document = dom.window.document;
   global.CustomEvent = dom.window.CustomEvent;
   global.localStorage = dom.window.localStorage;
+  global.sessionStorage = dom.window.sessionStorage;
+  // ResizeObserver isn't implemented by jsdom; stub it so files that observe
+  // element size (e.g. ui/scrollable-tabs.js) can be imported/exercised.
+  global.ResizeObserver = dom.window.ResizeObserver || class ResizeObserver {
+    observe() {} unobserve() {} disconnect() {}
+  };
+  dom.window.ResizeObserver = global.ResizeObserver;
   try {
     Object.defineProperty(global, 'navigator', { value: dom.window.navigator, configurable: true, writable: true });
   } catch { /* already defined in this Node version */ }

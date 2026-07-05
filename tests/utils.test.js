@@ -18,15 +18,23 @@ export async function runTests({ assert: a = assert } = {}) {
   const h1 = buildHash('dashboard');
   a.strictEqual(h1, '#dashboard');
   const h2 = buildHash('page', { id: '123' });
-  a.strictEqual(h2, '#page/123');
+  a.strictEqual(h2, '#page?id=123');
   const h3 = buildHash('page', { a: 'x', b: 'y' });
-  a.strictEqual(h3.startsWith('#page/'), true);
+  a.strictEqual(h3.startsWith('#page?'), true);
+  a.strictEqual(h3.includes('a=x') && h3.includes('b=y'), true);
 
-  // parseHash needs a global location
-  globalThis.location = { hash: '#/page/123' };
+  // parseHash needs a global location — canonical format is #page?key=value
+  globalThis.location = { hash: '#page?id=123' };
   const ph = parseHash();
   a.strictEqual(ph.page, 'page');
   a.strictEqual(ph.params.id, '123');
+
+  // parseHash also tolerates a leading slash (older/typed-in URLs) as long as
+  // params stay in query-string form after it
+  globalThis.location = { hash: '#/page?id=456' };
+  const ph2 = parseHash();
+  a.strictEqual(ph2.page, 'page');
+  a.strictEqual(ph2.params.id, '456');
 
   // timeout resolves and times out
   await timeout(Promise.resolve(5), 500);

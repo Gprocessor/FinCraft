@@ -70,3 +70,8 @@
   .login-left  { display: none; }
   .login-right { width: 100%; }
 }
+
+@media (max-width: 375px) {
+  .login-card, .login-form-box { padding: 20px; border-radius: 14px; }
+  .login-form-title { font-size: 18px; }
+}

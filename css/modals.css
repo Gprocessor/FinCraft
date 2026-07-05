@@ -1,0 +1,39 @@
+/* FinCraft · css/modals.css — modal overlay, dialog box, header/body/footer regions.
+   Split out of components.css (audit item 9). */
+
+/* ---- MODALS ---- */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+  z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal-overlay.top-align { align-items: flex-start; overflow-y: auto; }
+.modal {
+  background: var(--bg-card); border: 1px solid var(--border-1);
+  border-radius: 22px; width: 100%; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 60px rgba(0,201,177,.06);
+}
+@keyframes modalIn { from { opacity:0; transform:scale(.96) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+.modal-sm { max-width: 400px; }
+.modal-md { max-width: 560px; }
+.modal-lg { max-width: 720px; }
+.modal-xl { max-width: 900px; }
+.modal-header {
+  padding: 18px 22px 16px; border-bottom: 1px solid var(--border-1);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0;
+}
+.modal-title    { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+.modal-subtitle { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.modal-close {
+  background: none; border: none; cursor: pointer; color: var(--text-3);
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; font-size: 16px; transition: all 200ms; flex-shrink: 0;
+}
+.modal-close:hover { background: var(--bg-card-alt); color: var(--text-1); }
+.modal-body   { padding: 22px; }
+.modal-body.p0 { padding: 0; }
+.modal-footer { padding: 14px 22px; border-top: 1px solid var(--border-1); display: flex; justify-content: flex-end; gap: 8px; }
+/* Compat: old modal-head / modal-foot */
+.modal-head { padding: 18px 22px 16px; border-bottom: 1px solid var(--border-1); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-foot { padding: 14px 22px; border-top: 1px solid var(--border-1); display: flex; justify-content: flex-end; gap: 8px; }

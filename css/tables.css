@@ -1,0 +1,40 @@
+/* FinCraft · css/tables.css — data table base styles, legacy .table alias, and the
+   avatar+name user-cell pattern used across list views. Split out of components.css (audit item 9). */
+
+/* ---- TABLES ---- */
+.tbl-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th {
+  background: var(--bg-card-alt); padding: 9px 14px;
+  text-align: left; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-3); border-bottom: 1px solid var(--border-1); white-space: nowrap;
+}
+.tbl td { padding: 12px 14px; border-bottom: 1px solid var(--border-1); font-size: 13px; color: var(--text-1); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tbody tr { cursor: default; transition: background 200ms ease; }
+.tbl tbody tr.clickable { cursor: pointer; }
+.tbl tbody tr:hover { background: rgba(0,201,177,.04); }
+.tbl .mono { font-family: var(--font-mono); font-size: 12px; }
+.tbl-pagination { padding: 12px 18px; border-top: 1px solid var(--border-1); display: flex; align-items: center; justify-content: space-between; }
+
+
+/* ---- TABLE alias (.table = .tbl) ---- */
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  background: var(--bg-card-alt); padding: 9px 14px;
+  text-align: left; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-3); border-bottom: 1px solid var(--border-1); white-space: nowrap;
+}
+.table td { padding: 11px 14px; border-bottom: 1px solid var(--border-1); font-size: 13px; color: var(--text-1); vertical-align: middle; }
+.table tr:last-child td { border-bottom: none; }
+.table tbody tr { transition: background 200ms ease; }
+.table tbody tr:hover { background: rgba(0,201,177,.04); }
+
+
+/* ---- USER CELL (table with avatar + name) ---- */
+.user-cell { display: flex; align-items: center; gap: 8px; }
+.user-cell .avatar { width: 28px; height: 28px; font-size: 10px; border-radius: 99px; flex-shrink: 0; }
+.user-cell a { color: var(--text-1); text-decoration: none; }
+.user-cell a:hover { color: var(--brand-teal); }

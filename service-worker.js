@@ -1,12 +1,13 @@
-const CACHE = 'fincraft-v8'; // bumped: removed legacy fincraft-shell.css (was corrupting
-                              // theme rendering with undefined CSS vars), fixed modal
-                              // size classes (modal md/lg -> modal-md/modal-lg) that
-                              // caused Quick Actions and other modals to render full-width.
+const CACHE = 'fincraft-v9'; // bumped: split components.css into cards/tables/forms/modals.css (audit item 9)
 const ASSETS = [
   './',
   './index.html',
   // CSS — full bundle now
   './css/tokens.css',
+  './css/cards.css',
+  './css/tables.css',
+  './css/forms.css',
+  './css/modals.css',
   './css/components.css',
   './css/app.css',
   './css/login.css',

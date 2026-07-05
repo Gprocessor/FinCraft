@@ -218,7 +218,7 @@ async function loadAll(c) {
  * matched by name rather than fixed index. Returns null (triggering the count-based fallback)
  * if no recognisable "total outstanding" column is found.
  */
-function computeNplFromPar(parData) {
+export function computeNplFromPar(parData) {
   if (!parData?.data?.length || !parData?.columnHeaders?.length) return null;
   const cols = parData.columnHeaders.map(h => h.columnName || '');
 

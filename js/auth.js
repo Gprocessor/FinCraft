@@ -15,7 +15,7 @@ const SHELL_ID = 'appShell';
  *  - permissions: [{ code: "CODE" }, ...]
  *  - roles: [{ permissions: [{ code, selected }, ...] }, ...]
  */
-function _extractPerms(payload) {
+export function _extractPerms(payload) {
   const out = new Set();
   const top = Array.isArray(payload?.permissions) ? payload.permissions : [];
   top.forEach(p => {
