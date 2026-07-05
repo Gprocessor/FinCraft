@@ -276,8 +276,14 @@ export async function changePassword({ password, repeatPassword }) {
 /* ------------------------------------------------------------------ */
 /* Forgot password                                                     */
 /* ------------------------------------------------------------------ */
-export async function forgotPassword({ username, email }) {
+export async function forgotPassword({ serverUrl, tenantId, username, email }) {
   if (!username && !email) throw new Error('Provide username or email');
+  // The user may not have successfully logged in yet (that's the whole point
+  // of "forgot password"), so the API client might not be configured with a
+  // server/tenant at all. Without this, the request silently falls back to a
+  // relative URL and hits whatever origin FinCraft itself is hosted on
+  // (e.g. GitHub Pages), which returns 405 since it's static hosting.
+  if (serverUrl || tenantId) configureAPI({ serverUrl, tenantId });
   return api.password.forgot({ username, email });
 }
 
@@ -490,10 +496,13 @@ function renderLogin(container, banner) {
 
   forgotLink.addEventListener('click', async (e) => {
     e.preventDefault();
+    const serverUrl = container.querySelector('#l-server').value.trim().replace(/\/$/, '');
+    const tenantId  = container.querySelector('#l-tenant').value.trim() || 'default';
     const u = container.querySelector('#l-user').value.trim();
+    if (!serverUrl) return showErr('Enter the server URL first, then click "Forgot password?".');
     if (!u) return showErr('Enter your username first, then click "Forgot password?".');
     try {
-      await forgotPassword({ username: u });
+      await forgotPassword({ serverUrl, tenantId, username: u });
       showOk('If the account exists, a reset has been initiated.');
     } catch (ex) {
       showErr(ex.detail?.defaultUserMessage || ex.message || 'Could not initiate password reset.');
