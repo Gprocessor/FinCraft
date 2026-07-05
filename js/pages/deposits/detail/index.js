@@ -9,6 +9,7 @@ import { can } from '../shared.js';
 import { loadClosureCalculator } from './closure.js';
 import { loadDepositDocuments, loadDepositNotes } from './notes-docs.js';
 import { loadDepositCharges, loadDepositTransactions } from './transactions.js';
+import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
 export async function renderDetail(c, apiGroup, id, initialTab) {
   const isFD = apiGroup === 'fixedDeposits';
@@ -136,6 +137,7 @@ export async function renderDetail(c, apiGroup, id, initialTab) {
       </div>`;
 
     // -------- Tab switching with deep-link --------
+    enhanceScrollableTabs(c.querySelector('#dep-tabs'));
     const tabs = c.querySelectorAll('[data-deptab]');
     const panels = c.querySelectorAll('[data-deppanel]');
     const lazyLoaded = {};

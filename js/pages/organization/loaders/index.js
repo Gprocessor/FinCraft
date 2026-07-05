@@ -7,3 +7,4 @@ export * from './finance.js';
 export * from './si.js';
 export * from './reporting.js';
 export * from './integrations.js';
+export * from './group-hierarchy.js';

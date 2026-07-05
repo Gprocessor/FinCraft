@@ -7,6 +7,7 @@ import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate, ini, sb } from '../../../utils.js';
 import { openAddAddressModal, openAddFamilyModal, openAddIdentifierModal, openApplyChargeModal, openAssignStaffModal, openCloseClientModal, openEditClientModal, openRejectClientModal, openTransferModal } from '../actions.js';
 import { can } from '../shared.js';
+import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 import { loadClientAccounts, loadClientCharges, loadClientStandingInstructions, loadClientTransactions } from './accounts.js';
 import { loadClientAddresses, loadClientFamilyMembers, loadClientIdentifiers, loadClientPhoto } from './identity.js';
 import { loadClientDocuments, loadClientNotes } from './notes-docs.js';
@@ -177,6 +178,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       </div>`;
 
     // -------- Tab switching --------
+    enhanceScrollableTabs(c.querySelector('#cl-tabs'));
     const tabs   = c.querySelectorAll('[data-cltab]');
     const panels = c.querySelectorAll('[data-clpanel]');
     const lazyLoaded = {};

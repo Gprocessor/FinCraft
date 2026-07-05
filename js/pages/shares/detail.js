@@ -6,6 +6,7 @@ import { confirm, toast } from '../../ui.js';
 import { escapeHtml, fmt, fmtDate, num, sb } from '../../utils.js';
 import { openApplyAdditionalSharesModal, openApplyShareChargeModal, openCloseShareModal, openEditShareModal, openPayShareChargeModal, openRedeemSharesModal, openShareSimpleCmd } from './actions.js';
 import { can } from './shared.js';
+import { enhanceScrollableTabs } from '../../ui/scrollable-tabs.js';
 
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading share account…</div></div>`;
@@ -122,6 +123,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       </div>`;
 
     // -------- Tab switching with deep-link --------
+    enhanceScrollableTabs(c.querySelector('#sh-tabs'));
     const tabs = c.querySelectorAll('[data-shtab]');
     const panels = c.querySelectorAll('[data-shpanel]');
     const lazyLoaded = {};

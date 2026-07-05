@@ -11,6 +11,7 @@ import { loadLoanBuyDown, loadLoanDelinquency, loadLoanReschedule } from './life
 import { loadLoanDocuments, loadLoanNotes } from './notes-docs.js';
 import { loadOriginalSchedule, loadSchedule } from './schedule.js';
 import { loadLoanCharges, loadLoanDisbursements, loadLoanTransactions } from './transactions.js';
+import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading loan…</div></div>`;
@@ -169,6 +170,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       </div>`;
 
     // -------- Tab switching with deep-link --------
+    enhanceScrollableTabs(c.querySelector('#ln-tabs'));
     const tabs = c.querySelectorAll('[data-lntab]');
     const panels = c.querySelectorAll('[data-lnpanel]');
     const lazyLoaded = {};

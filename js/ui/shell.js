@@ -79,7 +79,8 @@ export function mountAppShell() {
 
   // ---------- Full shell HTML ----------
   shell.innerHTML = `
-    <aside class="sidebar" id="sidebar">
+    <a href="#contentArea" class="skip-link">Skip to main content</a>
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
       <div class="sidebar-brand" data-nav="dashboard">
         <div class="brand-icon">F</div>
         <div class="brand-text">
@@ -149,7 +150,7 @@ export function mountAppShell() {
         </div>
       </header>
 
-      <main class="content-area" id="contentArea">
+      <main class="content-area" id="contentArea" role="main" tabindex="-1">
         <div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin empty-state-icon"></i><h3>Loading…</h3></div>
       </main>
     </div>

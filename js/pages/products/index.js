@@ -1,48 +1,23 @@
 /* FinCraft · pages/products/index.js — render() entry point — orchestrates the pieces above.
-   Auto-split from the original monolithic pages/products.js for maintainability. */
+   Converted from a 9-tab bar (which previously eagerly loaded all 9 product-type tables
+   on every visit) to a card-grid hub — see js/ui/section-hub.js for the rationale.
+   Only the selected product type now loads, on demand. */
 
 import { api } from '../../api.js';
 import { escapeHtml, fmt, sb } from '../../utils.js';
 import { confirm as modalConfirm, toast } from '../../ui.js';
 import { openDelinquencyModal, openFDProductModal, openFloatingRateModal, openLoanProductModal, openProductMixModal, openRDProductModal, openSavingsProductModal, openShareProductModal, openTaxModal } from './actions.js';
 import { loadProductMixList } from './loaders.js';
-import { TABS, _glCache, can, resetGlCache } from './shared.js';
+import { can, resetGlCache } from './shared.js';
+import { renderSectionHub } from '../../ui/section-hub.js';
 
-export async function render(c) {
+export async function render(c, params = {}) {
   resetGlCache();
-
-  c.innerHTML = `
-    <div class="page-header mb-3">
-      <div>
-        <h1>Products</h1>
-        <div class="text-muted">Loan, savings, deposit, share & support catalogs</div>
-      </div>
-      <div class="page-actions">
-        <a href="#/charges" class="btn-secondary"><i class="fa-solid fa-tags"></i> Manage Charges</a>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="tabs" id="prod-tabs">
-        ${TABS.map((t, i) => `<button class="tab ${i === 0 ? 'active' : ''}" data-tab="pr-${i}">${t}</button>`).join('')}
-      </div>
-      ${TABS.map((_, i) => `
-        <div class="tab-panel ${i === 0 ? 'active' : ''}" id="pr-${i}">
-          <div class="empty-state-row">Loading…</div>
-        </div>`).join('')}
-    </div>`;
-
-  c.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
-    c.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    c.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    c.querySelector('#' + tab.dataset.tab)?.classList.add('active');
-  }));
 
   // Loader registry — Path B: Charges removed, Product Mix added at index 5
   const loaders = [
     {
-      key: 0, label: 'Loan Product', perm: 'LOANPRODUCT',
+      key: 0, label: 'Loan Product', perm: 'LOANPRODUCT', icon: 'fa-hand-holding-dollar', desc: 'Lending product definitions',
       fn: () => api.loanProducts.list(),
       cols: ['Name','Short Name','Principal','Rate'],
       row: p => [p.name, p.shortName, fmt(p.principal || 0), `${p.interestRatePerPeriod || 0}%`],
@@ -51,7 +26,7 @@ export async function render(c) {
       deleteFn: (id) => api.loanProducts.delete(id)
     },
     {
-      key: 1, label: 'Savings Product', perm: 'SAVINGSPRODUCT',
+      key: 1, label: 'Savings Product', perm: 'SAVINGSPRODUCT', icon: 'fa-piggy-bank', desc: 'Savings account product definitions',
       fn: () => api.savingsProducts.list(),
       cols: ['Name','Short Name','Nominal Rate'],
       row: p => [p.name, p.shortName, `${p.nominalAnnualInterestRate || 0}%`],
@@ -60,7 +35,7 @@ export async function render(c) {
       deleteFn: (id) => api.savingsProducts.delete(id)
     },
     {
-      key: 2, label: 'FD Product', perm: 'FIXEDDEPOSITPRODUCT',
+      key: 2, label: 'FD Product', perm: 'FIXEDDEPOSITPRODUCT', icon: 'fa-money-check-dollar', desc: 'Fixed deposit product definitions',
       fn: () => api.fdProducts.list(),
       cols: ['Name','Short Name','Min Deposit'],
       row: p => [p.name, p.shortName, fmt(p.minDepositAmount || 0)],
@@ -69,7 +44,7 @@ export async function render(c) {
       deleteFn: (id) => api.fdProducts.delete(id)
     },
     {
-      key: 3, label: 'RD Product', perm: 'RECURRINGDEPOSITPRODUCT',
+      key: 3, label: 'RD Product', perm: 'RECURRINGDEPOSITPRODUCT', icon: 'fa-arrows-rotate', desc: 'Recurring deposit product definitions',
       fn: () => api.rdProducts.list(),
       cols: ['Name','Short Name','Mandatory Deposit'],
       row: p => [p.name, p.shortName, fmt(p.mandatoryRecommendedDepositAmount || 0)],
@@ -78,7 +53,7 @@ export async function render(c) {
       deleteFn: (id) => api.rdProducts.delete(id)
     },
     {
-      key: 4, label: 'Share Product', perm: 'SHAREPRODUCT',
+      key: 4, label: 'Share Product', perm: 'SHAREPRODUCT', icon: 'fa-chart-pie', desc: 'Share account product definitions',
       fn: () => api.shareProducts.list(),
       cols: ['Name','Short Name','Unit Price'],
       row: p => [p.name, p.shortName, fmt(p.unitPrice || 0)],
@@ -87,7 +62,7 @@ export async function render(c) {
       deleteFn: (id) => api.shareProducts.delete(id)
     },
     {
-      key: 5, label: 'Product Mix', perm: 'LOANPRODUCT',
+      key: 5, label: 'Product Mix', perm: 'LOANPRODUCT', icon: 'fa-shuffle', desc: 'Restricted loan product combinations',
       fn: () => loadProductMixList(),
       cols: ['Loan Product','Restricted Products'],
       row: p => [p.name, (p._mixCount > 0) ? `${p._mixCount} restricted` : '—'],
@@ -97,7 +72,7 @@ export async function render(c) {
       _customActions: true
     },
     {
-      key: 6, label: 'Floating Rate', perm: 'FLOATINGRATE',
+      key: 6, label: 'Floating Rate', perm: 'FLOATINGRATE', icon: 'fa-chart-line', desc: 'Base lending rate definitions',
       fn: () => api.floatingRates.list(),
       cols: ['Name','Base Rate','Active'],
       row: p => [p.name, p.isBaseLendingRate ? 'Yes' : 'No', p.active !== false ? 'Yes' : 'No'],
@@ -106,7 +81,7 @@ export async function render(c) {
       deleteFn: (id) => api.floatingRates.delete(id)
     },
     {
-      key: 7, label: 'Tax', perm: 'TAXCOMPONENT',
+      key: 7, label: 'Tax', perm: 'TAXCOMPONENT', icon: 'fa-percent', desc: 'Tax components & groups',
       fn: async () => {
         const [tc, tg] = await Promise.all([api.taxComponents.list(), api.taxGroups.list()]);
         return [
@@ -122,7 +97,7 @@ export async function render(c) {
       deleteFn: null
     },
     {
-      key: 8, label: 'Delinquency Bucket', perm: 'DELINQUENCY_BUCKET',
+      key: 8, label: 'Delinquency Bucket', perm: 'DELINQUENCY_BUCKET', icon: 'fa-triangle-exclamation', desc: 'Arrears classification buckets',
       fn: async () => {
         const [b, r] = await Promise.all([api.delinquencyBuckets.list(), api.delinquencyBuckets.ranges()]);
         return (Array.isArray(b) ? b : []).map(bk => ({
@@ -144,6 +119,7 @@ export async function render(c) {
   async function reload(key) {
     const cfg = loaders[key];
     const pane = c.querySelector('#pr-' + key);
+    if (!pane) return; // panel isn't mounted (user navigated away) — nothing to do
     pane.innerHTML = '<div class="empty-state-row">Loading…</div>';
     try {
       const res = await cfg.fn();
@@ -207,5 +183,21 @@ export async function render(c) {
     }
   }
 
-  await Promise.all(loaders.map(l => reload(l.key)));
+  const SECTIONS = loaders.map(cfg => ({
+    key: 'p' + cfg.key,
+    panelId: 'pr-' + cfg.key,
+    label: cfg.label + (cfg.label.endsWith('s') ? '' : 's'),
+    icon: cfg.icon,
+    desc: cfg.desc,
+    load: () => reload(cfg.key)
+  }));
+
+  renderSectionHub(c, {
+    pageKey: 'products',
+    title: 'Products',
+    subtitle: 'Loan, savings, deposit, share & support catalogs',
+    sections: SECTIONS,
+    params,
+    headerExtra: `<a href="#/charges" class="btn-secondary"><i class="fa-solid fa-tags"></i> Manage Charges</a>`
+  });
 }

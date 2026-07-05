@@ -33,7 +33,7 @@ export async function render(c) {
     tab.classList.add('active');
     c.querySelector('#' + tab.dataset.tab)?.classList.add('active');
     const idx = parseInt(tab.dataset.tab.split('-')[1]);
-    if (loaders[idx] && !loaded[idx]) { loaded[idx] = true; loadersc; }
+    if (loaders[idx] && !loaded[idx]) { loaded[idx] = true; loaders[idx](c); }
   }));
 
   loadRunReports(c);

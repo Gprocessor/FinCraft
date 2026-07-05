@@ -10,6 +10,7 @@ import { can } from '../shared.js';
 import { loadSavingsDocuments, loadSavingsNotes } from './notes-docs.js';
 import { loadSavingsSI } from './si.js';
 import { loadOnHoldFunds, loadSavingsCharges, loadSavingsTransactions } from './transactions.js';
+import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div>`;
@@ -147,6 +148,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       </div>`;
 
     // -------- Tab switching with deep-link --------
+    enhanceScrollableTabs(c.querySelector('#sv-tabs'));
     const tabs = c.querySelectorAll('[data-svtab]');
     const panels = c.querySelectorAll('[data-svpanel]');
     const lazyLoaded = {};

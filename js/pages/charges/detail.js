@@ -6,6 +6,7 @@ import { confirm, toast } from '../../ui.js';
 import { escapeHtml, fmt, num, sb } from '../../utils.js';
 import { openChargeFormModal } from './actions.js';
 import { can } from './shared.js';
+import { enhanceScrollableTabs } from '../../ui/scrollable-tabs.js';
 
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading charge…</div></div>`;
@@ -87,6 +88,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       </div>`;
 
     // Tab switching
+    enhanceScrollableTabs(c.querySelector('#ch-tabs'));
     const tabs = c.querySelectorAll('[data-chtab]');
     const panels = c.querySelectorAll('[data-chpanel]');
     const lazyLoaded = {};

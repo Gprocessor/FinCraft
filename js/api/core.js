@@ -7,14 +7,15 @@ const CFG = getRuntimeConfig();
 
 
 export class FineractAPI {
-  constructor() { this.serverUrl = ''; this.tenantId = 'default'; this.authToken = ''; this._onUnauthorized = null; }
+  constructor() { this.serverUrl = ''; this.tenantId = 'default'; this.authToken = ''; this.tfaToken = ''; this._onUnauthorized = null; }
 
-  configure({ serverUrl, tenantId, authToken }) {
+  configure({ serverUrl, tenantId, authToken, tfaToken }) {
     if (serverUrl != null) this.serverUrl = serverUrl.replace(/\/$/, '');
     if (tenantId  != null) this.tenantId  = tenantId;
     if (authToken != null) this.authToken = authToken;
+    if (tfaToken  != null) this.tfaToken  = tfaToken;
   }
-  reset() { this.serverUrl = ''; this.authToken = ''; }
+  reset() { this.serverUrl = ''; this.authToken = ''; this.tfaToken = ''; }
 
   /** Registers a callback invoked once whenever any request returns HTTP 401. */
   onUnauthorized(fn) { this._onUnauthorized = fn; }
@@ -37,6 +38,7 @@ export class FineractAPI {
     // below) to let the browser set its own multipart Content-Type + boundary automatically.
     if (h['Content-Type'] == null) delete h['Content-Type'];
     if (this.authToken) h['Authorization'] = 'Basic ' + this.authToken;
+    if (this.tfaToken) h['Fineract-Platform-TFA-Token'] = this.tfaToken;
     return h;
   }
 

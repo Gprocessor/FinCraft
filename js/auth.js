@@ -125,22 +125,28 @@ export async function login({ serverUrl, tenantId, username, password }) {
   });
   store.set('perms', authPerms);
 
+  // If the tenant has two-factor auth enabled, stop here and require OTP
+  // verification before making any further authenticated calls or completing
+  // sign-in. The caller (renderLogin) catches OTP_REQUIRED and shows the OTP
+  // step; finishLogin() below resumes once the OTP has been validated.
+  if (await isTwoFactorRequired()) {
+    throw Object.assign(new Error('OTP_REQUIRED'), { code: 'OTP_REQUIRED' });
+  }
+
+  await finishLogin({ serverUrl, tenantId, username, authPerms });
+}
+
+/**
+ * Completes sign-in: enriches the session from /userdetails, remembers the
+ * tenant, loads the default currency, and reveals the app shell. Called
+ * directly from login() when no 2FA is required, or from completeTwoFactorLogin()
+ * once the OTP has been validated.
+ */
+async function finishLogin({ serverUrl, tenantId, username, authPerms }) {
   // Best-effort enrichment from /userdetails — merges, never overwrites with empty
   try {
     const me = await api.userDetails.self();
-    const auth = store.get('auth') || {};
-    store.set('auth', {
-      ...auth,
-      userId:     me.userId ?? me.id ?? auth.userId,
-      officeId:   me.officeId ?? auth.officeId,
-      officeName: me.officeName ?? auth.officeName,
-      roles:      Array.isArray(me.roles) && me.roles.length ? me.roles : auth.roles
-    });
-    const mePerms = _extractPerms(me);
-    if (mePerms.length) {
-      const merged = [...new Set([...authPerms, ...mePerms])];
-      store.set('perms', merged);
-    }
+    _persistUserContext(me);
   } catch (e) {
     if (e.status === 401) {
       _clearSession();
@@ -153,6 +159,23 @@ export async function login({ serverUrl, tenantId, username, password }) {
   _saveRecentTenant(serverUrl, tenantId, username);   // Remember for next time
   await _loadDefaultCurrency();
   showApp();
+}
+
+/**
+ * Called once the OTP has been validated for a tenant that requires 2FA.
+ * `tfaToken` is the session token returned by validateOtp(), sent as the
+ * Fineract-Platform-TFA-Token header on every subsequent request.
+ */
+export async function completeTwoFactorLogin(tfaToken) {
+  if (tfaToken) configureAPI({ tfaToken });
+  const auth = store.get('auth') || {};
+  if (tfaToken) store.set('auth', { ...auth, tfaToken });
+  await finishLogin({
+    serverUrl: auth.serverUrl,
+    tenantId:  auth.tenantId,
+    username:  auth.username,
+    authPerms: store.get('perms') || []
+  });
 }
 
 /** Best-effort fetch of the tenant's configured currency, used as the fallback in fmt(). */
@@ -379,6 +402,7 @@ function renderLogin(container, banner) {
     try {
       await login({ serverUrl, tenantId, username, password });
     } catch (e) {
+      if (e.code === 'OTP_REQUIRED')  { setBusy(false); return renderOtpStep(container); }
       if (e.status === 401)        showErr('Invalid username or password.');
       else if (e.code === 'TIMEOUT') showErr('Server did not respond. Check the URL and try again.');
       else                          showErr(e.message || 'Sign in failed.');
@@ -440,5 +464,83 @@ function renderLogin(container, banner) {
     } catch (ex) {
       showErr(ex.detail?.defaultUserMessage || ex.message || 'Could not initiate password reset.');
     }
+  });
+}
+
+/** Renders the OTP verification step. Shown after login() throws OTP_REQUIRED. */
+async function renderOtpStep(container) {
+  let methods = [];
+  try { methods = await getOtpMethods(); } catch { methods = []; }
+  const methodOptions = (Array.isArray(methods) && methods.length ? methods : [{ name: 'Default', deliveryMethod: 'default' }])
+    .map(m => `<option value="${m.deliveryMethod ?? m.name}">${m.name ?? m.deliveryMethod}</option>`).join('');
+
+  container.innerHTML = `
+    <div class="login-wrap active" style="width:100%;height:100vh;display:flex;align-items:center;justify-content:center">
+      <div class="login-form-box" style="max-width:420px">
+        <div class="login-form-title">Two-factor verification</div>
+        <div class="login-form-sub">This tenant requires a one-time code to finish signing in.</div>
+        <div id="otp-error" class="msg-banner b-danger mb-4" style="display:none"></div>
+        <div id="otp-info" class="msg-banner b-success mb-4" style="display:none"></div>
+        ${methods.length > 1 ? `
+        <div class="form-group mb-3"><label class="form-label">Delivery method</label>
+          <select id="otp-method" class="form-control">${methodOptions}</select></div>` : ''}
+        <div class="form-group mb-4"><label class="form-label">Verification code</label>
+          <input id="otp-code" class="form-control" inputmode="numeric" autocomplete="one-time-code" placeholder="Enter the code sent to you"/></div>
+        <button class="btn btn-primary btn-full" id="otp-send-btn" type="button">
+          <i class="fa-solid fa-paper-plane"></i> Send code
+        </button>
+        <button class="btn btn-secondary btn-full mt-2" id="otp-verify-btn" type="button">
+          <i class="fa-solid fa-check"></i> Verify &amp; sign in
+        </button>
+        <div class="login-footer mt-3">
+          <a href="#" id="otp-back" class="link" style="font-size:12px">&larr; Back to sign in</a>
+        </div>
+      </div>
+    </div>`;
+
+  const err        = container.querySelector('#otp-error');
+  const info       = container.querySelector('#otp-info');
+  const codeInput  = container.querySelector('#otp-code');
+  const methodSel  = container.querySelector('#otp-method');
+  const sendBtn    = container.querySelector('#otp-send-btn');
+  const verifyBtn  = container.querySelector('#otp-verify-btn');
+  const backLink   = container.querySelector('#otp-back');
+
+  const showErr  = (msg) => { info.style.display = 'none'; err.style.display = ''; err.textContent = msg; };
+  const showInfo = (msg) => { err.style.display = 'none'; info.style.display = ''; info.textContent = msg; };
+
+  sendBtn.addEventListener('click', async () => {
+    sendBtn.disabled = true;
+    try {
+      const deliveryMethod = methodSel ? methodSel.value : (methods[0]?.deliveryMethod ?? 'default');
+      await requestOtp(deliveryMethod);
+      showInfo('A verification code has been sent. Enter it below.');
+    } catch (ex) {
+      showErr(ex.detail?.defaultUserMessage || ex.message || 'Could not send verification code.');
+    } finally {
+      sendBtn.disabled = false;
+    }
+  });
+
+  verifyBtn.addEventListener('click', async () => {
+    const code = codeInput.value.trim();
+    if (!code) return showErr('Enter the verification code first.');
+    verifyBtn.disabled = true;
+    try {
+      const result = await validateOtp(code);
+      const tfaToken = result?.token ?? result?.authenticationToken ?? null;
+      await completeTwoFactorLogin(tfaToken);
+    } catch (ex) {
+      showErr(ex.detail?.defaultUserMessage || ex.message || 'Invalid or expired code.');
+      verifyBtn.disabled = false;
+    }
+  });
+
+  codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') verifyBtn.click(); });
+
+  backLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    _clearSession();
+    renderLogin(container);
   });
 }

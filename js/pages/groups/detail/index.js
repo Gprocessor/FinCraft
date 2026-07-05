@@ -10,6 +10,7 @@ import { can } from '../shared.js';
 import { loadCharges, loadMeetings, loadStandingInstructions } from './meetings-charges.js';
 import { loadAccounts, loadMembers } from './members.js';
 import { loadDocuments, loadNotes } from './notes-docs.js';
+import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading group…</div></div>`;
@@ -141,6 +142,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       </div>`;
 
     // -------- Tab switching with deep-link --------
+    enhanceScrollableTabs(c.querySelector('#grp-tabs'));
     const tabs = c.querySelectorAll('[data-grptab]');
     const panels = c.querySelectorAll('[data-grppanel]');
     const lazyLoaded = {};

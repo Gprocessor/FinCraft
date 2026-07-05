@@ -2,7 +2,18 @@
    Each domain module (clients.js, loans.js, ...) exports factory functions that take the
    shared `self` (this FineractAPI instance) and return the namespaced method object, e.g.
    self.clients.list(). This keeps js/api.js's public surface — `import { api } from './api.js'`
-   — completely unchanged for the rest of the app. */
+   — completely unchanged for the rest of the app.
+
+   Namespace-usage review (audit item 6): several namespaces expose only 1-2 methods and are
+   called from a single page. This is intentional, not dead surface — each maps to one focused
+   UI action rather than a full CRUD screen:
+     - runAccruals        → accounting/loaders/period.js   (period-close "run accruals" button)
+     - openingBalances    → accounting/actions/balances.js (one-time GL opening-balance entry)
+     - collectionSheet    → pages/collections.js            (generate/save collection sheet)
+     - permissions        → users/roles.js, users/account/detail.js (role permission editor)
+     - externalServices   → system/actions/integrations.js  (configure SMTP/S3 endpoints)
+     - batch              → pages/collections.js, ui/handlers/config-wizard.js (bulk submit)
+   tenantOidc and groupLevels were previously unused; both are now wired (see below / groups-centers.js). */
 import { FineractAPI } from './core.js';
 import { makePasswordAPI, makeTenantOidcAPI, makeTwoFactorAPI, makeUserDetailsAPI } from './auth-account.js';
 import { makeClientsAPI } from './clients.js';

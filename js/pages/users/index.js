@@ -46,7 +46,7 @@ export async function render(c, params = {}) {
     const idx = parseInt(tab.dataset.tab.split('-')[1]);
     if (loaders[idx] && !loaded[idx]) {
       loaded[idx] = true;
-      loadersc;
+      loaders[idx](c);
     }
   }));
 
