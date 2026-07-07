@@ -103,8 +103,13 @@ export function makeTransfersAPI(self) {
     list:    (params) => self._g('/accounttransfers', params),
     create:  (body)   => self._p('/accounttransfers', body),
     refund:  (body)   => self._p('/accounttransfers/refundByTransfer', body),
+    refundTemplate: (params) => self._g('/accounttransfers/templateRefundByTransfer', params),
     template:(params) => self._g('/accounttransfers/template', params),
-    get:     (id)     => self._g(`/accounttransfers/${id}`)
+    get:     (id)     => self._g(`/accounttransfers/${id}`),
+    // "Operation on active account transfer" — the doc doesn't spell out what
+    // operations exist (only the bare path + a generic summary), so this is a
+    // thin pass-through; the caller supplies whatever command/body Fineract expects.
+    operate: (id, body) => self._p(`/accounttransfers/${id}`, body)
   };
 }
 
@@ -126,7 +131,11 @@ export function makeCobAPI(self) {
     updateConfig:   (id, body) => self._u(`/cob-configurations/${id}`, body),
     businessDate: {
       get: () => self._g('/businessdate'),
-      set: (body) => self._u('/businessdate', body)
+      getByType: (type) => self._g(`/businessdate/${type}`),
+      // NOTE: Fineract_Backend_API_Reference.md documents this as POST, not PUT
+      // (existing code previously used self._u/PUT — corrected to match the doc).
+      // Flagging this as a behavior change, not a net-new addition.
+      set: (body) => self._p('/businessdate', body)
     },
     catchUp: () => self._p('/loans/catch-up-processing', {})
   };

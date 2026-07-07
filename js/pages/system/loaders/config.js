@@ -116,7 +116,7 @@ export async function loadMakerCheckerConfig(c) {
   const el = c.querySelector('#sy-11');
   el.innerHTML = '<div class="empty-state-row">Loading maker-checker tasks…</div>';
   try {
-    const res = await api.makerCheckerTasks.list();
+    const res = await api.permissions.list(true); // GET /permissions?makerCheckerable=true
     const list = Array.isArray(res) ? res : (res?.permissions || []);
 
     const canEdit = can('UPDATE_PERMISSION') || can('UPDATE_MAKERCHECKERPERMISSIONS');
@@ -225,7 +225,7 @@ export async function loadMakerCheckerConfig(c) {
       });
 
       try {
-        await api.makerCheckerTasks.update({ permissions });
+        await api.permissions.update({ permissions });
         toast('success', 'Maker-checker configuration saved', '');
         loadMakerCheckerConfig(c);
       } catch (e) {

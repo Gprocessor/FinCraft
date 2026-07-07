@@ -4,7 +4,7 @@
 import { api } from '../../../api.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
-import { openAdjustSavingsTxModal, openApplySavingsChargeModal, openPaySavingsChargeModal } from '../actions.js';
+import { openAdjustSavingsTxModal, openApplySavingsChargeModal, openEditSavingsChargeModal, openPaySavingsChargeModal, openSavingsTransactionDetailModal } from '../actions.js';
 import { can } from '../shared.js';
 
 export async function loadSavingsTransactions(c, id) {
@@ -54,6 +54,7 @@ export async function loadSavingsTransactions(c, id) {
                 <td>${escapeHtml(t.paymentDetail?.receiptNumber || '—')}</td>
                 <td>${reversed ? sb('Reversed') : sb('Posted')}</td>
                 <td class="text-right">
+                  <button class="btn-mini" data-view-tx="${t.id}">View</button>
                   ${!reversed && can('ADJUSTTRANSACTION_SAVINGSACCOUNT') ?
                     `<button class="btn-mini" data-adj-tx="${t.id}">Adjust</button>` : ''}
                   ${!reversed && can('UNDOTRANSACTION_SAVINGSACCOUNT') ?
@@ -65,6 +66,8 @@ export async function loadSavingsTransactions(c, id) {
           }).join('')}</tbody>
         </table>` : '<div class="empty-state-row">No transactions match</div>';
 
+      listEl.querySelectorAll('[data-view-tx]').forEach(b => b.addEventListener('click', () =>
+        openSavingsTransactionDetailModal(id, b.dataset.viewTx)));
       listEl.querySelectorAll('[data-undo-tx]').forEach(b => b.addEventListener('click', async () => {
         if (!await confirm({ title: 'Undo transaction?', message: 'Reverses the posting; balances restored.', danger: true, confirmText: 'Undo' })) return;
         try { await api.savings.undoTransaction(id, b.dataset.undoTx); toast('success', 'Transaction undone', ''); reload(); }
@@ -129,6 +132,8 @@ export async function loadSavingsCharges(c, id, savings) {
                 ? `<button class="btn-mini btn-success" data-pay-charge="${ch.id}">Pay</button>` : ''}
               ${!ch.paid && !ch.waived && ch.active && can('WAIVE_SAVINGSACCOUNTCHARGE')
                 ? `<button class="btn-mini btn-warning" data-waive-charge="${ch.id}">Waive</button>` : ''}
+              ${!ch.paid && can('UPDATE_SAVINGSACCOUNTCHARGE')
+                ? `<button class="btn-mini" data-edit-charge="${ch.id}">Edit</button>` : ''}
               ${!ch.paid && ch.active && can('INACTIVATE_SAVINGSACCOUNTCHARGE')
                 ? `<button class="btn-mini" data-inactivate-charge="${ch.id}">Inactivate</button>` : ''}
               ${can('DELETE_SAVINGSACCOUNTCHARGE')
@@ -137,6 +142,8 @@ export async function loadSavingsCharges(c, id, savings) {
           </tr>`).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No charges on this account</div>';
 
+    listEl.querySelectorAll('[data-edit-charge]').forEach(b => b.addEventListener('click', () =>
+      openEditSavingsChargeModal(id, b.dataset.editCharge, () => loadSavingsCharges(c, id, savings))));
     listEl.querySelectorAll('[data-pay-charge]').forEach(b => b.addEventListener('click', () =>
       (typeof openPaySavingsChargeModal === 'function') && openPaySavingsChargeModal(id, b.dataset.payCharge, () => loadSavingsCharges(c, id, savings))));
     listEl.querySelectorAll('[data-waive-charge]').forEach(b => b.addEventListener('click', async () => {

@@ -6,7 +6,7 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { confirm, openModal, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
-import { openAdjustLoanChargeModal, openAdjustTransactionModal, openApplyLoanChargeModal, openChargeRefundModal, openChargebackModal, openGoodwillModal, openPayLoanChargeModal, openTrancheEditorModal } from '../actions.js';
+import { openAdjustLoanChargeModal, openAdjustTransactionModal, openApplyLoanChargeModal, openBulkTrancheEditorModal, openChargeRefundModal, openChargebackModal, openEditLoanChargeModal, openGoodwillModal, openPayLoanChargeModal, openTrancheEditorModal } from '../actions.js';
 
 export async function loadLoanTransactions(c, loanId) {
   const wrap = c.querySelector('#ln-tx-list');
@@ -160,6 +160,8 @@ export async function loadLoanCharges(c, loanId) {
               ${!ch.paid && !ch.waived && can('WAIVE_LOANCHARGE') ?
                 `<button class="btn-mini btn-warning" data-waive-charge="${ch.id}">Waive</button>` : ''}
               ${can('UPDATE_LOANCHARGE') ?
+                `<button class="btn-mini" data-edit-charge="${ch.id}">Edit</button>` : ''}
+              ${can('UPDATE_LOANCHARGE') ?
                 `<button class="btn-mini" data-adjust-charge="${ch.id}">Adjust</button>` : ''}
               ${can('DELETE_LOANCHARGE') ?
                 `<button class="btn-mini btn-danger" data-del-charge="${ch.id}">Delete</button>` : ''}
@@ -174,6 +176,8 @@ export async function loadLoanCharges(c, loanId) {
     }));
     listEl.querySelectorAll('[data-pay-charge]').forEach(b => b.addEventListener('click', () =>
       openPayLoanChargeModal(loanId, b.dataset.payCharge, () => loadLoanCharges(c, loanId))));
+    listEl.querySelectorAll('[data-edit-charge]').forEach(b => b.addEventListener('click', () =>
+      openEditLoanChargeModal(loanId, b.dataset.editCharge, () => loadLoanCharges(c, loanId))));
     listEl.querySelectorAll('[data-adjust-charge]').forEach(b => b.addEventListener('click', () =>
       openAdjustLoanChargeModal(loanId, b.dataset.adjustCharge, () => loadLoanCharges(c, loanId))));
     listEl.querySelectorAll('[data-del-charge]').forEach(b => b.addEventListener('click', async () => {
@@ -190,12 +194,17 @@ export async function loadLoanDisbursements(c, loanId) {
     ${can('UPDATE_DISBURSEMENT') ? `
       <div class="section-header mb-2">
         <h3>Tranches / Disbursements</h3>
-        <button class="btn-primary btn-sm" id="ln-add-tranche"><i class="fa-solid fa-plus"></i> Add Tranche</button>
+        <div>
+          <button class="btn-secondary btn-sm" id="ln-edit-all-tranches"><i class="fa-solid fa-list-check"></i> Edit All</button>
+          <button class="btn-primary btn-sm" id="ln-add-tranche"><i class="fa-solid fa-plus"></i> Add Tranche</button>
+        </div>
       </div>` : '<h3>Tranches / Disbursements</h3>'}
     <div id="ln-disb-list"><div class="empty-state-row">Loading…</div></div>`;
 
   wrap.querySelector('#ln-add-tranche')?.addEventListener('click', () =>
     openTrancheEditorModal(loanId, null, () => loadLoanDisbursements(c, loanId)));
+  wrap.querySelector('#ln-edit-all-tranches')?.addEventListener('click', () =>
+    openBulkTrancheEditorModal(loanId, () => loadLoanDisbursements(c, loanId)));
 
   const listEl = wrap.querySelector('#ln-disb-list');
   try {

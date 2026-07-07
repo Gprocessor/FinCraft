@@ -160,12 +160,15 @@ export async function loadProvisioning(c) {
               <td>${escapeHtml(p.criteriaName || p.name || '—')}</td>
               <td>${escapeHtml(p.createdBy || '—')}</td>
               <td class="text-right">
+                ${can('UPDATE_PROVISIONINGCRITERIA') ? `<button class="btn-mini" data-edit-prov="${p.id}">Edit</button>` : ''}
                 ${can('DELETE_PROVISIONINGCRITERIA') ? `<button class="btn-mini btn-danger" data-del-prov="${p.id}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
         </table>` : '<div class="empty-state-row">No provisioning criteria</div>'}`;
 
     el.querySelector('#btn-prov-new')?.addEventListener('click', () => openProvisioningModal(() => loadProvisioning(c)));
+    el.querySelectorAll('[data-edit-prov]').forEach(b => b.addEventListener('click', () =>
+      openProvisioningModal(() => loadProvisioning(c), b.dataset.editProv)));
     el.querySelector('#btn-prov-entry')?.addEventListener('click', async () => {
       if (!await modalConfirm({ title: 'Create provisioning entry?', message: 'For all active loans.', confirmText: 'Create' })) return;
       try {
@@ -201,7 +204,7 @@ export async function loadFinancialActivities(c) {
   try {
     const [fa, tpl] = await Promise.all([
       api.financialActivityAccounts.list(),
-      api.financialActivityAccounts.list().catch(() => ({ financialActivityOptions: [] }))
+      api.financialActivityAccounts.template().catch(() => ({ financialActivityOptions: [] }))
     ]);
     const list = Array.isArray(fa) ? fa : [];
     const actOpts = (tpl?.financialActivityOptions || []).map(a => `<option value="${a.id}">${escapeHtml(a.name || a.value || '')}</option>`).join('');

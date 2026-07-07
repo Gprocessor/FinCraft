@@ -18,6 +18,7 @@ export function makePasswordAPI(self) {
     change:      (userId, body) => self._p(`/users/${userId}/pwd`, body),
     /** Active password policy. */
     preferences: ()             => self._g('/passwordpreferences'),
+    preferencesTemplate: ()     => self._g('/passwordpreferences/template'),
     updatePreferences: (body)   => self._u('/passwordpreferences', body)
   };
 }

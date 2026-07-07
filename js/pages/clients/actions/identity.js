@@ -4,7 +4,7 @@
 import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE } from '../../../config.js';
 import { toast } from '../../../ui.js';
-import { escapeHtml } from '../../../utils.js';
+import { escapeHtml, fmt } from '../../../utils.js';
 
 export async function openAddIdentifierModal(clientId, onSuccess) {
   let docTypes = [];
@@ -49,6 +49,98 @@ export async function openAddIdentifierModal(clientId, onSuccess) {
       });
       el.remove(); toast('success', 'Identifier added', documentKey); onSuccess();
     } catch (e) { toast('error', 'Failed to add', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
+export async function openAddClientCollateralModal(clientId, onSuccess) {
+  let options = [];
+  try {
+    const tpl = await api.clients.collateralTemplate(clientId);
+    // Field name per Fineract ClientCollateralManagementApiResource template response.
+    options = tpl?.clientCollateralOptions || tpl?.collateralOptions || [];
+  } catch {}
+  if (!options.length) {
+    // Fallback to the organisation-wide collateral catalogue if the client template came back empty.
+    try {
+      const r = await api.collateralManagement.list();
+      options = Array.isArray(r) ? r : (r?.pageItems || []);
+    } catch {}
+  }
+  const mid = `cl-coll-modal-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Add Collateral</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          ${options.length ? `
+            <label>Collateral type *
+              <select id="cc-type" class="form-control" required>
+                <option value="">Select…</option>
+                ${options.map(o => `<option value="${o.id}" data-base="${o.basePrice || 0}">${escapeHtml(o.name)} · base ${fmt(o.basePrice || 0)}</option>`).join('')}
+              </select>
+            </label>
+            <label class="mt-2">Quantity * <input type="number" step="0.01" min="0" id="cc-qty" class="form-control" required/></label>
+            <div class="text-muted small mt-2" id="cc-value-preview"></div>
+          ` : `<div class="msg-banner b-warning">No collateral types configured. Add one under Organization → Collateral Types first.</div>`}
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          ${options.length ? `<button class="btn-primary" id="cc-save">Add</button>` : ''}
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+
+  const updatePreview = () => {
+    const sel = el.querySelector('#cc-type'); const qty = parseFloat(el.querySelector('#cc-qty')?.value);
+    const base = parseFloat(sel?.selectedOptions?.[0]?.dataset.base || 0);
+    const prev = el.querySelector('#cc-value-preview');
+    if (prev) prev.textContent = isFinite(qty) && qty > 0 ? `Estimated value: ${fmt(base * qty)}` : '';
+  };
+  el.querySelector('#cc-type')?.addEventListener('change', updatePreview);
+  el.querySelector('#cc-qty')?.addEventListener('input', updatePreview);
+
+  el.querySelector('#cc-save')?.addEventListener('click', async () => {
+    const collateralId = el.querySelector('#cc-type').value;
+    const quantity = parseFloat(el.querySelector('#cc-qty').value);
+    if (!collateralId || !isFinite(quantity) || quantity <= 0) { toast('warn', 'Select a type and enter a valid quantity', ''); return; }
+    try {
+      await api.clients.addCollateral(clientId, { collateralId: parseInt(collateralId), quantity, locale: LOCALE });
+      el.remove(); toast('success', 'Collateral added', ''); onSuccess();
+    } catch (e) { toast('error', 'Failed to add', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
+export async function openEditClientCollateralModal(clientId, collateralId, onSuccess) {
+  let record = null;
+  try { record = await api.clients.getCollateral(clientId, collateralId); } catch (e) {
+    toast('error', 'Failed to load collateral', e.detail?.defaultUserMessage || e.message); return;
+  }
+  const mid = `cl-coll-edit-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Edit Collateral</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <div class="text-muted mb-2">${escapeHtml(record?.collateral?.name || record?.name || '—')}</div>
+          <label>Quantity * <input type="number" step="0.01" min="0" id="cc-edit-qty" class="form-control" value="${record?.quantity ?? ''}" required/></label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="cc-edit-save">Save</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#cc-edit-save').addEventListener('click', async () => {
+    const quantity = parseFloat(el.querySelector('#cc-edit-qty').value);
+    if (!isFinite(quantity) || quantity <= 0) { toast('warn', 'Enter a valid quantity', ''); return; }
+    try {
+      await api.clients.updateCollateral(clientId, collateralId, { quantity, locale: LOCALE });
+      el.remove(); toast('success', 'Collateral updated', ''); onSuccess();
+    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
 

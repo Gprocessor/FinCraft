@@ -4,14 +4,100 @@
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { api } from '../../../api.js';
 import { toast } from '../../../ui.js';
-import { openSimpleLoanCmdModal } from './closure.js';
+import { escapeHtml } from '../../../utils.js';
 
-export function openReageModal(id) {
-  openSimpleLoanCmdModal({ id, command: 'reAge', label: 'Re-age Loan', dateField: 'transactionDate' });
+export async function openReageModal(id) {
+  const mid = `ln-reage-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Re-age Loan</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <label>Date * <input type="date" id="ra-date" class="form-control" value="${today()}" required/></label>
+          <label class="mt-2">Note <textarea id="ra-note" class="form-control" rows="2"></textarea></label>
+          <div id="ra-preview" class="mt-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-secondary" id="ra-preview-btn">Preview</button>
+          <button class="btn-primary" id="ra-save">Re-age Loan</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  const buildPayload = () => {
+    const payload = { transactionDate: el.querySelector('#ra-date').value, dateFormat: DATE_FORMAT, locale: LOCALE };
+    const note = el.querySelector('#ra-note').value.trim();
+    if (note) payload.note = note;
+    return payload;
+  };
+  el.querySelector('#ra-preview-btn').addEventListener('click', async () => {
+    const box = el.querySelector('#ra-preview');
+    box.innerHTML = '<div class="empty-state-row">Loading preview…</div>';
+    try {
+      const res = await api.loans.reagePreview(id, buildPayload());
+      const installments = res?.periods || res?.installments || [];
+      box.innerHTML = `<div class="msg-banner b-info small">
+        ${installments.length ? `Preview shows ${installments.length} resulting installment(s).` : 'Preview returned no schedule detail.'}
+      </div>`;
+    } catch (e) { box.innerHTML = `<div class="text-error small">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+  });
+  el.querySelector('#ra-save').addEventListener('click', async () => {
+    try {
+      await api.loans.reage(id, buildPayload());
+      el.remove();
+      toast('success', 'Loan re-aged', '');
+      document.dispatchEvent(new CustomEvent('fc:reload'));
+    } catch (e) { toast('error', 'Re-age failed', e.detail?.defaultUserMessage || e.message); }
+  });
 }
 
-export function openReamortizeModal(id) {
-  openSimpleLoanCmdModal({ id, command: 'reAmortize', label: 'Re-amortize Loan', dateField: 'transactionDate' });
+export async function openReamortizeModal(id) {
+  const mid = `ln-reamort-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Re-amortize Loan</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <label>Date * <input type="date" id="rm-date" class="form-control" value="${today()}" required/></label>
+          <label class="mt-2">Note <textarea id="rm-note" class="form-control" rows="2"></textarea></label>
+          <div id="rm-preview" class="mt-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-secondary" id="rm-preview-btn">Preview</button>
+          <button class="btn-primary" id="rm-save">Re-amortize Loan</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  const buildPayload = () => {
+    const payload = { transactionDate: el.querySelector('#rm-date').value, dateFormat: DATE_FORMAT, locale: LOCALE };
+    const note = el.querySelector('#rm-note').value.trim();
+    if (note) payload.note = note;
+    return payload;
+  };
+  el.querySelector('#rm-preview-btn').addEventListener('click', async () => {
+    const box = el.querySelector('#rm-preview');
+    box.innerHTML = '<div class="empty-state-row">Loading preview…</div>';
+    try {
+      const res = await api.loans.reamortizePreview(id, buildPayload());
+      const installments = res?.periods || res?.installments || [];
+      box.innerHTML = `<div class="msg-banner b-info small">
+        ${installments.length ? `Preview shows ${installments.length} resulting installment(s).` : 'Preview returned no schedule detail.'}
+      </div>`;
+    } catch (e) { box.innerHTML = `<div class="text-error small">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+  });
+  el.querySelector('#rm-save').addEventListener('click', async () => {
+    try {
+      await api.loans.reamortize(id, buildPayload());
+      el.remove();
+      toast('success', 'Loan re-amortized', '');
+      document.dispatchEvent(new CustomEvent('fc:reload'));
+    } catch (e) { toast('error', 'Re-amortize failed', e.detail?.defaultUserMessage || e.message); }
+  });
 }
 
 export async function openTrancheEditorModal(loanId, existing, onSuccess) {
@@ -47,6 +133,63 @@ export async function openTrancheEditorModal(loanId, existing, onSuccess) {
       toast('success', isEdit ? 'Tranche updated' : 'Tranche added', '');
       onSuccess();
     } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
+export async function openBulkTrancheEditorModal(loanId, onSuccess) {
+  let list = [];
+  try {
+    const r = await api.loans.disbursements(loanId);
+    list = (Array.isArray(r) ? r : []).filter(d => !d.actualDisbursementDate);
+  } catch (e) {
+    toast('error', 'Failed to load tranches', e.detail?.defaultUserMessage || e.message); return;
+  }
+  if (!list.length) { toast('warn', 'No editable (undisbursed) tranches found', ''); return; }
+  const mid = `ln-bulktranche-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-md">
+        <div class="modal-header"><h3>Edit All Disbursements</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <div class="text-muted small mb-2">
+            <i class="fa-solid fa-circle-info"></i>
+            The API reference documents this endpoint's path but not its request body —
+            this sends the same field shape used elsewhere for disbursement data
+            (an array of id/date/principal). Verify against your instance before relying
+            on it for production edits.
+          </div>
+          <table class="table">
+            <thead><tr><th>#</th><th>Expected Date</th><th>Principal</th></tr></thead>
+            <tbody>${list.map((d, i) => `
+              <tr data-tranche-id="${d.id}">
+                <td>${i + 1}</td>
+                <td><input type="date" class="form-control bt-date" value="${d.expectedDisbursementDate || ''}"/></td>
+                <td><input type="number" step="0.01" class="form-control bt-principal" value="${d.principal ?? ''}"/></td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="bt-save">Save All</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#bt-save').addEventListener('click', async () => {
+    const rows = el.querySelectorAll('tr[data-tranche-id]');
+    const disbursementData = Array.from(rows).map(row => ({
+      id: parseInt(row.dataset.trancheId),
+      expectedDisbursementDate: row.querySelector('.bt-date').value,
+      principal: parseFloat(row.querySelector('.bt-principal').value)
+    }));
+    if (disbursementData.some(d => !d.expectedDisbursementDate || !isFinite(d.principal))) {
+      toast('warn', 'Fill in all dates and principal amounts', ''); return;
+    }
+    try {
+      await api.loans.editDisbursements(loanId, { disbursementData, dateFormat: DATE_FORMAT, locale: LOCALE });
+      el.remove(); toast('success', 'Disbursements updated', ''); onSuccess();
+    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
 

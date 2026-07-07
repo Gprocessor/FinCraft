@@ -6,6 +6,75 @@ import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 import { APP_TABLES, COLUMN_TYPES, can } from './shared.js';
 
+export function openDatatableEntryModal(tableName, entityId, columns, existing, onSuccess) {
+  const mid = 'dt-entry-' + Date.now();
+  const modalEl = document.createElement('div');
+  modalEl.id = mid;
+  modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
+
+  // Skip system-managed columns that Fineract populates itself.
+  const editable = columns.filter(c => !['id'].includes(c.columnName));
+
+  const inputFor = (col) => {
+    const val = existing ? (existing[col.columnName] ?? '') : '';
+    const t = (col.columnType || '').toUpperCase();
+    if (t.includes('DATE') && !t.includes('DATETIME')) {
+      return `<input type="date" class="form-control dt-field" data-col="${escapeHtml(col.columnName)}" value="${escapeHtml(String(val))}"/>`;
+    }
+    if (t.includes('INT') || t.includes('DECIMAL') || t.includes('NUMERIC') || t.includes('DOUBLE') || t.includes('FLOAT')) {
+      return `<input type="number" step="any" class="form-control dt-field" data-col="${escapeHtml(col.columnName)}" value="${escapeHtml(String(val))}"/>`;
+    }
+    if (t.includes('BOOLEAN') || t.includes('BIT')) {
+      return `<select class="form-control dt-field" data-col="${escapeHtml(col.columnName)}">
+        <option value="true" ${val === true || val === 'true' ? 'selected' : ''}>True</option>
+        <option value="false" ${val === false || val === 'false' ? 'selected' : ''}>False</option>
+      </select>`;
+    }
+    if (t.includes('TEXT')) {
+      return `<textarea class="form-control dt-field" data-col="${escapeHtml(col.columnName)}" rows="3">${escapeHtml(String(val))}</textarea>`;
+    }
+    return `<input class="form-control dt-field" data-col="${escapeHtml(col.columnName)}" value="${escapeHtml(String(val))}"/>`;
+  };
+
+  modalEl.innerHTML = `
+    <div class="modal modal-md">
+      <div class="modal-header"><h3>${existing ? 'Edit' : 'Add'} Entry</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <div class="form-grid">
+          ${editable.map(col => `
+            <label>${escapeHtml(col.columnName)}${col.isColumnNullable === false ? ' *' : ''}
+              ${inputFor(col)}
+            </label>`).join('')}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close-modal>Cancel</button>
+        <button class="btn-primary" id="dt-entry-save">Save</button>
+      </div>
+    </div>`;
+  document.getElementById('modalRoot').appendChild(modalEl);
+  modalEl.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => modalEl.remove()));
+  modalEl.querySelector('#dt-entry-save').addEventListener('click', async () => {
+    const body = {};
+    modalEl.querySelectorAll('.dt-field').forEach(inp => {
+      const v = inp.value;
+      if (v !== '') body[inp.dataset.col] = v;
+    });
+    try {
+      if (existing && existing.id != null) {
+        await api.dataTables.updateEntryOneToMany(tableName, entityId, existing.id, body);
+      } else if (existing) {
+        await api.dataTables.update(tableName, entityId, body);
+      } else {
+        await api.dataTables.createEntry(tableName, entityId, body);
+      }
+      modalEl.remove(); toast('success', existing ? 'Entry updated' : 'Entry created', ''); onSuccess();
+    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
 export function openCreateDataTableModal(onSuccess) {
   const mid = 'dt-create-' + Date.now();
   const modalEl = document.createElement('div');

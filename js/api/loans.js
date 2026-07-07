@@ -27,9 +27,12 @@ export function makeLoansAPI(self) {
     closeAsRescheduled: (id, body)       => self._p(`/loans/${id}?command=close-rescheduled`, body),
     foreclose:      (id, body)           => self._p(`/loans/${id}?command=foreclosure`, body),
     reage:          (id, body)           => self._p(`/loans/${id}?command=reAge`, body),
+    reagePreview:   (id, params)         => self._g(`/loans/${id}/transactions/reage-preview`, params),
     undoReAge:      (id)                 => self._p(`/loans/${id}?command=undoReAge`, {}),
     reamortize:     (id, body)           => self._p(`/loans/${id}?command=reAmortize`, body),
+    reamortizePreview: (id, params)      => self._g(`/loans/${id}/transactions/reamortization-preview`, params),
     undoReAmortize: (id)                 => self._p(`/loans/${id}?command=undoReAmortize`, {}),
+    transactionTemplate: (id, params)    => self._g(`/loans/${id}/transactions/template`, params),
     markAsFraud:    (id, body)           => self._p(`/loans/${id}?command=markAsFraud`, body || { fraud: true }),
     recoverGuarantees: (id, body)        => self._p(`/loans/${id}?command=recoverGuarantees`, body || {}),
     assignOfficer:  (id, body)           => self._p(`/loans/${id}?command=assignLoanOfficer`, body),
@@ -65,6 +68,9 @@ export function makeLoansAPI(self) {
 
     // ---- Charges ----
     addCharge:      (id, body)           => self._p(`/loans/${id}/charges`, body),
+    chargeTemplate: (id)                 => self._g(`/loans/${id}/charges/template`),
+    getCharge:      (id, cid)            => self._g(`/loans/${id}/charges/${cid}`),
+    updateCharge:   (id, cid, body)      => self._u(`/loans/${id}/charges/${cid}`, body),
     waiveCharge:    (id, cid)            => self._p(`/loans/${id}/charges/${cid}?command=waive`, {}),
     payCharge:      (id, cid, body)      => self._p(`/loans/${id}/charges/${cid}?command=paycharge`, body),
     chargeAdjustment: (id, cid, body)    => self._p(`/loans/${id}/charges/${cid}?command=adjustment`, body),
@@ -73,13 +79,23 @@ export function makeLoansAPI(self) {
 
     // ---- Collateral ----
     listCollaterals:(id)                 => self._g(`/loans/${id}/collaterals`),
+    // GLIM (Group Loan Individual Monitoring) — a group-disbursed loan tracked as
+    // individual member sub-loans under one parent account.
+    getGlimAccount:   (glimId)           => self._g(`/loans/glimAccount/${glimId}`),
+    glimAccountCommand:(glimId, command, body) => self._p(`/loans/glimAccount/${glimId}?command=${command}`, body || {}),
+    collateralTemplate:(id)              => self._g(`/loans/${id}/collaterals/template`),
+    getCollateral:  (id, cid)            => self._g(`/loans/${id}/collaterals/${cid}`),
     addCollateral:  (id, body)           => self._p(`/loans/${id}/collaterals`, body),
+    updateCollateral:(id, cid, body)     => self._u(`/loans/${id}/collaterals/${cid}`, body),
     deleteCollateral:(id, cid)           => self._d(`/loans/${id}/collaterals/${cid}`),
 
     // ---- Guarantors ----
     guarantors:     (id)                 => self._g(`/loans/${id}/guarantors`),
     guarantorTemplate: (id)              => self._g(`/loans/${id}/guarantors/template`),
+    getGuarantor:   (id, gid)            => self._g(`/loans/${id}/guarantors/${gid}`),
+    guarantorAccountsTemplate:(id)       => self._g(`/loans/${id}/guarantors/accounts/template`),
     addGuarantor:   (id, body)           => self._p(`/loans/${id}/guarantors`, body),
+    updateGuarantor:(id, gid, body)      => self._u(`/loans/${id}/guarantors/${gid}`, body),
     deleteGuarantor:(id, gid)            => self._d(`/loans/${id}/guarantors/${gid}`),
 
     // ---- Disbursements / Tranches ----
@@ -87,11 +103,21 @@ export function makeLoansAPI(self) {
     disbursement:   (id, disbId)         => self._g(`/loans/${id}/disbursements/${disbId}`),
     addDisbursement:(id, body)           => self._u(`/loans/${id}/disbursements`, body),
     updateDisbursement: (id, disbId, body) => self._u(`/loans/${id}/disbursements/${disbId}`, body),
+    // Distinct from updateDisbursement — edits the full set of tranches in one call.
+    editDisbursements: (id, body)        => self._u(`/loans/${id}/disbursements/editDisbursements`, body),
 
     // ---- Delinquency ----
     delinquency:    (id)                 => self._g(`/loans/${id}/delinquency-actions`),
     addDelinquencyAction: (id, body)     => self._p(`/loans/${id}/delinquency-actions`, body),
-    delinquencyTags:(id)                 => self._g(`/loans/${id}/delinquency-tags`),
+    // NOTE: was calling /delinquency-tags (hyphenated) — the API reference confirms
+    // the real Fineract path has no hyphen (/delinquencytags). Fixed; this endpoint
+    // was silently failing in production before this fix.
+    delinquencyTags:(id)                 => self._g(`/loans/${id}/delinquencytags`),
+
+    // ---- Approved amount / available disbursement amount modification ----
+    getApprovedAmountHistory: (id)        => self._g(`/loans/${id}/approved-amount`),
+    updateApprovedAmount:     (id, body)  => self._u(`/loans/${id}/approved-amount`, body),
+    updateAvailableDisbursementAmount: (id, body) => self._u(`/loans/${id}/available-disbursement-amount`, body),
 
     // ---- Standing Instructions (via association) ----
     standingInstructions: (id)           => self._g(`/loans/${id}`, { associations: 'standingInstructions' }),
@@ -161,7 +187,7 @@ export function makeDelinquencyBucketsAPI(self) {
     createRange: (b)      => self._p('/delinquency/ranges', b),
     updateRange: (id, b)  => self._u(`/delinquency/ranges/${id}`, b),
     deleteRange: (id)     => self._d(`/delinquency/ranges/${id}`),
-    loanTagHistory: (loanId) => self._g(`/loans/${loanId}/delinquency-tags`)
+    loanTagHistory: (loanId) => self._g(`/loans/${loanId}/delinquencytags`)
   };
 }
 
@@ -178,15 +204,27 @@ export function makeLoanOriginatorsAPI(self) {
 
 export function makeExternalAssetOwnersAPI(self) {
   return {
+    // NOTE: the API reference documents GET-single/PUT/DELETE for this resource
+    // and the loan-transfer/buy-back actions under different paths than what's
+    // already wired into the UI (e.g. doc says POST
+    // /external-asset-owners/transfers/loans/{loanId}, existing code uses
+    // /loans/{id}/external-asset-owners/transfer). Since both the doc and the
+    // existing, already-in-use code could be right depending on Fineract version,
+    // this hasn't been changed — flagging for verification against your instance
+    // rather than guessing which side to trust.
     list:           (params)     => self._g('/external-asset-owners', params),
     get:            (ownerId)    => self._g(`/external-asset-owners/${ownerId}`),
     create:         (body)       => self._p('/external-asset-owners', body),
     update:         (ownerId, b) => self._u(`/external-asset-owners/${ownerId}`, b),
     delete:         (ownerId)    => self._d(`/external-asset-owners/${ownerId}`),
     journalEntries: (transferId, params) => self._g(`/external-asset-owners/transfers/${transferId}/journal-entries`, params),
+    ownerJournalEntriesByExternalId: (ownerExternalId, params) => self._g(`/external-asset-owners/owners/external-id/${ownerExternalId}/journal-entries`, params),
     transferLoans:  (transferId) => self._g(`/external-asset-owners/transfers/${transferId}/loans`),
     transfers:      (params)     => self._g('/external-asset-owners/transfers', params),
-    transfer:       (transferId) => self._g(`/external-asset-owners/transfers/${transferId}`)
+    activeTransfer: (params)     => self._g('/external-asset-owners/transfers/active-transfer', params),
+    transfer:       (transferId) => self._g(`/external-asset-owners/transfers/${transferId}`),
+    transferAsset:  (id, body)   => self._p(`/external-asset-owners/transfers/${id}`, body),
+    search:         (body)       => self._p('/external-asset-owners/search', body)
   };
 }
 

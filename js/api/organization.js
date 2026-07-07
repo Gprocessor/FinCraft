@@ -26,10 +26,29 @@ export function makeTellersAPI(self) {
     get:     (id)     => self._g(`/tellers/${id}`),
     create:  (body)   => self._p('/tellers', body),
     update:  (id, b)  => self._u(`/tellers/${id}`, b),
+    delete:  (id)     => self._d(`/tellers/${id}`),
     cashiers:(id)     => self._g(`/tellers/${id}/cashiers`),
+    getCashier:     (id, cid)       => self._g(`/tellers/${id}/cashiers/${cid}`),
+    cashierTemplate:(id)            => self._g(`/tellers/${id}/cashiers/template`),
     allocateCashier:(id, body) => self._p(`/tellers/${id}/cashiers`, body),
+    updateCashier:  (id, cid, body) => self._u(`/tellers/${id}/cashiers/${cid}`, body),
+    deleteCashier:  (id, cid)       => self._d(`/tellers/${id}/cashiers/${cid}`),
     settleCashier:  (id, cid, body) => self._p(`/tellers/${id}/cashiers/${cid}/settle`, body),
-    allocateCashTo: (id, cid, body) => self._p(`/tellers/${id}/cashiers/${cid}/allocate`, body)
+    allocateCashTo: (id, cid, body) => self._p(`/tellers/${id}/cashiers/${cid}/allocate`, body),
+    cashierTransactions:   (id, cid, params) => self._g(`/tellers/${id}/cashiers/${cid}/transactions`, params),
+    cashierSummary:        (id, cid, params) => self._g(`/tellers/${id}/cashiers/${cid}/summaryandtransactions`, params),
+    cashierTxTemplate:     (id, cid)         => self._g(`/tellers/${id}/cashiers/${cid}/transactions/template`),
+    transactions:   (id, params)      => self._g(`/tellers/${id}/transactions`, params),
+    getTransaction: (id, txId)        => self._g(`/tellers/${id}/transactions/${txId}`),
+    journals:       (id, params)      => self._g(`/tellers/${id}/journals`, params)
+  };
+}
+
+// TellerJournalApiResource — distinct top-level resource, base path /v1/cashiersjournal
+// (NOT nested under /tellers/{id}; per Fineract_Backend_API_Reference.md section 3.2).
+export function makeTellerJournalAPI(self) {
+  return {
+    list: (params) => self._g('/cashiersjournal', params)
   };
 }
 
@@ -46,7 +65,7 @@ export function makeHolidaysAPI(self) {
 }
 
 export function makeWorkingDaysAPI(self) {
-  return { get: () => self._g('/workingdays'), update: (b) => self._u('/workingdays', b) };
+  return { get: () => self._g('/workingdays'), update: (b) => self._u('/workingdays', b), template: () => self._g('/workingdays/template') };
 }
 
 export function makeFundsAPI(self) {
@@ -62,13 +81,22 @@ export function makeCodesAPI(self) {
   return {
     list:    ()           => self._g('/codes'),
     get:     (id)         => self._g(`/codes/${id}`),
+    getByName: (name)     => self._g(`/codes/name/${name}`),
     create:  (body)       => self._p('/codes', body),
     update:  (id, body)   => self._u(`/codes/${id}`, body),
     delete:  (id)         => self._d(`/codes/${id}`),
     values:  (id)         => self._g(`/codes/${id}/codevalues`),
+    getValue:    (id, vid) => self._g(`/codes/${id}/codevalues/${vid}`),
     createValue: (id,body)=> self._p(`/codes/${id}/codevalues`, body),
     updateValue: (id,vid,body) => self._u(`/codes/${id}/codevalues/${vid}`, body),
-    deleteValue: (id,vid) => self._d(`/codes/${id}/codevalues/${vid}`)
+    deleteValue: (id,vid) => self._d(`/codes/${id}/codevalues/${vid}`),
+    // By-name variants of the same code-value CRUD (Fineract offers both
+    // numeric-id and code-name addressing for this sub-resource).
+    valuesByName:      (name)       => self._g(`/codes/name/${name}/codevalues`),
+    getValueByName:    (name, vid)  => self._g(`/codes/name/${name}/codevalues/${vid}`),
+    createValueByName: (name, body) => self._p(`/codes/name/${name}/codevalues`, body),
+    updateValueByName: (name, vid, body) => self._u(`/codes/name/${name}/codevalues/${vid}`, body),
+    deleteValueByName: (name, vid)  => self._d(`/codes/name/${name}/codevalues/${vid}`)
   };
 }
 

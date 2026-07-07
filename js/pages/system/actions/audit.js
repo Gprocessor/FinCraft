@@ -2,7 +2,44 @@
    Auto-split from the original monolithic pages/system/actions.js for maintainability. */
 
 import { api } from '../../../api.js';
+import { toast } from '../../../ui.js';
 import { escapeHtml, fmtDate } from '../../../utils.js';
+
+export async function openEditJobModal(jobId, onSuccess) {
+  let job = null;
+  try { job = await api.jobs.get(jobId); } catch (e) {
+    toast('error', 'Failed to load job', e.detail?.defaultUserMessage || e.message); return;
+  }
+  const mid = 'edit-job-' + Date.now();
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Edit Job</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <div class="text-muted mb-2">${escapeHtml(job?.displayName || job?.name || '—')}</div>
+          <label>Cron expression * <input id="ej-cron" class="form-control" value="${escapeHtml(job?.cronExpression || '')}" required/></label>
+          <label class="mt-2 checkbox-label">
+            <input type="checkbox" id="ej-active" ${job?.active ? 'checked' : ''}/> Active
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="ej-save">Save</button>
+        </div>
+      </div>
+    </div>`);
+  const m = document.getElementById(mid);
+  m.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => m.remove()));
+  m.querySelector('#ej-save').addEventListener('click', async () => {
+    const cronExpression = m.querySelector('#ej-cron').value.trim();
+    const active = m.querySelector('#ej-active').checked;
+    if (!cronExpression) { toast('warn', 'Enter a cron expression', ''); return; }
+    try {
+      await api.jobs.update(jobId, { cronExpression, active });
+      m.remove(); toast('success', 'Job updated', ''); onSuccess?.();
+    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
 
 export async function openAuditDetail(auditId) {
   const mid = 'audit-detail-' + Date.now();

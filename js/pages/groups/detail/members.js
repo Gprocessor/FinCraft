@@ -59,11 +59,20 @@ export async function loadAccounts(c, id) {
   const wrap = c.querySelector('#grp-accounts-wrap');
   wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
   try {
-    const acc = await api.groups.accounts(id);
+    const [acc, glimRes, gsimRes] = await Promise.all([
+      api.groups.accounts(id),
+      api.groups.glimAccounts(id).catch(() => []),
+      api.groups.gsimAccounts(id).catch(() => [])
+    ]);
     const loans   = acc?.loanAccounts || [];
     const savings = acc?.savingsAccounts || [];
     const memberLoans   = acc?.memberLoanAccounts || [];
     const memberSavings = acc?.memberSavingsAccounts || [];
+    // Response shape for glimaccounts/gsimaccounts isn't documented in the API
+    // reference beyond the path — rendered defensively against several
+    // plausible field names rather than assumed as one fixed schema.
+    const glimList = Array.isArray(glimRes) ? glimRes : (glimRes?.pageItems || glimRes?.glimAccounts || []);
+    const gsimList = Array.isArray(gsimRes) ? gsimRes : (gsimRes?.pageItems || gsimRes?.gsimAccounts || []);
 
     const sect = (title, rows, mapper, cols) => `
       <h3 class="mt-3">${title}</h3>
@@ -100,10 +109,30 @@ export async function loadAccounts(c, id) {
           <td>${escapeHtml(s.clientName || '')}</td>
           <td>${escapeHtml(s.productName || '')}</td>
           <td>${sb(s.status?.value || '—')}</td></tr>`,
-        ['Account', 'Client', 'Product', 'Status']) : ''}`;
+        ['Account', 'Client', 'Product', 'Status']) : ''}
+      ${sect('GLIM Accounts <span class="text-muted small">(group loan, tracked per member)</span>', glimList,
+        g => `<tr>
+          <td>${escapeHtml(g.accountNo || g.parentAccountNo || String(g.id ?? g.parentAccountId ?? '—'))}</td>
+          <td>${escapeHtml(g.productName || '—')}</td>
+          <td class="text-right">${fmt(g.principalAmount ?? g.totalPrincipal ?? 0)}</td>
+          <td>${sb(g.status?.value || g.status || '—')}</td>
+          <td class="text-right"><button class="btn-mini" data-view-glim="${g.id ?? g.parentAccountId}">View</button></td></tr>`,
+        ['Account', 'Product', 'Principal', 'Status', ''])}
+      ${sect('GSIM Accounts <span class="text-muted small">(group savings, tracked per member)</span>', gsimList,
+        g => `<tr>
+          <td>${escapeHtml(g.accountNo || g.parentAccountNo || String(g.id ?? g.parentAccountId ?? '—'))}</td>
+          <td>${escapeHtml(g.productName || '—')}</td>
+          <td class="text-right">${fmt(g.totalDeposit ?? g.accountBalance ?? 0)}</td>
+          <td>${sb(g.status?.value || g.status || '—')}</td></tr>`,
+        ['Account', 'Product', 'Balance', 'Status'])}`;
+
     wrap.querySelectorAll('[data-view-loan]').forEach(b => b.addEventListener('click', (e) => {
       e.preventDefault();
       import('../../../router.js').then(r => r.navigate('loans', { id: b.dataset.viewLoan }));
+    }));
+    wrap.querySelectorAll('[data-view-glim]').forEach(b => b.addEventListener('click', async () => {
+      const { openGlimDetailModal } = await import('../actions.js');
+      openGlimDetailModal(b.dataset.viewGlim);
     }));
   } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

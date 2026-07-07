@@ -67,9 +67,16 @@ export async function openGLAccountModal(onSuccess) {
 
 export async function openAccountingRuleModal(ruleId, onSuccess) {
   const isEdit = !!ruleId;
+  let tpl = null;
+  try { tpl = await api.accountingRules.template(); } catch {}
+  // Field names for this template aren't documented beyond the endpoint path,
+  // so we only use it if it actually contains recognizable option arrays —
+  // otherwise fall back to the generic offices/GL-accounts lists already used here.
+  const tplOffices = tpl?.allowedOffices;
+  const tplGl = tpl?.allowedAccounts || tpl?.glAccountOptions;
   const [officesRes, glAccounts] = await Promise.all([
-    api.offices.list().catch(() => []),
-    glList()
+    Array.isArray(tplOffices) && tplOffices.length ? Promise.resolve(tplOffices) : api.offices.list().catch(() => []),
+    Array.isArray(tplGl) && tplGl.length ? Promise.resolve(tplGl) : glList()
   ]);
   const offices = Array.isArray(officesRes) ? officesRes : [];
   const glOptsHtml = glAccounts.map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${g.glCode})</option>`).join('');

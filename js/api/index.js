@@ -21,12 +21,12 @@ import { makeCollateralManagementAPI, makeDelinquencyBucketsAPI, makeExternalAss
 import { makeFixedDepositsAPI, makeRecurringDepositsAPI, makeSavingsAPI } from './savings-deposits.js';
 import { makeSharesAPI } from './shares.js';
 import { makeCalendarsAPI, makeCentersAPI, makeGroupLevelsAPI, makeGroupsAPI, makeMeetingsAPI } from './groups-centers.js';
-import { makeCodesAPI, makeCurrenciesAPI, makeFundsAPI, makeHolidaysAPI, makeOfficesAPI, makePaymentTypesAPI, makeStaffAPI, makeTellersAPI, makeWorkingDaysAPI } from './organization.js';
+import { makeCodesAPI, makeCurrenciesAPI, makeFundsAPI, makeHolidaysAPI, makeOfficesAPI, makePaymentTypesAPI, makeStaffAPI, makeTellerJournalAPI, makeTellersAPI, makeWorkingDaysAPI } from './organization.js';
 import { makeFdProductsAPI, makeFloatingRatesAPI, makeLoanProductsAPI, makeProductMixAPI, makeRdProductsAPI, makeSavingsProductsAPI, makeShareProductsAPI } from './products.js';
 import { makeAccountingRulesAPI, makeFinancialActivityAccountsAPI, makeGlAccountsAPI, makeGlClosuresAPI, makeJournalEntriesAPI, makeOpeningBalancesAPI, makeProvisioningAPI, makeRunAccrualsAPI, makeTaxComponentsAPI, makeTaxGroupsAPI } from './accounting.js';
 import { makeAdhocQueriesAPI, makeCollectionSheetAPI, makeDataTablesAPI, makeEntityDatatableChecksAPI, makeReportsAPI, makeRunReportsAPI } from './reports.js';
-import { makeAccountNumberPreferencesAPI, makeAuditsAPI, makeConfigurationsAPI, makeEntityToEntityMappingsAPI, makeJobsAPI, makeMakerCheckerTasksAPI, makeMakercheckerAPI, makePermissionsAPI, makeRolesAPI, makeSurveysAdminAPI, makeUsersAPI } from './admin.js';
-import { makeExternalEventsAPI, makeExternalServicesAPI, makeHooksAPI, makeNotificationsAPI, makeSmsCampaignsAPI } from './integrations.js';
+import { makeAccountNumberPreferencesAPI, makeAuditsAPI, makeConfigurationsAPI, makeEntityToEntityMappingsAPI, makeJobsAPI, makeMakercheckerAPI, makePermissionsAPI, makeRolesAPI, makeSurveysAdminAPI, makeUsersAPI } from './admin.js';
+import { makeEmailAPI, makeEmailCampaignsAPI, makeEmailConfigurationAPI, makeExternalEventsAPI, makeExternalServicesAPI, makeHooksAPI, makeNotificationsAPI, makeSmsAPI, makeSmsCampaignsAPI } from './integrations.js';
 import { makeBatchAPI, makeBulkImportsAPI, makeChargesAPI, makeCobAPI, makeDocumentsAPI, makeImagesAPI, makeNotesAPI, makeSearchAPI, makeSelfServiceAPI, makeStandingInstructionsAPI, makeTemplatesAPI, makeTransfersAPI } from './misc.js';
 
 export class FineractAPIFull extends FineractAPI {
@@ -52,6 +52,7 @@ export class FineractAPIFull extends FineractAPI {
     this.offices = makeOfficesAPI(this);
     this.staff = makeStaffAPI(this);
     this.tellers = makeTellersAPI(this);
+    this.tellerJournal = makeTellerJournalAPI(this);
     this.charges = makeChargesAPI(this);
     this.taxComponents = makeTaxComponentsAPI(this);
     this.taxGroups = makeTaxGroupsAPI(this);
@@ -90,7 +91,6 @@ export class FineractAPIFull extends FineractAPI {
     this.makerchecker = makeMakercheckerAPI(this);
     this.configurations = makeConfigurationsAPI(this);
     this.surveysAdmin = makeSurveysAdminAPI(this);
-    this.makerCheckerTasks = makeMakerCheckerTasksAPI(this);
     this.entityToEntityMappings = makeEntityToEntityMappingsAPI(this);
     this.accountNumberPreferences = makeAccountNumberPreferencesAPI(this);
     this.notifications = makeNotificationsAPI(this);
@@ -98,6 +98,10 @@ export class FineractAPIFull extends FineractAPI {
     this.externalServices = makeExternalServicesAPI(this);
     this.externalEvents = makeExternalEventsAPI(this);
     this.smsCampaigns = makeSmsCampaignsAPI(this);
+    this.sms = makeSmsAPI(this);
+    this.email = makeEmailAPI(this);
+    this.emailCampaigns = makeEmailCampaignsAPI(this);
+    this.emailConfiguration = makeEmailConfigurationAPI(this);
     this.currencies = makeCurrenciesAPI(this);
     this.templates = makeTemplatesAPI(this);
     this.dataTables = makeDataTablesAPI(this);

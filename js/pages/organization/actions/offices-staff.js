@@ -259,3 +259,140 @@ export async function openSettleCashierModal(tellerId, cashierId, onSuccess) {
     } catch (e) { toast('error', 'Settlement failed', e.detail?.defaultUserMessage || e.message); }
   });
 }
+
+export async function openEditTellerModal(tellerId, allTellers, onSuccess) {
+  const t = allTellers.find(x => String(x.id) === String(tellerId));
+  let officeList = [];
+  try { const r = await api.offices.list(); officeList = Array.isArray(r) ? r : []; } catch {}
+  const mid = 'edit-teller-' + Date.now();
+  const modalEl = document.createElement('div');
+  modalEl.id = mid;
+  modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
+  modalEl.innerHTML = `
+    <div class="modal modal-md">
+      <div class="modal-header"><h3>Edit Teller</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <label>Name * <input id="et-name" class="form-control" value="${escapeHtml(t?.name || '')}" required/></label>
+          <label>Office *
+            <select id="et-office" class="form-control" required>
+              ${officeList.map(o => `<option value="${o.id}" ${String(o.id) === String(t?.officeId) ? 'selected' : ''}>${escapeHtml(o.name)}</option>`).join('')}
+            </select>
+          </label>
+          <label>Start date * <input type="date" id="et-start" class="form-control" value="${(t?.startDate || []).join?.('-') || ''}" required/></label>
+          <label>End date <input type="date" id="et-end" class="form-control" value="${(t?.endDate || []).join?.('-') || ''}"/></label>
+          <label class="full">Description <textarea id="et-desc" class="form-control" rows="2">${escapeHtml(t?.description || '')}</textarea></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close-modal>Cancel</button>
+        <button class="btn-primary" id="et-save">Save</button>
+      </div>
+    </div>`;
+  document.getElementById('modalRoot').appendChild(modalEl);
+  modalEl.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => modalEl.remove()));
+  modalEl.querySelector('#et-save').addEventListener('click', async () => {
+    const name = modalEl.querySelector('#et-name').value.trim();
+    const officeId = parseInt(modalEl.querySelector('#et-office').value);
+    const startDate = modalEl.querySelector('#et-start').value;
+    const endDate = modalEl.querySelector('#et-end').value;
+    const description = modalEl.querySelector('#et-desc').value.trim();
+    if (!name || !officeId || !startDate) { toast('warn', 'Fill required fields', ''); return; }
+    const payload = { name, officeId, startDate, dateFormat: DATE_FORMAT, locale: LOCALE };
+    if (endDate) payload.endDate = endDate;
+    if (description) payload.description = description;
+    try {
+      await api.tellers.update(tellerId, payload);
+      modalEl.remove(); toast('success', 'Teller updated', ''); onSuccess();
+    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
+export async function openEditCashierModal(tellerId, cashierId, onSuccess) {
+  let record = null;
+  try { record = await api.tellers.getCashier(tellerId, cashierId); } catch (e) {
+    toast('error', 'Failed to load cashier', e.detail?.defaultUserMessage || e.message); return;
+  }
+  const mid = 'edit-cashier-' + Date.now();
+  const modalEl = document.createElement('div');
+  modalEl.id = mid;
+  modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
+  modalEl.innerHTML = `
+    <div class="modal modal-md">
+      <div class="modal-header"><h3>Edit Cashier</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <div class="text-muted mb-2">${escapeHtml(record?.staffName || record?.name || '—')}</div>
+        <div class="form-grid">
+          <label>Start date * <input type="date" id="ec-start" class="form-control" value="${record?.startDate || ''}" required/></label>
+          <label>End date <input type="date" id="ec-end" class="form-control" value="${record?.endDate || ''}"/></label>
+          <label>Cash limit <input type="number" step="0.01" id="ec-limit" class="form-control" value="${record?.cashLimit ?? ''}"/></label>
+          <label>Description <input id="ec-desc" class="form-control" value="${escapeHtml(record?.description || '')}"/></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close-modal>Cancel</button>
+        <button class="btn-primary" id="ec-save">Save</button>
+      </div>
+    </div>`;
+  document.getElementById('modalRoot').appendChild(modalEl);
+  modalEl.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => modalEl.remove()));
+  modalEl.querySelector('#ec-save').addEventListener('click', async () => {
+    const startDate = modalEl.querySelector('#ec-start').value;
+    const endDate = modalEl.querySelector('#ec-end').value;
+    const cashLimit = parseFloat(modalEl.querySelector('#ec-limit').value);
+    const description = modalEl.querySelector('#ec-desc').value.trim();
+    if (!startDate) { toast('warn', 'Select a start date', ''); return; }
+    const payload = { startDate, dateFormat: DATE_FORMAT, locale: LOCALE };
+    if (endDate) payload.endDate = endDate;
+    if (isFinite(cashLimit)) payload.cashLimit = cashLimit;
+    if (description) payload.description = description;
+    try {
+      await api.tellers.updateCashier(tellerId, cashierId, payload);
+      modalEl.remove(); toast('success', 'Cashier updated', ''); onSuccess();
+    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
+export async function openCashierTransactionsModal(tellerId, cashierId) {
+  const mid = 'cashier-txns-' + Date.now();
+  const modalEl = document.createElement('div');
+  modalEl.id = mid;
+  modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
+  modalEl.innerHTML = `
+    <div class="modal modal-lg">
+      <div class="modal-header"><h3>Cashier Transactions</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body" id="${mid}-body"><div class="empty-state-row">Loading…</div></div>
+      <div class="modal-footer"><button class="btn-secondary" data-close-modal>Close</button></div>
+    </div>`;
+  document.getElementById('modalRoot').appendChild(modalEl);
+  modalEl.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => modalEl.remove()));
+  const body = modalEl.querySelector(`#${mid}-body`);
+  try {
+    const res = await api.tellers.cashierSummary(tellerId, cashierId);
+    const txns = res?.cashierTransactions || res?.transactions || (Array.isArray(res) ? res : []);
+    body.innerHTML = `
+      ${res?.summary ? `
+        <div class="msg-banner b-info mb-2">
+          Net: ${fmt(res.summary.netCash ?? res.summary.net ?? 0)}
+        </div>` : ''}
+      ${txns.length ? `
+        <table class="table">
+          <thead><tr><th>Date</th><th>Type</th><th class="text-right">Amount</th><th>Currency</th></tr></thead>
+          <tbody>${txns.map(t => `
+            <tr>
+              <td>${t.txnDate ? escapeHtml(Array.isArray(t.txnDate) ? t.txnDate.join('-') : t.txnDate) : '—'}</td>
+              <td>${escapeHtml(t.txnType?.value || t.txnType || '—')}</td>
+              <td class="text-right">${fmt(t.txnAmount ?? t.amount ?? 0)}</td>
+              <td>${escapeHtml(t.currencyCode || '—')}</td>
+            </tr>`).join('')}</tbody>
+        </table>` : '<div class="empty-state-row">No transactions found for this cashier</div>'}`;
+  } catch (e) {
+    body.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+  }
+}

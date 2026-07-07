@@ -7,6 +7,11 @@ export function makeSavingsAPI(self) {
     get:         (id, params)  => self._g(`/savingsaccounts/${id}`, params),
     template:    (params)      => self._g('/savingsaccounts/template', params),
     create:      (body)        => self._p('/savingsaccounts', body),
+    // GSIM (Group Savings Individual Monitoring) — a group savings product tracked
+    // as individual member sub-accounts under one parent account.
+    createGsim:  (body)        => self._p('/savingsaccounts/gsim', body),
+    updateGsim:  (parentAccountId, body) => self._u(`/savingsaccounts/gsim/${parentAccountId}`, body),
+    gsimCommand: (parentAccountId, command, body) => self._p(`/savingsaccounts/gsimcommands/${parentAccountId}?command=${command}`, body || {}),
     approve:     (id, body)    => self._p(`/savingsaccounts/${id}?command=approve`, body),
     undoApproval:(id)          => self._p(`/savingsaccounts/${id}?command=undoApproval`, {}),
     reject:      (id, body)    => self._p(`/savingsaccounts/${id}?command=reject`, body),
@@ -42,8 +47,21 @@ export function makeSavingsAPI(self) {
     adjustTransaction:  (id, txId, body) => self._p(`/savingsaccounts/${id}/transactions/${txId}?command=modify`, body),
     undoTransaction:    (id, txId) => self._p(`/savingsaccounts/${id}/transactions/${txId}?command=undo`, {}),
     addCharge:   (id, body)    => self._p(`/savingsaccounts/${id}/charges`, body),
+    chargeTemplate: (id)       => self._g(`/savingsaccounts/${id}/charges/template`),
+    getCharge:      (id, cid)  => self._g(`/savingsaccounts/${id}/charges/${cid}`),
     charges:     (id)          => self._g(`/savingsaccounts/${id}/charges`),
-    transactions:(id)          => self._g(`/savingsaccounts/${id}/transactions`)
+    // NOTE: the API reference documents no bare GET /savingsaccounts/{id}/transactions
+    // list route for this resource (only /template, /{transactionId}, /search, /query,
+    // and POST). The previous implementation called that undocumented path directly,
+    // which real Fineract instances may 404 on. Fixed to use the documented
+    // associations=transactions expansion on the account GET, matching the same
+    // pattern already used elsewhere in this codebase (e.g. loan standingInstructions).
+    transactions:(id)          => self._g(`/savingsaccounts/${id}`, { associations: 'transactions' })
+      .then(r => r?.transactions || []),
+    transactionTemplate: (id, params) => self._g(`/savingsaccounts/${id}/transactions/template`, params),
+    getTransaction:      (id, txId)   => self._g(`/savingsaccounts/${id}/transactions/${txId}`),
+    searchTransactions:  (id, params) => self._g(`/savingsaccounts/${id}/transactions/search`, params),
+    queryTransactions:   (id, body)   => self._p(`/savingsaccounts/${id}/transactions/query`, body)
   };
 }
 
@@ -75,8 +93,13 @@ export function makeFixedDepositsAPI(self) {
     postInterest:      (id) => self._p(`/fixeddepositaccounts/${id}?command=postInterest`, {}),
 
     // ---- Transactions ----
-    transactions: (id, params) => self._g(`/fixeddepositaccounts/${id}/transactions`, params),
+    // No bare GET /fixeddepositaccounts/{id}/transactions list endpoint
+    // exists (FixedDepositAccountTransactionsApiResource only exposes
+    // template/{id}(get one)/create/adjust) — fetch the account with the
+    // transactions association expanded instead.
+    transactions: (id, params) => self._g(`/fixeddepositaccounts/${id}`, { ...params, associations: 'transactions' }),
     transaction:  (id, txId)   => self._g(`/fixeddepositaccounts/${id}/transactions/${txId}`),
+    transactionTemplate: (id, params) => self._g(`/fixeddepositaccounts/${id}/transactions/template`, params),
     deposit:      (id, body)   => self._p(`/fixeddepositaccounts/${id}/transactions?command=deposit`, body),
     withdrawal:   (id, body)   => self._p(`/fixeddepositaccounts/${id}/transactions?command=withdrawal`, body),
     interestTx:   (id, body)   => self._p(`/fixeddepositaccounts/${id}/transactions?command=interest`, body || {}),
@@ -84,14 +107,14 @@ export function makeFixedDepositsAPI(self) {
     adjustTransaction: (id, txId, body) => self._p(`/fixeddepositaccounts/${id}/transactions/${txId}?command=adjust`, body),
     undoTransaction:   (id, txId)       => self._p(`/fixeddepositaccounts/${id}/transactions/${txId}?command=undo`, {}),
 
-    // ---- Charges (mirrors savings charges API) ----
-    charges:      (id)          => self._g(`/fixeddepositaccounts/${id}/charges`),
-    addCharge:    (id, body)    => self._p(`/fixeddepositaccounts/${id}/charges`, body),
-    updateCharge: (id, cid, body) => self._u(`/fixeddepositaccounts/${id}/charges/${cid}`, body),
-    payCharge:    (id, cid, body) => self._p(`/fixeddepositaccounts/${id}/charges/${cid}?command=paycharge`, body),
-    waiveCharge:  (id, cid)     => self._p(`/fixeddepositaccounts/${id}/charges/${cid}?command=waive`, {}),
-    inactivateCharge: (id, cid) => self._p(`/fixeddepositaccounts/${id}/charges/${cid}?command=inactivate`, {}),
-    deleteCharge: (id, cid)     => self._d(`/fixeddepositaccounts/${id}/charges/${cid}`),
+    // NOTE: charges/, addCharge/, updateCharge/, payCharge/, waiveCharge/,
+    // inactivateCharge/, deleteCharge/ were removed — neither
+    // FixedDepositAccountsApiResource nor RecurringDepositAccountsApiResource
+    // expose a /charges sub-path in Fineract (unlike plain savings accounts,
+    // which do via SavingsAccountChargesApiResource). If your Fineract
+    // instance shares the underlying savings-account table for FD/RD, route
+    // through /savingsaccounts/{id}/charges with that shared accountId
+    // instead — verify against your target server first.
 
     // ---- Generic command escape hatch ----
     command:      (id, cmd, body) => self._p(`/fixeddepositaccounts/${id}?command=${cmd}`, body || {})
@@ -126,8 +149,13 @@ export function makeRecurringDepositsAPI(self) {
     postInterest:      (id) => self._p(`/recurringdepositaccounts/${id}?command=postInterest`, {}),
 
     // ---- Transactions ----
-    transactions: (id, params) => self._g(`/recurringdepositaccounts/${id}/transactions`, params),
+    // No bare GET /recurringdepositaccounts/{id}/transactions list endpoint
+    // exists (RecurringDepositAccountTransactionsApiResource only exposes
+    // template/{id}(get one)/create/adjust) — fetch the account with the
+    // transactions association expanded instead.
+    transactions: (id, params) => self._g(`/recurringdepositaccounts/${id}`, { ...params, associations: 'transactions' }),
     transaction:  (id, txId)   => self._g(`/recurringdepositaccounts/${id}/transactions/${txId}`),
+    transactionTemplate: (id, params) => self._g(`/recurringdepositaccounts/${id}/transactions/template`, params),
     deposit:      (id, body)   => self._p(`/recurringdepositaccounts/${id}/transactions?command=deposit`, body),
     withdrawal:   (id, body)   => self._p(`/recurringdepositaccounts/${id}/transactions?command=withdrawal`, body),
     interestTx:   (id, body)   => self._p(`/recurringdepositaccounts/${id}/transactions?command=interest`, body || {}),
@@ -135,14 +163,9 @@ export function makeRecurringDepositsAPI(self) {
     adjustTransaction: (id, txId, body) => self._p(`/recurringdepositaccounts/${id}/transactions/${txId}?command=adjust`, body),
     undoTransaction:   (id, txId)       => self._p(`/recurringdepositaccounts/${id}/transactions/${txId}?command=undo`, {}),
 
-    // ---- Charges ----
-    charges:      (id)          => self._g(`/recurringdepositaccounts/${id}/charges`),
-    addCharge:    (id, body)    => self._p(`/recurringdepositaccounts/${id}/charges`, body),
-    updateCharge: (id, cid, body) => self._u(`/recurringdepositaccounts/${id}/charges/${cid}`, body),
-    payCharge:    (id, cid, body) => self._p(`/recurringdepositaccounts/${id}/charges/${cid}?command=paycharge`, body),
-    waiveCharge:  (id, cid)     => self._p(`/recurringdepositaccounts/${id}/charges/${cid}?command=waive`, {}),
-    inactivateCharge: (id, cid) => self._p(`/recurringdepositaccounts/${id}/charges/${cid}?command=inactivate`, {}),
-    deleteCharge: (id, cid)     => self._d(`/recurringdepositaccounts/${id}/charges/${cid}`),
+    // NOTE: charges/, addCharge/, updateCharge/, payCharge/, waiveCharge/,
+    // inactivateCharge/, deleteCharge/ were removed — see the matching note
+    // in makeFixedDepositsAPI above; same non-existent sub-resource problem.
 
     // ---- Generic command escape hatch ----
     command:      (id, cmd, body) => self._p(`/recurringdepositaccounts/${id}?command=${cmd}`, body || {})

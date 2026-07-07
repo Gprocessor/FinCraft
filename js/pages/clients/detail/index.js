@@ -5,11 +5,11 @@ import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate, ini, sb } from '../../../utils.js';
-import { openAddAddressModal, openAddFamilyModal, openAddIdentifierModal, openApplyChargeModal, openAssignStaffModal, openCloseClientModal, openEditClientModal, openRejectClientModal, openTransferModal } from '../actions.js';
+import { openAddAddressModal, openAddClientCollateralModal, openAddFamilyModal, openAddIdentifierModal, openApplyChargeModal, openAssignStaffModal, openCloseClientModal, openEditClientModal, openRejectClientModal, openTransferModal } from '../actions.js';
 import { can } from '../shared.js';
 import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 import { loadClientAccounts, loadClientCharges, loadClientStandingInstructions, loadClientTransactions } from './accounts.js';
-import { loadClientAddresses, loadClientFamilyMembers, loadClientIdentifiers, loadClientPhoto } from './identity.js';
+import { loadClientAddresses, loadClientCollateral, loadClientFamilyMembers, loadClientIdentifiers, loadClientPhoto } from './identity.js';
 import { loadClientDocuments, loadClientNotes } from './notes-docs.js';
 
 export async function renderDetail(c, id, initialTab = 'overview') {
@@ -66,6 +66,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           ${can('READ_CLIENTIDENTIFIER')    ? `<button class="tab" data-cltab="identifiers">Identifiers</button>` : ''}
           ${can('READ_CLIENTFAMILYMEMBER')  ? `<button class="tab" data-cltab="family">Family</button>` : ''}
           ${can('READ_CLIENTADDRESS')       ? `<button class="tab" data-cltab="address">Address</button>` : ''}
+          ${can('READ_CLIENTCOLLATERAL')    ? `<button class="tab" data-cltab="collateral">Collateral</button>` : ''}
           ${can('READ_STANDINGINSTRUCTION') ? `<button class="tab" data-cltab="si">Standing Instructions</button>` : ''}
           ${can('READ_DOCUMENT')            ? `<button class="tab" data-cltab="documents">Documents</button>` : ''}
           ${can('READ_NOTE')                ? `<button class="tab" data-cltab="notes">Notes</button>` : ''}
@@ -148,6 +149,15 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           <div id="cl-address-list"><div class="empty-state-row">Loading…</div></div>
         </div>
 
+        <!-- Collateral -->
+        <div class="tab-panel" data-clpanel="collateral" hidden>
+          <div class="section-header">
+            <h3>Collateral</h3>
+            ${can('CREATE_CLIENTCOLLATERAL') ? `<button class="btn-primary btn-sm" id="btn-add-collateral"><i class="fa-solid fa-plus"></i> Add Collateral</button>` : ''}
+          </div>
+          <div id="cl-collateral-list"><div class="empty-state-row">Loading…</div></div>
+        </div>
+
         <!-- Standing Instructions -->
         <div class="tab-panel" data-clpanel="si" hidden>
           <h3>Standing Instructions</h3>
@@ -189,6 +199,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       identifiers:  () => loadClientIdentifiers(c, id),
       family:       () => loadClientFamilyMembers(c, id),
       address:      () => loadClientAddresses(c, id),
+      collateral:   () => loadClientCollateral(c, id),
       si:           () => loadClientStandingInstructions(c, id),
       documents:    () => loadClientDocuments(c, id),
       notes:        () => loadClientNotes(c, id)
@@ -289,6 +300,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-add-identifier')?.addEventListener('click', () => openAddIdentifierModal(id, () => loadClientIdentifiers(c, id)));
     c.querySelector('#btn-add-family')?.addEventListener('click', () => openAddFamilyModal(id, () => loadClientFamilyMembers(c, id)));
     c.querySelector('#btn-add-address')?.addEventListener('click', () => openAddAddressModal(id, () => loadClientAddresses(c, id)));
+    c.querySelector('#btn-add-collateral')?.addEventListener('click', () => openAddClientCollateralModal(id, () => loadClientCollateral(c, id)));
 
     // -------- Document upload --------
     c.querySelector('#cl-doc-form')?.addEventListener('submit', async (e) => {

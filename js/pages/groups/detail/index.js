@@ -5,7 +5,7 @@ import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate, sb } from '../../../utils.js';
-import { openAddMembersModal, openApplyChargeModal, openAssignStaffModal, openCloseGroupModal, openEditGroupModal, openScheduleMeetingModal, openTransferMembersModal } from '../actions.js';
+import { openAddMembersModal, openAssignStaffModal, openCloseGroupModal, openEditGroupModal, openScheduleMeetingModal, openTransferMembersModal } from '../actions.js';
 import { can } from '../shared.js';
 import { loadCharges, loadMeetings, loadStandingInstructions } from './meetings-charges.js';
 import { loadAccounts, loadMembers } from './members.js';
@@ -107,7 +107,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         <div class="tab-panel" data-grppanel="charges" hidden>
           <div class="section-header">
             <h3>Charges</h3>
-            ${can('CREATE_GROUPCHARGE') ? `<button class="btn-primary btn-sm" id="grp-add-charge"><i class="fa-solid fa-plus"></i> Apply Charge</button>` : ''}
+
           </div>
           <div id="grp-charges-list"><div class="empty-state-row">Loading…</div></div>
         </div>
@@ -192,7 +192,6 @@ function switchTab(name) {
     c.querySelector('#grp-add-members')?.addEventListener('click', () => openAddMembersModal(id, g, () => loadMembers(c, id, g)));
     c.querySelector('#grp-transfer-members')?.addEventListener('click', () => openTransferMembersModal(id, g));
     c.querySelector('#grp-add-meeting')?.addEventListener('click', () => openScheduleMeetingModal(id, () => loadMeetings(c, id)));
-    c.querySelector('#grp-add-charge')?.addEventListener('click', () => openApplyChargeModal(id, () => loadCharges(c, id)));
 
     // -------- Notes --------
     c.querySelector('#grp-note-save')?.addEventListener('click', async () => {

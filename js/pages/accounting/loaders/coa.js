@@ -4,7 +4,7 @@
 import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE } from '../../../config.js';
 import { escapeHtml, fmt, fmtDate } from '../../../utils.js';
-import { openFrequentPostingModal, openGLAccountModal, openJournalEntryModal, openReverseJEModal } from '../actions.js';
+import { openFrequentPostingModal, openGLAccountModal, openJournalEntryDetailModal, openJournalEntryModal, openReverseJEModal } from '../actions.js';
 import { can, populateJEFilters, resetGlCache } from '../shared.js';
 
 export async function loadChartOfAccounts(c) {
@@ -116,6 +116,11 @@ export async function loadJournalEntries(c, params = {}) {
         ${can('CREATE_JOURNALENTRY') ? `<button class="btn-primary" id="btn-new-je"><i class="fa-solid fa-plus"></i> New Entry</button>` : ''}
       </div>
    <div class="filter-bar mb-2" id="je-filter-bar">
+  <select id="je-f-set" class="form-control" style="min-width:170px">
+    <option value="">All entries</option>
+    <option value="provisioning">Provisioning entries</option>
+    <option value="openingbalance">Opening balance entries</option>
+  </select>
   <select id="je-f-office" class="form-control" style="min-width:180px">
     <option value="">All offices</option>
   </select>
@@ -132,6 +137,7 @@ export async function loadJournalEntries(c, params = {}) {
 
    el.querySelector('#je-filter-go').addEventListener('click', () => {
   const p = {};
+  const entrySet = el.querySelector('#je-f-set').value;
   const offId = el.querySelector('#je-f-office').value.trim();
   const glId  = el.querySelector('#je-f-glacct').value.trim();
   const txId  = el.querySelector('#je-f-txid').value.trim();
@@ -143,6 +149,7 @@ export async function loadJournalEntries(c, params = {}) {
   if (from)  p.fromDate      = from;
   if (to)    p.toDate        = to;
   if (from || to) { p.dateFormat = DATE_FORMAT; p.locale = LOCALE; }
+  if (entrySet) p.__entrySet = entrySet;
   loadJournalEntries(c, p);
 });
 
@@ -151,6 +158,7 @@ populateJEFilters(el);
 
 // Clear filter button
 el.querySelector('#je-filter-clear')?.addEventListener('click', () => {
+  el.querySelector('#je-f-set').value    = '';
   el.querySelector('#je-f-office').value = '';
   el.querySelector('#je-f-glacct').value = '';
   el.querySelector('#je-f-txid').value   = '';
@@ -169,7 +177,10 @@ el.querySelector('#btn-new-je')?.addEventListener('click', () =>
   try {
     const queryParams = { limit: 50 };
     Object.assign(queryParams, params);
-    const res = await api.journalEntries.list(queryParams);
+    const entrySet = queryParams.__entrySet; delete queryParams.__entrySet;
+    const res = entrySet === 'provisioning'   ? await api.journalEntries.provisioning(queryParams)
+              : entrySet === 'openingbalance' ? await api.journalEntries.openingBalances(queryParams)
+              : await api.journalEntries.list(queryParams);
     const entries = Array.isArray(res) ? res : (res?.pageItems || []);
 
     wrap.innerHTML = `
@@ -189,6 +200,7 @@ el.querySelector('#btn-new-je')?.addEventListener('click', () =>
             <td class="text-right">${je.type?.value === 'CREDIT' ? fmt(je.amount) : '—'}</td>
             <td>${escapeHtml(je.comments || '—')}</td>
             <td class="text-right">
+              <button class="btn-mini" data-view-je="${je.id}">View</button>
               ${je.reversed
                 ? '<span class="badge b-warning">Reversed</span>'
                 : (can('REVERSE_JOURNALENTRY')
@@ -199,6 +211,8 @@ el.querySelector('#btn-new-je')?.addEventListener('click', () =>
         </tbody>
       </table>`;
 
+    wrap.querySelectorAll('[data-view-je]').forEach(b => b.addEventListener('click', () =>
+      openJournalEntryDetailModal(b.dataset.viewJe)));
     wrap.querySelectorAll('[data-reverse-je]').forEach(b => b.addEventListener('click', () =>
       openReverseJEModal(b.dataset.reverseJe, () => loadJournalEntries(c))));
   } catch (e) {

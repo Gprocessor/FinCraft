@@ -5,7 +5,7 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { escapeHtml, fmtDate, num, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
-import { openAuditDetail } from '../actions.js';
+import { openAuditDetail, openEditJobModal } from '../actions.js';
 
 export async function loadAuditTrails(c) {
   const el = c.querySelector('#sy-1');
@@ -84,6 +84,7 @@ export async function loadJobs(c) {
                 <td class="text-right">
                   <button class="btn-mini" data-job-history="${jobId}" data-job-name="${escapeHtml(j.displayName || j.name || '')}">History</button>
                   ${canRun ? `<button class="btn-mini btn-success" data-run-job="${jobId}">Run</button>` : ''}
+                  ${can('UPDATE_JOB') ? `<button class="btn-mini" data-edit-job="${jobId}">Edit</button>` : ''}
                 </td>
               </tr>
               <tr id="job-hist-${jobId}" style="display:none">
@@ -109,6 +110,9 @@ export async function loadJobs(c) {
         toast('error', 'Job failed', e.detail?.defaultUserMessage || e.message);
       }
     }));
+
+    el.querySelectorAll('[data-edit-job]').forEach(b => b.addEventListener('click', () =>
+      openEditJobModal(b.dataset.editJob, () => loadJobs(c))));
 
     el.querySelectorAll('[data-job-history]').forEach(b => b.addEventListener('click', async () => {
       const jid = b.dataset.jobHistory;

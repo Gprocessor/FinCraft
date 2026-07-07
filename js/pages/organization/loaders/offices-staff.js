@@ -5,7 +5,7 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { escapeHtml, fmtDate, sb } from '../../../utils.js';
 import { confirm as modalConfirm, openModal, toast } from '../../../ui.js';
-import { openAllocateCashierModal, openCashInModal, openEditOfficeModal, openEditStaffModal, openSettleCashierModal } from '../actions.js';
+import { openAllocateCashierModal, openCashierTransactionsModal, openCashInModal, openEditCashierModal, openEditOfficeModal, openEditStaffModal, openEditTellerModal, openSettleCashierModal } from '../actions.js';
 
 export function loadOffices(c, officeList) {
   const el = c.querySelector('#og-0');
@@ -113,6 +113,8 @@ export async function loadTellers(c) {
             <td>${sb(t.status || 'Active')}</td>
             <td class="text-right">
               <button class="btn-mini" data-teller-cashiers="${t.id}" data-teller-name="${escapeHtml(t.name || '')}">Cashiers</button>
+              ${can('UPDATE_TELLER') ? `<button class="btn-mini" data-edit-teller="${t.id}">Edit</button>` : ''}
+              ${can('DELETE_TELLER') ? `<button class="btn-mini btn-danger" data-del-teller="${t.id}">Delete</button>` : ''}
             </td>
           </tr>
           <tr id="cashier-row-${t.id}" style="display:none">
@@ -122,6 +124,13 @@ export async function loadTellers(c) {
       </table>`;
 
     el.querySelector('#btn-new-teller')?.addEventListener('click', () => openModal('newTellerModal'));
+    el.querySelectorAll('[data-edit-teller]').forEach(b => b.addEventListener('click', () =>
+      openEditTellerModal(b.dataset.editTeller, list, () => loadTellers(c))));
+    el.querySelectorAll('[data-del-teller]').forEach(b => b.addEventListener('click', async () => {
+      if (!await modalConfirm({ title: 'Delete teller?', danger: true, confirmText: 'Delete' })) return;
+      try { await api.tellers.delete(b.dataset.delTeller); toast('success', 'Teller deleted', ''); loadTellers(c); }
+      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+    }));
     el.querySelectorAll('[data-teller-cashiers]').forEach(b => b.addEventListener('click', async () => {
       const tid = b.dataset.tellerCashiers;
       const row = c.querySelector('#cashier-row-' + tid);
@@ -149,6 +158,9 @@ export async function loadTellers(c) {
                   <td class="text-right">
                     ${can('ALLOCATE_CASHIERS_TELLER') ? `<button class="btn-mini" data-cashin-teller="${tid}" data-cashin-cashier="${cx.id}" data-cashin-name="${escapeHtml(cx.staffName || cx.name || '')}">Cash In</button>` : ''}
                     ${can('SETTLE_CASHIERS_TELLER') ? `<button class="btn-mini" data-settle-teller="${tid}" data-settle-cashier="${cx.id}">Settle</button>` : ''}
+                    <button class="btn-mini" data-txn-teller="${tid}" data-txn-cashier="${cx.id}">Transactions</button>
+                    ${can('UPDATE_CASHIERS_TELLER') ? `<button class="btn-mini" data-edit-teller-c="${tid}" data-edit-cashier="${cx.id}">Edit</button>` : ''}
+                    ${can('DELETE_CASHIERS_TELLER') ? `<button class="btn-mini btn-danger" data-del-teller-c="${tid}" data-del-cashier="${cx.id}">Remove</button>` : ''}
                   </td>
                 </tr>`).join('')}</tbody>
             </table>` : '<div class="empty-state-row">No cashiers assigned</div>'}`;
@@ -161,6 +173,19 @@ export async function loadTellers(c) {
         body.querySelectorAll('[data-settle-teller]').forEach(sb2 =>
           sb2.addEventListener('click', () =>
             openSettleCashierModal(sb2.dataset.settleTeller, sb2.dataset.settleCashier, () => { row.style.display = 'none'; loadTellers(c); })));
+        body.querySelectorAll('[data-txn-teller]').forEach(tb =>
+          tb.addEventListener('click', () =>
+            openCashierTransactionsModal(tb.dataset.txnTeller, tb.dataset.txnCashier)));
+        body.querySelectorAll('[data-edit-teller-c]').forEach(eb =>
+          eb.addEventListener('click', () =>
+            openEditCashierModal(eb.dataset.editTellerC, eb.dataset.editCashier, () => { row.style.display = 'none'; loadTellers(c); })));
+        body.querySelectorAll('[data-del-teller-c]').forEach(db => db.addEventListener('click', async () => {
+          if (!await modalConfirm({ title: 'Remove cashier?', danger: true, confirmText: 'Remove' })) return;
+          try {
+            await api.tellers.deleteCashier(db.dataset.delTellerC, db.dataset.delCashier);
+            toast('success', 'Cashier removed', ''); row.style.display = 'none'; loadTellers(c);
+          } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+        }));
       } catch (e) { body.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
     }));
   } catch (e) { el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }

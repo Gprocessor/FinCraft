@@ -5,7 +5,7 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { confirm, openModal, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, num, sb } from '../../../utils.js';
-import { openApproveModal, openAssignOfficerModal, openChargeOffModal, openCloseLoanModal, openDisburseModal, openDisburseToSavingsModal, openForecloseModal, openReageModal, openReamortizeModal, openRecoverPaymentModal, openSimpleLoanCmdModal, openWaiveInterestModal } from '../actions.js';
+import { openApproveModal, openApprovedAmountHistoryModal, openAssignOfficerModal, openChargeOffModal, openCloseLoanModal, openDisburseModal, openDisburseToSavingsModal, openForecloseModal, openModifyApprovedAmountModal, openModifyAvailableDisbursementAmountModal, openReageModal, openReamortizeModal, openRecoverPaymentModal, openSimpleLoanCmdModal, openWaiveInterestModal } from '../actions.js';
 import { loadLoanCollateral, loadLoanEAO, loadLoanGuarantors, loadLoanOriginators } from './collateral-guarantors.js';
 import { loadLoanBuyDown, loadLoanDelinquency, loadLoanReschedule } from './lifecycle.js';
 import { loadLoanDocuments, loadLoanNotes } from './notes-docs.js';
@@ -42,6 +42,12 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     const canAssignOfficer  = can('UPDATELOANOFFICER_LOAN');
     const canMarkFraud      = can('UPDATE_LOAN');
     const canRecoverGuar    = status === 'Active' && can('RECOVERGUARANTEES_LOAN');
+    // No dedicated permission code for these two actions is documented anywhere
+    // I have access to (they're newer Fineract additions) — gated on UPDATE_LOAN,
+    // a permission already confirmed to exist and used elsewhere on this page,
+    // rather than inventing an unverified permission constant.
+    const canModifyApprovedAmount = (status === 'Approved' || status === 'Active') && can('UPDATE_LOAN');
+    const canModifyAvailableDisbursement = status === 'Active' && can('UPDATE_LOAN');
 
     c.innerHTML = `
       <div class="page-header mb-3">
@@ -75,6 +81,9 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           ${canClose          ? `<button class="btn-secondary" id="btn-close-loan"><i class="fa-solid fa-box-archive"></i> Close</button>` : ''}
           ${canReschedule     ? `<button class="btn-secondary" id="btn-reschedule"><i class="fa-solid fa-calendar-plus"></i> Reschedule</button>` : ''}
           ${canAssignOfficer  ? `<button class="btn-secondary" id="btn-assign-officer"><i class="fa-solid fa-user-tag"></i> Officer</button>` : ''}
+          ${canModifyApprovedAmount ? `<button class="btn-secondary" id="btn-mod-approved-amt"><i class="fa-solid fa-sack-dollar"></i> Modify Approved Amount</button>
+          <button class="btn-ghost" id="btn-approved-amt-hist" title="Approved amount history"><i class="fa-solid fa-clock-rotate-left"></i></button>` : ''}
+          ${canModifyAvailableDisbursement ? `<button class="btn-secondary" id="btn-mod-avail-disb"><i class="fa-solid fa-wallet"></i> Modify Available Disbursement</button>` : ''}
           ${canMarkFraud      ? `<button class="btn-danger"    id="btn-mark-fraud"><i class="fa-solid fa-triangle-exclamation"></i> Fraud</button>` : ''}
         </div>
       </div>
@@ -261,6 +270,11 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       }
     });
     c.querySelector('#btn-assign-officer')?.addEventListener('click', () => openAssignOfficerModal(id, l.loanOfficerName));
+    c.querySelector('#btn-mod-approved-amt')?.addEventListener('click', () =>
+      openModifyApprovedAmountModal(id, l.approvedPrincipal ?? l.summary?.principalDisbursed, () => document.dispatchEvent(new CustomEvent('fc:reload'))));
+    c.querySelector('#btn-approved-amt-hist')?.addEventListener('click', () => openApprovedAmountHistoryModal(id));
+    c.querySelector('#btn-mod-avail-disb')?.addEventListener('click', () =>
+      openModifyAvailableDisbursementAmountModal(id, l.summary?.availableDisbursementAmount, () => document.dispatchEvent(new CustomEvent('fc:reload'))));
     c.querySelector('#btn-mark-fraud')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Toggle fraud flag?', message: 'This flags or unflags the loan as fraudulent.', danger: true, confirmText: 'Toggle' })) return;
       try { await api.loans.markAsFraud(id, { fraud: !l.fraud }); toast('warn', 'Fraud flag toggled', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }

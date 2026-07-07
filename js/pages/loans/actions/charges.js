@@ -98,6 +98,42 @@ export async function openPayLoanChargeModal(loanId, chargeId, onSuccess) {
   });
 }
 
+export async function openEditLoanChargeModal(loanId, chargeId, onSuccess) {
+  let charge = null;
+  try { charge = await api.loans.getCharge(loanId, chargeId); } catch (e) {
+    toast('error', 'Failed to load charge', e.detail?.defaultUserMessage || e.message); return;
+  }
+  const mid = `ln-editcharge-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Edit Charge</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <div class="text-muted mb-2">${escapeHtml(charge?.name || charge?.chargeName || '—')}</div>
+          <label>Amount * <input type="number" step="0.01" id="ec-amount" class="form-control" value="${charge?.amount ?? charge?.amountOrPercentage ?? ''}" required/></label>
+          <label class="mt-2">Due date <input type="date" id="ec-due" class="form-control" value="${charge?.dueDate ? (Array.isArray(charge.dueDate) ? charge.dueDate.join('-') : charge.dueDate) : ''}"/></label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="ec-save">Save</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#ec-save').addEventListener('click', async () => {
+    const amount = parseFloat(el.querySelector('#ec-amount').value);
+    const dueDate = el.querySelector('#ec-due').value;
+    if (!isFinite(amount)) { toast('warn', 'Enter a valid amount', ''); return; }
+    const payload = { amount, dateFormat: DATE_FORMAT, locale: LOCALE };
+    if (dueDate) payload.dueDate = dueDate;
+    try {
+      await api.loans.updateCharge(loanId, chargeId, payload);
+      el.remove(); toast('success', 'Charge updated', ''); onSuccess();
+    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
 export async function openAdjustLoanChargeModal(loanId, chargeId, onSuccess) {
   const mid = `ln-adjcharge-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `

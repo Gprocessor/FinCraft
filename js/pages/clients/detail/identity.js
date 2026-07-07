@@ -3,7 +3,7 @@
 
 import { api } from '../../../api.js';
 import { confirm, toast } from '../../../ui.js';
-import { escapeHtml, fmtDate, sb } from '../../../utils.js';
+import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { can } from '../shared.js';
 
 export async function loadClientIdentifiers(c, id) {
@@ -56,6 +56,42 @@ export async function loadClientFamilyMembers(c, id) {
     listEl.querySelectorAll('[data-del-fam]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Remove family member?', danger: true, confirmText: 'Remove' })) return;
       try { await api.clients.deleteFamilyMember(id, b.dataset.delFam); toast('success', 'Removed', ''); loadClientFamilyMembers(c, id); }
+      catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+    }));
+  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
+}
+
+export async function loadClientCollateral(c, id) {
+  const listEl = c.querySelector('#cl-collateral-list'); if (!listEl) return;
+  listEl.innerHTML = '<div class="empty-state-row">Loading…</div>';
+  try {
+    const res = await api.clients.collateral(id);
+    const list = Array.isArray(res) ? res : (res?.pageItems || []);
+    listEl.innerHTML = list.length ? `
+      <table class="table">
+        <thead><tr><th>Type</th><th class="text-right">Quantity</th><th class="text-right">Total Value</th><th></th></tr></thead>
+        <tbody>${list.map(cc => {
+          const value = (cc.basePrice || cc.collateral?.basePrice || 0) * (cc.quantity || 0);
+          return `
+          <tr>
+            <td>${escapeHtml(cc.collateral?.name || cc.name || '—')}</td>
+            <td class="text-right">${fmt(cc.quantity || 0)}</td>
+            <td class="text-right">${fmt(value)}</td>
+            <td class="text-right">
+              ${can('UPDATE_CLIENTCOLLATERAL') ? `<button class="btn-mini" data-edit-coll="${cc.id}">Edit</button>` : ''}
+              ${can('DELETE_CLIENTCOLLATERAL') ? `<button class="btn-mini btn-danger" data-del-coll="${cc.id}">Remove</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>` : '<div class="empty-state-row">No collateral registered for this client</div>';
+
+    listEl.querySelectorAll('[data-edit-coll]').forEach(b => b.addEventListener('click', async () => {
+      const { openEditClientCollateralModal } = await import('../actions/identity.js');
+      openEditClientCollateralModal(id, b.dataset.editColl, () => loadClientCollateral(c, id));
+    }));
+    listEl.querySelectorAll('[data-del-coll]').forEach(b => b.addEventListener('click', async () => {
+      if (!await confirm({ title: 'Remove collateral?', danger: true, confirmText: 'Remove' })) return;
+      try { await api.clients.deleteCollateral(id, b.dataset.delColl); toast('success', 'Collateral removed', ''); loadClientCollateral(c, id); }
       catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }

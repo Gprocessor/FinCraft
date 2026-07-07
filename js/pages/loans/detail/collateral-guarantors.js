@@ -5,7 +5,7 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
-import { openAddGuarantorModal, openAddLoanCollateralModal, openAttachOriginatorModal, openEAOTransferModal } from '../actions.js';
+import { openAddGuarantorModal, openAddLoanCollateralModal, openAttachOriginatorModal, openEAOTransferModal, openEditGuarantorModal, openEditLoanCollateralModal } from '../actions.js';
 
 export async function loadLoanCollateral(c, loanId) {
   const wrap = c.querySelector('#ln-coll-wrap');
@@ -48,6 +48,7 @@ export async function loadLoanCollateral(c, loanId) {
             <td class="text-right">${fmt(col.value || col.basePrice || 0)}</td>
             <td class="text-right">${fmt(col.pctToBase ? (col.value * col.pctToBase / 100) : 0)}</td>
             <td class="text-right">
+              ${can('UPDATE_COLLATERAL') ? `<button class="btn-mini" data-edit-col="${col.id}">Edit</button>` : ''}
               ${can('DELETE_COLLATERAL') ? `<button class="btn-mini btn-danger" data-del-col="${col.id}">Remove</button>` : ''}
             </td>
           </tr>`).join('')}</tbody>
@@ -56,6 +57,8 @@ export async function loadLoanCollateral(c, loanId) {
         <i class="fa-solid fa-circle-info"></i> Collateral is drawn from the client's pre-registered collateral pool.
       </div>` : '<div class="empty-state-row">No collateral pledged for this loan</div>';
 
+    listEl.querySelectorAll('[data-edit-col]').forEach(b => b.addEventListener('click', () =>
+      openEditLoanCollateralModal(loanId, b.dataset.editCol, () => loadLoanCollateral(c, loanId))));
     listEl.querySelectorAll('[data-del-col]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Remove collateral?', danger: true, confirmText: 'Remove' })) return;
       try {
@@ -101,12 +104,15 @@ export async function loadLoanGuarantors(c, loanId) {
               <td class="text-right">${fmt(g.amount || 0)}</td>
               <td>${escapeHtml(g.mobileNumber || '—')}</td>
               <td class="text-right">
+                ${can('UPDATE_GUARANTOR') ? `<button class="btn-mini" data-edit-guar="${g.id}">Edit</button>` : ''}
                 ${can('DELETE_GUARANTOR') ? `<button class="btn-mini btn-danger" data-del-guar="${g.id}">Remove</button>` : ''}
               </td>
             </tr>`;
         }).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No guarantors on file</div>';
 
+    listEl.querySelectorAll('[data-edit-guar]').forEach(b => b.addEventListener('click', () =>
+      openEditGuarantorModal(loanId, b.dataset.editGuar, () => loadLoanGuarantors(c, loanId))));
     listEl.querySelectorAll('[data-del-guar]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Remove guarantor?', danger: true, confirmText: 'Remove' })) return;
       try {

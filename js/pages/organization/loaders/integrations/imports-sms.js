@@ -5,7 +5,7 @@ import { api } from '../../../../api.js';
 import { DATE_FORMAT, LOCALE } from '../../../../config.js';
 import { confirm as modalConfirm, toast } from '../../../../ui.js';
 import { escapeHtml, fmtDate, num, sb } from '../../../../utils.js';
-import { openSmsCampaignModal } from '../../actions.js';
+import { openEmailCampaignModal, openSmsCampaignModal } from '../../actions.js';
 import { can } from '../../shared.js';
 
 export async function loadBulkImports(c) {
@@ -192,6 +192,108 @@ export async function loadBulkImports(c) {
     }));
   } catch (e) {
     el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+  }
+}
+
+export async function loadEmailCampaigns(c) {
+  const el = c.querySelector('#og-16');
+  try {
+    const [campaignsRes, configRes] = await Promise.all([
+      api.emailCampaigns.list(),
+      api.emailConfiguration.list().catch(() => null)
+    ]);
+    const list = Array.isArray(campaignsRes) ? campaignsRes : (campaignsRes?.pageItems || []);
+    const configList = Array.isArray(configRes) ? configRes : (configRes?.pageItems || []);
+
+    el.innerHTML = `
+      <div class="section-header mb-2">
+        <div>
+          <h3>Email Campaigns</h3>
+          <span class="text-muted">${list.length} campaign${list.length !== 1 ? 's' : ''}</span>
+        </div>
+        ${can('CREATE_EMAILCAMPAIGN') ? `<button class="btn-primary" id="btn-new-email"><i class="fa-solid fa-plus"></i> New Campaign</button>` : ''}
+      </div>
+      <div class="text-muted small mb-2">
+        <i class="fa-solid fa-circle-info"></i>
+        Configure email notifications triggered by Fineract events (loan disbursal, repayment due, etc.).
+      </div>
+      ${list.length ? `
+        <table class="table">
+          <thead><tr>
+            <th>Campaign Name</th><th>Subject</th>
+            <th>Type</th><th>Recipient</th>
+            <th>Status</th><th></th>
+          </tr></thead>
+          <tbody>${list.map(cmp => `
+            <tr>
+              <td><b>${escapeHtml(cmp.campaignName || cmp.name || '—')}</b></td>
+              <td>${escapeHtml(cmp.emailSubject || '—')}</td>
+              <td>${escapeHtml(cmp.campaignType?.value || cmp.campaignType || '—')}</td>
+              <td>${escapeHtml(cmp.recipientType?.value || cmp.recipientType || '—')}</td>
+              <td>${sb(cmp.campaignStatus?.value || (cmp.isActive ? 'Active' : 'Inactive'))}</td>
+              <td class="text-right">
+                ${cmp.campaignStatus?.value !== 'Active' && can('ACTIVATE_EMAILCAMPAIGN') ? `<button class="btn-mini btn-success" data-act-email="${cmp.id}">Activate</button>` : ''}
+                ${cmp.campaignStatus?.value === 'Active' && can('CLOSE_EMAILCAMPAIGN') ? `<button class="btn-mini btn-warning" data-close-email="${cmp.id}">Close</button>` : ''}
+                ${can('UPDATE_EMAILCAMPAIGN') ? `<button class="btn-mini" data-edit-email="${cmp.id}">Edit</button>` : ''}
+                ${can('DELETE_EMAILCAMPAIGN') ? `<button class="btn-mini btn-danger" data-del-email="${cmp.id}">Delete</button>` : ''}
+              </td>
+            </tr>`).join('')}</tbody>
+        </table>` : `
+        <div class="empty-state">
+          <i class="fa-solid fa-envelope"></i>
+          <h3>No email campaigns defined</h3>
+          ${can('CREATE_EMAILCAMPAIGN') ? `<div class="text-muted mt-2">Create your first campaign to send automated email notifications.</div>` : ''}
+        </div>`}
+
+      <h3 class="mt-4">Email Configuration (SMTP)</h3>
+      <div class="text-muted small mb-2">
+        <i class="fa-solid fa-circle-info"></i>
+        Server settings used to send these emails. Distinct from the generic External Services → SMTP config.
+      </div>
+      ${configList.length ? `
+        <table class="table">
+          <tbody>${configList.map(cfg => `
+            <tr><td>${escapeHtml(cfg.name || '—')}</td><td>${escapeHtml(cfg.value ?? '—')}</td></tr>`).join('')}</tbody>
+        </table>` : '<div class="empty-state-row">No email configuration returned by this Fineract instance</div>'}`;
+
+    el.querySelector('#btn-new-email')?.addEventListener('click', () =>
+      openEmailCampaignModal(null, () => loadEmailCampaigns(c)));
+
+    el.querySelectorAll('[data-edit-email]').forEach(b => b.addEventListener('click', async () => {
+      try {
+        const existing = await api.emailCampaigns.get(b.dataset.editEmail);
+        openEmailCampaignModal(existing, () => loadEmailCampaigns(c));
+      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
+    }));
+
+    el.querySelectorAll('[data-act-email]').forEach(b => b.addEventListener('click', async () => {
+      if (!await modalConfirm({ title: 'Activate campaign?', message: 'Notifications will start sending immediately.', confirmText: 'Activate' })) return;
+      try {
+        await api.emailCampaigns.activate(b.dataset.actEmail);
+        toast('success', 'Campaign activated', '');
+        loadEmailCampaigns(c);
+      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+    }));
+
+    el.querySelectorAll('[data-close-email]').forEach(b => b.addEventListener('click', async () => {
+      if (!await modalConfirm({ title: 'Close campaign?', message: 'No further notifications will be sent.', danger: true, confirmText: 'Close' })) return;
+      try {
+        await api.emailCampaigns.close(b.dataset.closeEmail);
+        toast('success', 'Campaign closed', '');
+        loadEmailCampaigns(c);
+      } catch (e) { toast('error', 'Close failed', e.detail?.defaultUserMessage || e.message); }
+    }));
+
+    el.querySelectorAll('[data-del-email]').forEach(b => b.addEventListener('click', async () => {
+      if (!await modalConfirm({ title: 'Delete campaign?', message: 'This permanently removes the campaign and its history.', danger: true, confirmText: 'Delete' })) return;
+      try {
+        await api.emailCampaigns.delete(b.dataset.delEmail);
+        toast('success', 'Campaign deleted', '');
+        loadEmailCampaigns(c);
+      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+    }));
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state-row text-muted">Email campaigns not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
   }
 }
 

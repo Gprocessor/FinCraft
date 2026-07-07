@@ -253,5 +253,4 @@ enabled server-side; building UI against endpoints most deployments don't expose
 use of effort right now.
 
 ---
-
 Built by **Processor** Power Platform & MIS Division

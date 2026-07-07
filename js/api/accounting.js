@@ -4,6 +4,9 @@
 export function makeJournalEntriesAPI(self) {
   return {
     list:    (params)  => self._g('/journalentries', params),
+    get:     (id)       => self._g(`/journalentries/${id}`),
+    provisioning: (params) => self._g('/journalentries/provisioning', params),
+    openingBalances: (params) => self._g('/journalentries/openingbalance', params),
     create:  (body)    => self._p('/journalentries', body),
     reverse: (txId, b) => self._p(`/journalentries/${txId}?command=reverse`, b || {})
   };
@@ -34,6 +37,7 @@ export function makeAccountingRulesAPI(self) {
   return {
     list: () => self._g('/accountingrules'),
     get: (id) => self._g(`/accountingrules/${id}`),
+    template: () => self._g('/accountingrules/template'),
     create: (b) => self._p('/accountingrules', b),
     update: (id, b) => self._u(`/accountingrules/${id}`, b),
     delete: (id) => self._d(`/accountingrules/${id}`)
@@ -44,6 +48,8 @@ export function makeProvisioningAPI(self) {
   return {
     entries:        ()     => self._g('/provisioningentries'),
     criteria:       ()     => self._g('/provisioningcriteria'),
+    criteriaTemplate: ()   => self._g('/provisioningcriteria/template'),
+    getCriteria:    (id)   => self._g(`/provisioningcriteria/${id}`),
     createCriteria: (b)    => self._p('/provisioningcriteria', b),
     updateCriteria: (id,b) => self._u(`/provisioningcriteria/${id}`, b),
     deleteCriteria: (id)   => self._d(`/provisioningcriteria/${id}`),
@@ -68,6 +74,7 @@ export function makeFinancialActivityAccountsAPI(self) {
   return {
     list:   ()     => self._g('/financialactivityaccounts'),
     get:    (id)   => self._g(`/financialactivityaccounts/${id}`),
+    template: ()   => self._g('/financialactivityaccounts/template'),
     create: (body) => self._p('/financialactivityaccounts', body),
     update: (id, b) => self._u(`/financialactivityaccounts/${id}`, b),
     delete: (id)   => self._d(`/financialactivityaccounts/${id}`)

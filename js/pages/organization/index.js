@@ -6,7 +6,7 @@
    via c.querySelector('#og-N') — kept as-is so none of the loaders needed changes. */
 
 import { api } from '../../api.js';
-import { loadAdhocQueries, loadBulkImports, loadCurrencies, loadEntityDatatableChecks, loadExternalAssetOwners, loadFunds, loadGroupHierarchy, loadHolidays, loadLoanOriginators, loadOffices, loadPaymentTypes, loadSmsCampaigns, loadStaff, loadStandingInstructions, loadTellers, loadWorkingDays } from './loaders.js';
+import { loadAdhocQueries, loadBulkImports, loadCurrencies, loadEmailCampaigns, loadEntityDatatableChecks, loadExternalAssetOwners, loadFunds, loadGroupHierarchy, loadHolidays, loadLoanOriginators, loadOffices, loadPaymentTypes, loadSmsCampaigns, loadStaff, loadStandingInstructions, loadTellers, loadWorkingDays } from './loaders.js';
 import { renderSectionHub } from '../../ui/section-hub.js';
 
 // Offices and Holidays both need the office list (previously fetched once up-front and
@@ -36,7 +36,8 @@ const SECTIONS = [
   { key: 'dt-checks',  panelId: 'og-12', label: 'Entity Datatable Checks',  icon: 'fa-table-list',         desc: 'Required datatable validations',     load: loadEntityDatatableChecks },
   { key: 'bulk',       panelId: 'og-13', label: 'Bulk Imports',             icon: 'fa-file-arrow-up',      desc: 'Spreadsheet bulk data import',       load: loadBulkImports },
   { key: 'sms',        panelId: 'og-14', label: 'SMS Campaigns',            icon: 'fa-comment-sms',        desc: 'Outbound SMS campaign management',   load: loadSmsCampaigns },
-  { key: 'grouplevels', panelId: 'og-15', label: 'Group Hierarchy Levels',  icon: 'fa-sitemap',            desc: 'How Groups & Centers nest (read-only)', load: loadGroupHierarchy }
+  { key: 'grouplevels', panelId: 'og-15', label: 'Group Hierarchy Levels',  icon: 'fa-sitemap',            desc: 'How Groups & Centers nest (read-only)', load: loadGroupHierarchy },
+  { key: 'email',      panelId: 'og-16', label: 'Email Campaigns',          icon: 'fa-envelope',           desc: 'Outbound email campaigns & SMTP config', load: loadEmailCampaigns }
 ];
 
 export async function render(c, params = {}) {

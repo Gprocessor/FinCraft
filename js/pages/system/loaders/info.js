@@ -3,6 +3,8 @@
 
 import { api } from '../../../api.js';
 import { escapeHtml, fmtDate, num, sb } from '../../../utils.js';
+import { can } from '../shared.js';
+import { toast } from '../../../ui.js';
 import { extractMCEntityGroup } from '../actions.js';
 import { store } from '../../../store.js';
 
@@ -16,6 +18,8 @@ export async function loadSystemInfo(c) {
   let serverVersion = '—';
   let buildInfo = '—';
   let cacheInfo = '—';
+  let cacheOptions = [];
+  let currentCacheType = null;
 
   try {
     // Some Fineract versions expose /configurations or /info — try gracefully
@@ -33,6 +37,11 @@ export async function loadSystemInfo(c) {
     if (cacheRes) {
       const cacheArr = Array.isArray(cacheRes) ? cacheRes : (cacheRes?.cacheTypes || []);
       if (cacheArr.length) {
+        // Response shape for GET /caches isn't detailed in the API reference beyond
+        // the path — rendered defensively rather than assuming one fixed schema.
+        cacheOptions = cacheArr;
+        const active = cacheArr.find(c => c.enabled || c.selected || c.active) || cacheArr[0];
+        currentCacheType = active?.value || active?.name || active;
         cacheInfo = cacheArr.map(c => escapeHtml(c.value || c.name || c)).join(', ');
       }
     }
@@ -65,7 +74,20 @@ export async function loadSystemInfo(c) {
           <dt>UI Application</dt><dd><b>FinCraft</b></dd>
           <dt>UI Version</dt><dd>1.0.0</dd>
           <dt>Fineract Server</dt><dd>${escapeHtml(serverVersion)}</dd>
-          <dt>Cache Strategy</dt><dd>${cacheInfo}</dd>
+          <dt>Cache Strategy</dt>
+          <dd>
+            ${cacheInfo}
+            ${can('UPDATE_CACHE') && cacheOptions.length > 1 ? `
+              <div class="mt-1">
+                <select id="cache-switch-select" class="form-control form-control-sm" style="display:inline-block;width:auto">
+                  ${cacheOptions.map(c => {
+                    const v = c.value || c.name || c;
+                    return `<option value="${escapeHtml(String(v))}" ${v === currentCacheType ? 'selected' : ''}>${escapeHtml(String(v))}</option>`;
+                  }).join('')}
+                </select>
+                <button class="btn-mini" id="cache-switch-btn">Switch</button>
+              </div>` : ''}
+          </dd>
           <dt>Build Date</dt><dd>${fmtDate(new Date().toISOString()) || '—'}</dd>
         </dl>
       </div>
@@ -129,5 +151,14 @@ export async function loadSystemInfo(c) {
     healthEl.innerHTML = '<span class="text-error">●</span> ' + escapeHtml(e.message || 'Unknown error');
     rtEl.textContent = '—';
     timeEl.textContent = '—';
+  });
+
+  el.querySelector('#cache-switch-btn')?.addEventListener('click', async () => {
+    const cacheType = el.querySelector('#cache-switch-select').value;
+    try {
+      await api.configurations.switchCache({ cacheType });
+      toast('success', 'Cache switched', cacheType);
+      loadSystemInfo(c);
+    } catch (e) { toast('error', 'Switch failed', e.detail?.defaultUserMessage || e.message); }
   });
 }

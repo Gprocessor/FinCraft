@@ -4,7 +4,7 @@
 import { api } from '../../../api.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
-import { openAttendanceModal, openPayChargeModal, openScheduleMeetingModal } from '../actions.js';
+import { openAttendanceModal, openScheduleMeetingModal } from '../actions.js';
 import { can } from '../shared.js';
 
 export async function loadMeetings(c, id) {
@@ -75,41 +75,18 @@ export async function loadMeetings(c, id) {
 
 export async function loadCharges(c, id) {
   const wrap = c.querySelector('#grp-charges-list');
-  wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
-  try {
-    const res = await api.groups.charges(id);
-    const list = Array.isArray(res) ? res : (res?.pageItems || []);
-    wrap.innerHTML = list.length ? `
-      <table class="table">
-        <thead><tr><th>Charge</th><th>Due</th><th>Amount</th><th>Outstanding</th><th>Status</th><th></th></tr></thead>
-        <tbody>${list.map(ch => `
-          <tr>
-            <td>${escapeHtml(ch.name || '—')}</td>
-            <td>${fmtDate(ch.dueDate)}</td>
-            <td class="text-right">${fmt(ch.amount ?? 0)}</td>
-            <td class="text-right">${fmt(ch.amountOutstanding ?? 0)}</td>
-            <td>${sb(ch.isPaid ? 'Paid' : ch.isWaived ? 'Waived' : 'Outstanding')}</td>
-            <td class="text-right">
-              ${!ch.isPaid && !ch.isWaived && can('PAY_GROUPCHARGE')   ? `<button class="btn-mini btn-success" data-pay-charge="${ch.id}">Pay</button>` : ''}
-              ${!ch.isPaid && !ch.isWaived && can('WAIVE_GROUPCHARGE') ? `<button class="btn-mini btn-warning" data-waive-charge="${ch.id}">Waive</button>` : ''}
-              ${can('DELETE_GROUPCHARGE') ? `<button class="btn-mini btn-danger" data-del-charge="${ch.id}">Delete</button>` : ''}
-            </td>
-          </tr>`).join('')}</tbody>
-      </table>` : '<div class="empty-state-row">No charges applied</div>';
-
-    wrap.querySelectorAll('[data-pay-charge]').forEach(b => b.addEventListener('click', () =>
-      openPayChargeModal(id, b.dataset.payCharge, () => loadCharges(c, id))));
-    wrap.querySelectorAll('[data-waive-charge]').forEach(b => b.addEventListener('click', async () => {
-      if (!await confirm({ title: 'Waive charge?', confirmText: 'Waive' })) return;
-      try { await api.groups.waiveCharge(id, b.dataset.waiveCharge); toast('success', 'Waived', ''); loadCharges(c, id); }
-      catch (e) { toast('error', 'Waive failed', e.detail?.defaultUserMessage || e.message); }
-    }));
-    wrap.querySelectorAll('[data-del-charge]').forEach(b => b.addEventListener('click', async () => {
-      if (!await confirm({ title: 'Delete charge?', danger: true, confirmText: 'Delete' })) return;
-      try { await api.groups.deleteCharge(id, b.dataset.delCharge); toast('success', 'Deleted', ''); loadCharges(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
-    }));
-  } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
+  // NOTE: Fineract's GroupsApiResource has no /charges sub-path at all (only
+  // template, {groupId}, command/unassign_staff, accounts, downloadtemplate,
+  // uploadtemplate, glimaccounts, gsimaccounts). Unlike clients, there is no
+  // GroupChargesApiResource. This tab always 404'd — show a clear notice
+  // instead of a silently-broken table.
+  wrap.innerHTML = `
+    <div class="msg-banner b-warning">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      Fineract has no group-level charges API. If you need charges tied to a group,
+      apply them to the individual member clients instead (Client Charges), which is
+      fully supported.
+    </div>`;
 }
 
 export async function loadStandingInstructions(c, id, group) {

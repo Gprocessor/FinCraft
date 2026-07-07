@@ -28,7 +28,7 @@ export function makeRolesAPI(self) {
 
 export function makePermissionsAPI(self) {
   return {
-    list: () => self._g('/permissions'),
+    list: (makerCheckerable) => self._g('/permissions', makerCheckerable ? { makerCheckerable: true } : undefined),
     update: (b) => self._u('/permissions', b)
   };
 }
@@ -39,8 +39,11 @@ export function makeJobsAPI(self) {
     get:     (id)      => self._g(`/jobs/${id}`),
     update:  (id, b)   => self._u(`/jobs/${id}`, b),
     runJob:  (id)      => self._p(`/jobs/${id}?command=executeJob`, {}),
-    history: (id, params) => self._g(`/jobs/${id}/runhistory`, params),
-    schedule:(id, b)   => self._u(`/jobs/${id}/schedulername`, b)
+    history: (id, params) => self._g(`/jobs/${id}/runhistory`, params)
+    // NOTE: there is no PUT /jobs/{id}/schedulername endpoint in Fineract —
+    // schedulerName is an internal Quartz-scheduler detail, never exposed
+    // over HTTP. A `schedule()` method calling that path used to live here;
+    // it was removed since it always 404'd and nothing in the UI called it.
   };
 }
 
@@ -54,30 +57,37 @@ export function makeAuditsAPI(self) {
 
 export function makeMakercheckerAPI(self) {
   return {
-    list:    (params) => self._g('/makercheckertasks', params),
-    template:()       => self._g('/makercheckertasks/searchtemplate'),
-    approve: (id)     => self._p(`/makercheckertasks/${id}?command=approve`, {}),
-    reject:  (id)     => self._p(`/makercheckertasks/${id}?command=reject`, {}),
-    delete:  (id)     => self._p(`/makercheckertasks/${id}?command=delete`, {})
+    // Real Fineract resource is /v1/makercheckers (FinCraft was calling the
+    // non-existent /makercheckertasks). Delete uses a real HTTP DELETE, not
+    // POST ?command=delete.
+    list:    (params) => self._g('/makercheckers', params),
+    template:()       => self._g('/makercheckers/searchtemplate'),
+    approve: (id)     => self._p(`/makercheckers/${id}?command=approve`, {}),
+    reject:  (id)     => self._p(`/makercheckers/${id}?command=reject`, {}),
+    delete:  (id)     => self._d(`/makercheckers/${id}`)
   };
 }
 
-export function makeMakerCheckerTasksAPI(self) {
-  return {
-    list:   () => self._g('/makercheckerpermissions'),
-    update: (body) => self._u('/makercheckerpermissions', body)
-  };
-}
+// The maker-checker permissions toggle screen duplicated makePermissionsAPI
+// with a fabricated /makercheckerpermissions endpoint that doesn't exist.
+// The real capability is the existing PermissionsApiResource, filtered by
+// the makerCheckerable query param — use api.permissions.list(true) /
+// api.permissions.update() instead of this API going forward.
 
 export function makeConfigurationsAPI(self) {
   return {
     list:        ()         => self._g('/configurations'),
-    get:         (name)     => self._g('/configurations', { name }),
+    // NOTE: previously sent `name` as a query param to the list endpoint
+    // (/configurations?name=X), which is not a real Fineract route. Corrected
+    // to the documented /configurations/name/{name} path.
+    get:         (name)     => self._g(`/configurations/name/${name}`),
     getById:     (id)       => self._g(`/configurations/${id}`),
     update:      (id, body) => self._u(`/configurations/${id}`, body),
+    updateByName:(name, body) => self._u(`/configurations/name/${name}`, body),
     cache:       ()         => self._g('/configurations/cache'),
     updateCache: (b)        => self._u('/configurations/cache', b),
     cacheTypes:  ()         => self._g('/caches'),
+    switchCache: (body)     => self._u('/caches', body),
     globalConfig: {
       list:   ()           => self._g('/configurations'),
       update: (id, body)   => self._u(`/configurations/${id}`, body)
@@ -102,7 +112,15 @@ export function makeEntityToEntityMappingsAPI(self) {
   return {
     list:     ()                  => self._g('/entitytoentitymapping'),
     get:      (mappingTypeId)     => self._g(`/entitytoentitymapping/${mappingTypeId}`),
-    update:   (mappingTypeId, b)  => self._u(`/entitytoentitymapping/${mappingTypeId}`, b)
+    // NOTE: the API reference gives no summary text or field names for any of
+    // entitytoentitymapping's endpoints beyond the bare paths (mapId/relId/
+    // fromId/toId are undocumented). These are added as thin, correctly-routed
+    // pass-throughs only — no UI has been built against them since there's no
+    // safe basis for guessing the request/response shape.
+    getMapping: (mapId, fromId, toId) => self._g(`/entitytoentitymapping/${mapId}/${fromId}/${toId}`),
+    create:     (relId, body)     => self._p(`/entitytoentitymapping/${relId}`, body),
+    update:   (mappingTypeId, b)  => self._u(`/entitytoentitymapping/${mappingTypeId}`, b),
+    delete:     (mapId)           => self._d(`/entitytoentitymapping/${mapId}`)
   };
 }
 

@@ -259,6 +259,10 @@ export async function openSmsCampaignModal(existing, onSuccess) {
           <label class="full">Message template *
             <textarea id="sms-message" class="form-control" rows="4" required placeholder="Hi {{client.displayName}}, your loan #{{loan.accountNo}} payment of {{loan.dueAmount}} is due on {{loan.dueDate}}.">${escapeHtml(existing?.message || existing?.smsMessage || '')}</textarea>
           </label>
+          <div class="full">
+            <button class="btn-secondary btn-sm" id="sms-preview-btn" type="button"><i class="fa-solid fa-eye"></i> Preview</button>
+            <div id="sms-preview-out" class="mt-2"></div>
+          </div>
         </div>
         <div class="msg-banner b-info mt-2">
           <i class="fa-solid fa-circle-info"></i>
@@ -273,6 +277,19 @@ export async function openSmsCampaignModal(existing, onSuccess) {
   document.getElementById('modalRoot').appendChild(modalEl);
 
   modalEl.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => modalEl.remove()));
+  modalEl.querySelector('#sms-preview-btn').addEventListener('click', async () => {
+    const message = modalEl.querySelector('#sms-message').value.trim();
+    const out = modalEl.querySelector('#sms-preview-out');
+    if (!message) { toast('warn', 'Enter a message template first', ''); return; }
+    out.innerHTML = '<div class="empty-state-row">Loading preview…</div>';
+    try {
+      const res = await api.smsCampaigns.preview({ smsMessage: message, message });
+      const previewText = res?.message || res?.smsMessage || (typeof res === 'string' ? res : JSON.stringify(res));
+      out.innerHTML = `<div class="msg-banner b-info small">${escapeHtml(previewText)}</div>`;
+    } catch (e) {
+      out.innerHTML = `<div class="text-error small">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    }
+  });
   modalEl.querySelector('#sms-save').addEventListener('click', async () => {
     const campaignName = modalEl.querySelector('#sms-name').value.trim();
     const campaignType = parseInt(modalEl.querySelector('#sms-camp-type').value);
@@ -299,6 +316,111 @@ export async function openSmsCampaignModal(existing, onSuccess) {
     try {
       if (isEdit) await api.smsCampaigns.update(existing.id, payload);
       else        await api.smsCampaigns.create(payload);
+      modalEl.remove();
+      toast('success', isEdit ? 'Campaign updated' : 'Campaign created', campaignName);
+      onSuccess();
+    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
+export async function openEmailCampaignModal(existing, onSuccess) {
+  const isEdit = !!existing?.id;
+  let tpl = {};
+  try { tpl = await api.emailCampaigns.template(); } catch {}
+
+  const campaignTypes = tpl.campaignTypeOptions || [
+    { id: 1, value: 'Direct' },
+    { id: 2, value: 'Schedule' },
+    { id: 3, value: 'Triggered' }
+  ];
+  const recipientTypes = tpl.businessRuleOptions || tpl.recipientOptions || [];
+
+  const mid = 'email-camp-' + Date.now();
+  const modalEl = document.createElement('div');
+  modalEl.id = mid;
+  modalEl.className = 'modal-overlay open';
+  modalEl.setAttribute('role', 'dialog');
+  modalEl.setAttribute('aria-modal', 'true');
+  modalEl.innerHTML = `
+    <div class="modal modal-lg">
+      <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} Email Campaign</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <label class="full">Campaign name * <input id="ec-name" class="form-control" value="${escapeHtml(existing?.campaignName || existing?.name || '')}" required/></label>
+          <label>Campaign type *
+            <select id="ec-camp-type" class="form-control" required>
+              <option value="">Select type…</option>
+              ${campaignTypes.map(t => `<option value="${t.id}" ${existing?.campaignType?.id === t.id ? 'selected' : ''}>${escapeHtml(t.value)}</option>`).join('')}
+            </select>
+          </label>
+          <label>Recipient business rule
+            <select id="ec-recip" class="form-control">
+              <option value="">— Select —</option>
+              ${recipientTypes.map(r => `<option value="${r.reportId || r.id}" ${existing?.businessRuleId === (r.reportId || r.id) ? 'selected' : ''}>${escapeHtml(r.reportName || r.value || r.name)}</option>`).join('')}
+            </select>
+          </label>
+          <label>Recurrence (cron-style)
+            <input id="ec-recurrence" class="form-control" placeholder="e.g. 0 9 * * 1" value="${escapeHtml(existing?.recurrence || '')}"/>
+          </label>
+          <label class="full">Email subject * <input id="ec-subject" class="form-control" value="${escapeHtml(existing?.emailSubject || '')}" required/></label>
+          <label class="full">Message body *
+            <textarea id="ec-message" class="form-control" rows="6" required placeholder="Dear {{client.displayName}}, your loan #{{loan.accountNo}} payment of {{loan.dueAmount}} is due on {{loan.dueDate}}.">${escapeHtml(existing?.message || existing?.emailMessage || '')}</textarea>
+          </label>
+          <div class="full">
+            <button class="btn-secondary btn-sm" id="ec-preview-btn" type="button"><i class="fa-solid fa-eye"></i> Preview</button>
+            <div id="ec-preview-out" class="mt-2"></div>
+          </div>
+        </div>
+        <div class="msg-banner b-info mt-2">
+          <i class="fa-solid fa-circle-info"></i>
+          Use <code>{{entity.field}}</code> placeholders for dynamic content (e.g. <code>{{client.displayName}}</code>, <code>{{loan.accountNo}}</code>).
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" data-close-modal>Cancel</button>
+        <button class="btn-primary" id="ec-save">${isEdit ? 'Update' : 'Create'}</button>
+      </div>
+    </div>`;
+  document.getElementById('modalRoot').appendChild(modalEl);
+
+  modalEl.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => modalEl.remove()));
+  modalEl.querySelector('#ec-preview-btn').addEventListener('click', async () => {
+    const message = modalEl.querySelector('#ec-message').value.trim();
+    const out = modalEl.querySelector('#ec-preview-out');
+    if (!message) { toast('warn', 'Enter a message body first', ''); return; }
+    out.innerHTML = '<div class="empty-state-row">Loading preview…</div>';
+    try {
+      const res = await api.emailCampaigns.preview({ message, emailMessage: message });
+      const previewText = res?.message || res?.emailMessage || (typeof res === 'string' ? res : JSON.stringify(res));
+      out.innerHTML = `<div class="msg-banner b-info small">${escapeHtml(previewText)}</div>`;
+    } catch (e) {
+      out.innerHTML = `<div class="text-error small">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    }
+  });
+  modalEl.querySelector('#ec-save').addEventListener('click', async () => {
+    const campaignName = modalEl.querySelector('#ec-name').value.trim();
+    const campaignType = parseInt(modalEl.querySelector('#ec-camp-type').value);
+    const emailSubject = modalEl.querySelector('#ec-subject').value.trim();
+    const message = modalEl.querySelector('#ec-message').value.trim();
+
+    if (!campaignName || !campaignType || !emailSubject || !message) {
+      toast('warn', 'Fill required fields', '');
+      return;
+    }
+
+    const payload = {
+      campaignName, campaignType,
+      emailSubject, message,
+      locale: LOCALE, dateFormat: DATE_FORMAT
+    };
+    const recipId = parseInt(modalEl.querySelector('#ec-recip').value);
+    if (recipId) payload.businessRuleId = recipId;
+    const recurrence = modalEl.querySelector('#ec-recurrence').value.trim();
+    if (recurrence) payload.recurrence = recurrence;
+
+    try {
+      if (isEdit) await api.emailCampaigns.update(existing.id, payload);
+      else        await api.emailCampaigns.create(payload);
       modalEl.remove();
       toast('success', isEdit ? 'Campaign updated' : 'Campaign created', campaignName);
       onSuccess();
