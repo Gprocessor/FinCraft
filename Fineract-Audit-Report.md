@@ -123,5 +123,18 @@ The assessment is based on repository inspection and fresh execution evidence:
 ## File-by-file conclusion
 Overall, the implementation is strongest in core business and administration files such as authentication, the API core, loans, savings, accounting, and organization management. The areas that remain more version-dependent are the integration and reporting files, where behavior may vary by Fineract server release.
 
+## Latest audit update (2026-07-08)
+Fresh verification was run against the current repository state.
+
+- Test result: 2 passed, 1 failed.
+- Passing areas: module-integrity and utils suites.
+- Failing area: the business-logic suite exposed a real regression in the Checker Inbox route permission logic.
+
+### Current issue found
+- [js/router.js](js/router.js) — The Checker Inbox route is still configured with a single permission value rather than an any-of array of CHECKER_* permissions. This causes users who have alternate checker permissions such as CHECKER_REJECT to be denied access, which is exactly the failure captured by the current business-logic test.
+
+### Current assessment
+The core Fineract-facing implementation remains strong, but the latest update introduced a clear regression in route access control. The application still demonstrates broad alignment with Apache Fineract for core workflows, but the permission gate for the Checker Inbox needs correction before the audit can be considered fully green.
+
 ## Bottom line
 The application is solidly aligned with Apache Fineract at the file level for core workflows. It is best understood as a capability-aware Fineract web client rather than a full reference-app clone, and the remaining gaps are mostly in broader enterprise module coverage rather than foundational functionality.
