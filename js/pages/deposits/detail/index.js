@@ -82,7 +82,7 @@ export async function renderDetail(c, apiGroup, id, initialTab) {
           <button class="tab" data-deptab="transactions">Transactions</button>
           <button class="tab" data-deptab="charges">Charges</button>
           ${canPremature ? `<button class="tab" data-deptab="calculator">Closure Calculator</button>` : ''}
-          ${can('READ_NOTE') ? `<button class="tab" data-deptab="notes">Notes</button>` : ''}
+          ${can('READ_SAVINGNOTE') ? `<button class="tab" data-deptab="notes">Notes</button>` : ''}
           ${can('READ_DOCUMENT') ? `<button class="tab" data-deptab="documents">Documents</button>` : ''}
         </div>
 

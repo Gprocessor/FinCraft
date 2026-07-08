@@ -56,8 +56,8 @@ export async function loadCOB(c) {
     const cfgs = cfgRes.status === 'fulfilled' ? cfgRes.value : null;
     const cfgList = Array.isArray(cfgs) ? cfgs : (cfgs?.businessSteps || []);
 
-    const canCatchUp = can('CATCHUP_LOAN_COB') || can('EXECUTE_JOB');
-    const canSetDate = can('UPDATE_BUSINESSDATE');
+    const canCatchUp = can('EXECUTEJOB_SCHEDULER'); // LoanCOBCatchUpApiResource has no documented permission requirement in Fineract source at all
+    const canSetDate = can('UPDATE_BUSINESS_DATE');
 
     const dateDisplay = date
       ? escapeHtml(String(date.date || date.businessDate || JSON.stringify(date)))
@@ -220,7 +220,7 @@ export async function loadExternalEvents(c) {
       ? (Array.isArray(configRes.value) ? configRes.value : (configRes.value?.externalEventConfiguration || []))
       : [];
 
-    const canEdit = can('UPDATE_EXTERNALEVENT_CONFIGURATION');
+    const canEdit = can('UPDATE_EXTERNAL_EVENT_CONFIGURATION');
 
     el.innerHTML = `
       <div class="section-header mb-2">

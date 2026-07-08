@@ -144,7 +144,7 @@ export async function loadTellers(c) {
         body.innerHTML = `
           <div class="section-header mb-2">
             <b>Cashiers — ${escapeHtml(b.dataset.tellerName)}</b>
-            ${can('ALLOCATE_CASHIERS_TELLER') ? `<button class="btn-secondary btn-sm" data-alloc-teller="${tid}"><i class="fa-solid fa-plus"></i> Allocate</button>` : ''}
+            ${(can('CREATE_TELLER') || can('ALLOCATECASHIER_TELLER')) ? `<button class="btn-secondary btn-sm" data-alloc-teller="${tid}"><i class="fa-solid fa-plus"></i> Allocate</button>` : ''}
           </div>
           ${clist.length ? `
             <table class="table">
@@ -156,11 +156,11 @@ export async function loadTellers(c) {
                   <td>${fmtDate(cx.endDate) || '—'}</td>
                   <td>${escapeHtml(cx.type || '—')}</td>
                   <td class="text-right">
-                    ${can('ALLOCATE_CASHIERS_TELLER') ? `<button class="btn-mini" data-cashin-teller="${tid}" data-cashin-cashier="${cx.id}" data-cashin-name="${escapeHtml(cx.staffName || cx.name || '')}">Cash In</button>` : ''}
-                    ${can('SETTLE_CASHIERS_TELLER') ? `<button class="btn-mini" data-settle-teller="${tid}" data-settle-cashier="${cx.id}">Settle</button>` : ''}
+                    ${(can('CREATE_TELLER') || can('ALLOCATECASHTOCASHIER_TELLER')) ? `<button class="btn-mini" data-cashin-teller="${tid}" data-cashin-cashier="${cx.id}" data-cashin-name="${escapeHtml(cx.staffName || cx.name || '')}">Cash In</button>` : ''}
+                    ${(can('CREATE_TELLER') || can('SETTLECASHFROMCASHIER_TELLER')) ? `<button class="btn-mini" data-settle-teller="${tid}" data-settle-cashier="${cx.id}">Settle</button>` : ''}
                     <button class="btn-mini" data-txn-teller="${tid}" data-txn-cashier="${cx.id}">Transactions</button>
-                    ${can('UPDATE_CASHIERS_TELLER') ? `<button class="btn-mini" data-edit-teller-c="${tid}" data-edit-cashier="${cx.id}">Edit</button>` : ''}
-                    ${can('DELETE_CASHIERS_TELLER') ? `<button class="btn-mini btn-danger" data-del-teller-c="${tid}" data-del-cashier="${cx.id}">Remove</button>` : ''}
+                    ${(can('UPDATE_TELLER') || can('UPDATECASHIERALLOCATION_TELLER')) ? `<button class="btn-mini" data-edit-teller-c="${tid}" data-edit-cashier="${cx.id}">Edit</button>` : ''}
+                    ${(can('DELETE_TELLER') || can('DELETECASHIERALLOCATION_TELLER')) ? `<button class="btn-mini btn-danger" data-del-teller-c="${tid}" data-del-cashier="${cx.id}">Remove</button>` : ''}
                   </td>
                 </tr>`).join('')}</tbody>
             </table>` : '<div class="empty-state-row">No cashiers assigned</div>'}`;

@@ -17,7 +17,7 @@ export async function loadTenantOidc(c) {
   const el = c.querySelector('#sy-15');
   const auth = store.get('auth') || {};
   const tenantId = auth.tenantId || 'default';
-  const canEdit = can('UPDATE_OIDC_CONFIGURATION') || can('EDIT_TENANT_OIDC') || can('ALL_FUNCTIONS');
+  const canEdit = can('UPDATE_ROLE') || can('ALL_FUNCTIONS'); // TenantOidcConfigApiResource PUT is gated by UPDATE_ROLE per source
 
   el.innerHTML = '<div class="empty-state-row">Loading OIDC configuration…</div>';
 

@@ -27,9 +27,9 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     const canReject     = status === 'Pending'   && can('REJECT_CLIENT');
     const canWithdraw   = status === 'Pending'   && can('WITHDRAW_CLIENT');
     const canTransfer   = status === 'Active'    && can('PROPOSETRANSFER_CLIENT');
-    const canUndoTransfer = (cl.transferToOfficeId || status === 'Transfer in progress') && can('UNDOTRANSFER_CLIENT');
+    const canUndoTransfer = (cl.transferToOfficeId || status === 'Transfer in progress') && can('WITHDRAWTRANSFER_CLIENT');
     const canEdit       = can('UPDATE_CLIENT');
-    const canAssign     = can('UPDATECLIENTSAVINGACCOUNT_CHECKER') || can('ASSIGN_STAFF_CLIENT') || can('UPDATE_CLIENT');
+    const canAssign     = can('UPDATESAVINGSACCOUNT_CLIENT') || can('ASSIGNSTAFF_CLIENT') || can('UPDATE_CLIENT');
     const canMarkFraud  = can('UPDATE_CLIENT');
 
     c.innerHTML = `
@@ -64,12 +64,12 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           ${can('READ_CLIENTCHARGE')        ? `<button class="tab" data-cltab="charges">Charges</button>` : ''}
           ${can('READ_CLIENT')              ? `<button class="tab" data-cltab="transactions">Transactions</button>` : ''}
           ${can('READ_CLIENTIDENTIFIER')    ? `<button class="tab" data-cltab="identifiers">Identifiers</button>` : ''}
-          ${can('READ_CLIENTFAMILYMEMBER')  ? `<button class="tab" data-cltab="family">Family</button>` : ''}
-          ${can('READ_CLIENTADDRESS')       ? `<button class="tab" data-cltab="address">Address</button>` : ''}
-          ${can('READ_CLIENTCOLLATERAL')    ? `<button class="tab" data-cltab="collateral">Collateral</button>` : ''}
-          ${can('READ_STANDINGINSTRUCTION') ? `<button class="tab" data-cltab="si">Standing Instructions</button>` : ''}
+          ${can('READ_CLIENT')              ? `<button class="tab" data-cltab="family">Family</button>` : ''}
+          ${can('READ_CLIENT')              ? `<button class="tab" data-cltab="address">Address</button>` : ''}
+          <button class="tab" data-cltab="collateral">Collateral</button>
+          ${can('READ_ACCOUNTTRANSFER')     ? `<button class="tab" data-cltab="si">Standing Instructions</button>` : ''}
           ${can('READ_DOCUMENT')            ? `<button class="tab" data-cltab="documents">Documents</button>` : ''}
-          ${can('READ_NOTE')                ? `<button class="tab" data-cltab="notes">Notes</button>` : ''}
+          ${can('READ_CLIENTNOTE')          ? `<button class="tab" data-cltab="notes">Notes</button>` : ''}
         </div>
 
         <!-- Overview -->
@@ -135,7 +135,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         <div class="tab-panel" data-clpanel="family" hidden>
           <div class="section-header">
             <h3>Family Members</h3>
-            ${can('CREATE_CLIENTFAMILYMEMBER') ? `<button class="btn-primary btn-sm" id="btn-add-family"><i class="fa-solid fa-plus"></i> Add Member</button>` : ''}
+            ${can('CREATE_CLIENT') ? `<button class="btn-primary btn-sm" id="btn-add-family"><i class="fa-solid fa-plus"></i> Add Member</button>` : ''}
           </div>
           <div id="cl-family-list"><div class="empty-state-row">Loading…</div></div>
         </div>
@@ -144,7 +144,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         <div class="tab-panel" data-clpanel="address" hidden>
           <div class="section-header">
             <h3>Addresses</h3>
-            ${can('CREATE_CLIENTADDRESS') ? `<button class="btn-primary btn-sm" id="btn-add-address"><i class="fa-solid fa-plus"></i> Add Address</button>` : ''}
+            ${can('CREATE_CLIENT') ? `<button class="btn-primary btn-sm" id="btn-add-address"><i class="fa-solid fa-plus"></i> Add Address</button>` : ''}
           </div>
           <div id="cl-address-list"><div class="empty-state-row">Loading…</div></div>
         </div>
@@ -153,7 +153,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         <div class="tab-panel" data-clpanel="collateral" hidden>
           <div class="section-header">
             <h3>Collateral</h3>
-            ${can('CREATE_CLIENTCOLLATERAL') ? `<button class="btn-primary btn-sm" id="btn-add-collateral"><i class="fa-solid fa-plus"></i> Add Collateral</button>` : ''}
+            ${can('CREATE_COLLATERAL_PRODUCT') ? `<button class="btn-primary btn-sm" id="btn-add-collateral"><i class="fa-solid fa-plus"></i> Add Collateral</button>` : ''}
           </div>
           <div id="cl-collateral-list"><div class="empty-state-row">Loading…</div></div>
         </div>

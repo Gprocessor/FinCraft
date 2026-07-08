@@ -211,7 +211,7 @@ export async function loadEmailCampaigns(c) {
           <h3>Email Campaigns</h3>
           <span class="text-muted">${list.length} campaign${list.length !== 1 ? 's' : ''}</span>
         </div>
-        ${can('CREATE_EMAILCAMPAIGN') ? `<button class="btn-primary" id="btn-new-email"><i class="fa-solid fa-plus"></i> New Campaign</button>` : ''}
+        ${can('CREATE_EMAIL_CAMPAIGN') ? `<button class="btn-primary" id="btn-new-email"><i class="fa-solid fa-plus"></i> New Campaign</button>` : ''}
       </div>
       <div class="text-muted small mb-2">
         <i class="fa-solid fa-circle-info"></i>
@@ -232,17 +232,17 @@ export async function loadEmailCampaigns(c) {
               <td>${escapeHtml(cmp.recipientType?.value || cmp.recipientType || '—')}</td>
               <td>${sb(cmp.campaignStatus?.value || (cmp.isActive ? 'Active' : 'Inactive'))}</td>
               <td class="text-right">
-                ${cmp.campaignStatus?.value !== 'Active' && can('ACTIVATE_EMAILCAMPAIGN') ? `<button class="btn-mini btn-success" data-act-email="${cmp.id}">Activate</button>` : ''}
-                ${cmp.campaignStatus?.value === 'Active' && can('CLOSE_EMAILCAMPAIGN') ? `<button class="btn-mini btn-warning" data-close-email="${cmp.id}">Close</button>` : ''}
-                ${can('UPDATE_EMAILCAMPAIGN') ? `<button class="btn-mini" data-edit-email="${cmp.id}">Edit</button>` : ''}
-                ${can('DELETE_EMAILCAMPAIGN') ? `<button class="btn-mini btn-danger" data-del-email="${cmp.id}">Delete</button>` : ''}
+                ${cmp.campaignStatus?.value !== 'Active' && can('ACTIVATE_EMAIL_CAMPAIGN') ? `<button class="btn-mini btn-success" data-act-email="${cmp.id}">Activate</button>` : ''}
+                ${cmp.campaignStatus?.value === 'Active' && can('CLOSE_EMAIL_CAMPAIGN') ? `<button class="btn-mini btn-warning" data-close-email="${cmp.id}">Close</button>` : ''}
+                ${can('UPDATE_EMAIL_CAMPAIGN') ? `<button class="btn-mini" data-edit-email="${cmp.id}">Edit</button>` : ''}
+                ${can('DELETE_EMAIL_CAMPAIGN') ? `<button class="btn-mini btn-danger" data-del-email="${cmp.id}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
         </table>` : `
         <div class="empty-state">
           <i class="fa-solid fa-envelope"></i>
           <h3>No email campaigns defined</h3>
-          ${can('CREATE_EMAILCAMPAIGN') ? `<div class="text-muted mt-2">Create your first campaign to send automated email notifications.</div>` : ''}
+          ${can('CREATE_EMAIL_CAMPAIGN') ? `<div class="text-muted mt-2">Create your first campaign to send automated email notifications.</div>` : ''}
         </div>`}
 
       <h3 class="mt-4">Email Configuration (SMTP)</h3>

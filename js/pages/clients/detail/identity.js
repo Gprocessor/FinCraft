@@ -49,7 +49,7 @@ export async function loadClientFamilyMembers(c, id) {
             <td>${escapeHtml(m.gender?.name || '—')}</td>
             <td>${fmtDate(m.dateOfBirth) || '—'}</td>
             <td>${m.isDependent ? 'Yes' : 'No'}</td>
-            <td>${can('DELETE_CLIENTFAMILYMEMBER') ? `<button class="btn-mini btn-danger" data-del-fam="${m.id}">Remove</button>` : ''}</td>
+            <td>${can('DELETE_CLIENT') ? `<button class="btn-mini btn-danger" data-del-fam="${m.id}">Remove</button>` : ''}</td>
           </tr>`).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No family members on file</div>';
 
@@ -78,8 +78,8 @@ export async function loadClientCollateral(c, id) {
             <td class="text-right">${fmt(cc.quantity || 0)}</td>
             <td class="text-right">${fmt(value)}</td>
             <td class="text-right">
-              ${can('UPDATE_CLIENTCOLLATERAL') ? `<button class="btn-mini" data-edit-coll="${cc.id}">Edit</button>` : ''}
-              ${can('DELETE_CLIENTCOLLATERAL') ? `<button class="btn-mini btn-danger" data-del-coll="${cc.id}">Remove</button>` : ''}
+              ${can('UPDATE_COLLATERAL_PRODUCT') ? `<button class="btn-mini" data-edit-coll="${cc.id}">Edit</button>` : ''}
+              ${can('DELETE_COLLATERAL_PRODUCT') ? `<button class="btn-mini btn-danger" data-del-coll="${cc.id}">Remove</button>` : ''}
             </td>
           </tr>`;
         }).join('')}</tbody>

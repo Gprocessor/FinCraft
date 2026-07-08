@@ -93,17 +93,17 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           <button class="tab" data-lntab="overview">Overview</button>
           <button class="tab" data-lntab="schedule">Schedule</button>
           <button class="tab" data-lntab="original">Original Schedule</button>
-          ${can('READ_LOANTRANSACTION') ? `<button class="tab" data-lntab="transactions">Transactions</button>` : ''}
-          ${can('READ_LOANCHARGE') ? `<button class="tab" data-lntab="charges">Charges</button>` : ''}
+          ${can('READ_LOAN') ? `<button class="tab" data-lntab="transactions">Transactions</button>` : ''}
+          ${can('READ_LOAN') ? `<button class="tab" data-lntab="charges">Charges</button>` : ''}
           <button class="tab" data-lntab="disbursements">Disbursements</button>
           <button class="tab" data-lntab="delinquency">Delinquency</button>
           ${can('READ_RESCHEDULELOAN') ? `<button class="tab" data-lntab="reschedule">Reschedule</button>` : ''}
           ${can('READ_COLLATERAL') ? `<button class="tab" data-lntab="collateral">Collateral</button>` : ''}
           ${can('READ_GUARANTOR') ? `<button class="tab" data-lntab="guarantors">Guarantors</button>` : ''}
           <button class="tab" data-lntab="buydown">Buy-down / Capitalized</button>
-          ${can('READ_LOANORIGINATOR') ? `<button class="tab" data-lntab="originators">Originators</button>` : ''}
+          ${can('READ_LOAN_ORIGINATOR') ? `<button class="tab" data-lntab="originators">Originators</button>` : ''}
           <button class="tab" data-lntab="eao">External Asset Owners</button>
-          ${can('READ_NOTE') ? `<button class="tab" data-lntab="notes">Notes</button>` : ''}
+          ${can('READ_LOANNOTE') ? `<button class="tab" data-lntab="notes">Notes</button>` : ''}
           ${can('READ_DOCUMENT') ? `<button class="tab" data-lntab="documents">Documents</button>` : ''}
         </div>
 

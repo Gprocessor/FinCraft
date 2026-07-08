@@ -49,7 +49,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           ${can('READ_GROUP') ? `<button class="tab" data-ctrtab="groups">Groups (${(ctr.groupMembers || []).length})</button>` : ''}
           ${can('READ_MEETING') ? `<button class="tab" data-ctrtab="meetings">Meetings</button>` : ''}
           ${canCollect ? `<button class="tab" data-ctrtab="collection">Collection Sheet</button>` : ''}
-          ${can('READ_NOTE') ? `<button class="tab" data-ctrtab="notes">Notes</button>` : ''}
+          <button class="tab" data-ctrtab="notes">Notes</button>
           ${can('READ_DOCUMENT') ? `<button class="tab" data-ctrtab="documents">Documents</button>` : ''}
         </div>
 

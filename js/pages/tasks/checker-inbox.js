@@ -34,9 +34,13 @@ export async function loadCheckerInbox(c) {
     const topAction = Object.entries(actionGroups).sort((a, b) => b[1] - a[1])[0];
     const topEntity = Object.entries(entityGroups).sort((a, b) => b[1] - a[1])[0];
 
-    const canApprove = can('CHECKER_APPROVE') || can('CHECKER_SUPER_USER');
-    const canReject  = can('CHECKER_REJECT')  || can('CHECKER_SUPER_USER');
-    const canDelete  = can('CHECKER_DELETE')  || can('CHECKER_SUPER_USER');
+    // No generic CHECKER_APPROVE/CHECKER_REJECT/CHECKER_DELETE permission exists in Fineract — real maker-checker
+    // approval is granted per originating action (e.g. approving a pending "create loan" task requires the specific
+    // CREATE_LOAN_CHECKER permission, not a blanket checker-approve code). CHECKER_SUPER_USER is the only real
+    // permission that bypasses all of them, so it's the only gate applied here (matches the router.js page gate).
+    const canApprove = can('CHECKER_SUPER_USER');
+    const canReject  = can('CHECKER_SUPER_USER');
+    const canDelete  = can('CHECKER_SUPER_USER');
     const showCheckboxes = canApprove || canReject || canDelete;
     const colspan = showCheckboxes ? 7 : 6;
 

@@ -11,7 +11,7 @@ export async function loadDepositNotes(c, entityType, id) {
   wrap.innerHTML = `
     <h3>Notes</h3>
     <div id="dep-note-list"><div class="empty-state-row">Loading…</div></div>
-    ${can('CREATE_NOTE') ? `
+    ${can('CREATE_SAVINGNOTE') ? `
       <div class="mt-3">
         <textarea id="dep-note-input" class="form-control" rows="2" placeholder="Add a note…"></textarea>
         <button class="btn-primary mt-2" id="dep-note-save"><i class="fa-solid fa-plus"></i> Add</button>

@@ -119,7 +119,7 @@ export async function loadMakerCheckerConfig(c) {
     const res = await api.permissions.list(true); // GET /permissions?makerCheckerable=true
     const list = Array.isArray(res) ? res : (res?.permissions || []);
 
-    const canEdit = can('UPDATE_PERMISSION') || can('UPDATE_MAKERCHECKERPERMISSIONS');
+    const canEdit = can('UPDATE_USER');
 
     // Group by entity prefix (CLIENT, LOAN, SAVINGS, etc.)
     const groups = {};

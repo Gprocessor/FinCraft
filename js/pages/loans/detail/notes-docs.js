@@ -11,7 +11,7 @@ export async function loadLoanNotes(c, loanId) {
   wrap.innerHTML = `
     <h3>Notes</h3>
     <div id="ln-note-list"><div class="empty-state-row">Loading…</div></div>
-    ${can('CREATE_NOTE') ? `
+    ${can('CREATE_LOANNOTE') ? `
       <div class="mt-3">
         <textarea id="ln-note-input" class="form-control" rows="2" placeholder="Add a note…"></textarea>
         <button class="btn-primary mt-2" id="ln-note-save"><i class="fa-solid fa-plus"></i> Add Note</button>

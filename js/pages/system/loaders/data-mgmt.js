@@ -112,7 +112,7 @@ export async function loadEntityMappings(c) {
                 <td>${escapeHtml(m.toType || m.secondEntity || '—')}</td>
                 <td class="text-right">${num(mappedCount)}</td>
                 <td class="text-right">
-                  ${can('UPDATE_ENTITYTOENTITYMAPPING') ? `<button class="btn-mini" data-edit-map="${m.mapId || m.id}" data-map-name="${escapeHtml(m.mappingName || '—')}">View / Edit</button>` : ''}
+                  ${can('UPDATE_ENTITYMAPPING') ? `<button class="btn-mini" data-edit-map="${m.mapId || m.id}" data-map-name="${escapeHtml(m.mappingName || '—')}">View / Edit</button>` : ''}
                 </td>
               </tr>`;
           }).join('')}</tbody>
@@ -141,7 +141,7 @@ export async function loadSurveys(c) {
     el.innerHTML = `
       <div class="section-header mb-2">
         <span class="text-muted">${num(list.length)} survey${list.length !== 1 ? 's' : ''}</span>
-        ${can('CREATE_SURVEY') ? `<button class="btn-primary" id="btn-new-survey"><i class="fa-solid fa-plus"></i> New Survey</button>` : ''}
+        ${can('REGISTER_SURVEY') ? `<button class="btn-primary" id="btn-new-survey"><i class="fa-solid fa-plus"></i> New Survey</button>` : ''}
       </div>
       <div class="text-muted small mb-2">
         <i class="fa-solid fa-circle-info"></i>
@@ -164,14 +164,19 @@ export async function loadSurveys(c) {
                 <td>${num((s.questionDatas || s.questions || []).length)}</td>
                 <td>${isActive ? sb('Active') : sb('Inactive')}</td>
                 <td class="text-right">
-                  ${can('UPDATE_SURVEY') ? `<button class="btn-mini" data-edit-survey="${s.id}">Edit</button>` : ''}
-                  ${isActive && can('DEACTIVATE_SURVEY')
+                  <!-- FLAGGED, NOT VERIFIED: only REGISTER_SURVEY exists as a real permission code for this resource;
+                       SpmApiResource's edit/activate/deactivate endpoints show unresolved permission literals in the
+                       source-derived map (no UPDATE_SURVEY/ACTIVATE_SURVEY/etc. exist anywhere in the 961-code set).
+                       Reusing REGISTER_SURVEY for all actions here as a single-permission-per-resource fallback —
+                       confirm against a live server. -->
+                  ${can('REGISTER_SURVEY') ? `<button class="btn-mini" data-edit-survey="${s.id}">Edit</button>` : ''}
+                  ${isActive && can('REGISTER_SURVEY')
                     ? `<button class="btn-mini btn-warning" data-deactivate-survey="${s.id}">Deactivate</button>`
                     : ''}
-                  ${!isActive && can('ACTIVATE_SURVEY')
+                  ${!isActive && can('REGISTER_SURVEY')
                     ? `<button class="btn-mini btn-success" data-activate-survey="${s.id}">Activate</button>`
                     : ''}
-                  ${can('DELETE_SURVEY') ? `<button class="btn-mini btn-danger" data-del-survey="${s.id}">Delete</button>` : ''}
+                  ${can('REGISTER_SURVEY') ? `<button class="btn-mini btn-danger" data-del-survey="${s.id}">Delete</button>` : ''}
                 </td>
               </tr>`;
           }).join('')}</tbody>
@@ -179,7 +184,7 @@ export async function loadSurveys(c) {
         <div class="empty-state">
           <i class="fa-solid fa-clipboard-list"></i>
           <h3>No surveys defined</h3>
-          ${can('CREATE_SURVEY') ? '<div class="text-muted mt-2">Create a survey to start collecting customer feedback.</div>' : ''}
+          ${can('REGISTER_SURVEY') ? '<div class="text-muted mt-2">Create a survey to start collecting customer feedback.</div>' : ''}
         </div>`}`;
 
     el.querySelector('#btn-new-survey')?.addEventListener('click', () =>

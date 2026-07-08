@@ -21,15 +21,21 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     const isActive = status === 'Active';
 
     const canApprove        = isPending  && can('APPROVE_SHAREACCOUNT');
-    const canUndoApproval   = isApproved && can('APPROVALUNDO_SHAREACCOUNT');
+    const canUndoApproval   = isApproved && can('UNDOAPPROVAL_SHAREACCOUNT');
     const canReject         = isPending  && can('REJECT_SHAREACCOUNT');
-    const canWithdrawApp    = isPending  && can('WITHDRAW_SHAREACCOUNT');
+    // FLAGGED, NOT VERIFIED: no WITHDRAW_SHAREACCOUNT permission exists anywhere in the 961-code Fineract set.
+    // ShareAccountsApiResource wasn't captured by the source-derived API map either, so the real gate can't be
+    // confirmed statically. Falling back to CREATE_SHAREACCOUNT (matches the single-generic-permission command
+    // dispatch pattern used by ClientsApiResource/GroupsApiResource) as a best-effort placeholder — confirm
+    // against a live server before relying on this for access control.
+    const canWithdrawApp    = isPending  && can('CREATE_SHAREACCOUNT');
     const canActivate       = isApproved && can('ACTIVATE_SHAREACCOUNT');
     const canApplyAdditional= isActive   && can('APPLYADDITIONALSHARES_SHAREACCOUNT');
     const canRedeem         = isActive   && can('REDEEMSHARES_SHAREACCOUNT');
     const canClose          = isActive   && can('CLOSE_SHAREACCOUNT');
     const canEdit           = isPending  && can('UPDATE_SHAREACCOUNT');
-    const canDelete         = isPending  && can('DELETE_SHAREACCOUNT');
+    // FLAGGED, NOT VERIFIED: same situation as canWithdrawApp above — no DELETE_SHAREACCOUNT code exists.
+    const canDelete         = isPending  && can('CREATE_SHAREACCOUNT');
 
     const totalApprovedShares = s.totalApprovedShares || 0;
     const totalPendingForApproval = s.totalPendingForApprovalShares || 0;
@@ -68,7 +74,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           <button class="tab" data-shtab="requests">Share Requests</button>
           <button class="tab" data-shtab="charges">Charges</button>
           <button class="tab" data-shtab="dividends">Dividends</button>
-          ${can('READ_NOTE') ? `<button class="tab" data-shtab="notes">Notes</button>` : ''}
+          <button class="tab" data-shtab="notes">Notes</button>
           ${can('READ_DOCUMENT') ? `<button class="tab" data-shtab="documents">Documents</button>` : ''}
         </div>
 
@@ -237,9 +243,9 @@ async function loadShareRequests(c, id, s) {
               <td class="text-right">${fmt((r.numberOfShares || 0) * (r.unitPrice || s.shareValue || 0))}</td>
               <td>${sb(stat)}</td>
               <td class="text-right">
-                ${isPending && can('APPROVESHARE_SHAREACCOUNT')
+                ${isPending && can('APPROVEADDITIONALSHARES_SHAREACCOUNT')
                   ? `<button class="btn-mini btn-success" data-req-approve="${r.id}">Approve</button>` : ''}
-                ${isPending && can('REJECTSHARE_SHAREACCOUNT')
+                ${isPending && can('REJECTADDITIONALSHARES_SHAREACCOUNT')
                   ? `<button class="btn-mini btn-warning" data-req-reject="${r.id}">Reject</button>` : ''}
               </td>
             </tr>`;
@@ -294,7 +300,7 @@ async function loadShareDividends(c, productId) {
   wrap.innerHTML = `
     <div class="section-header">
       <h3>Dividend Records</h3>
-      ${can('CREATE_DIVIDEND') ? `<button class="btn-primary btn-sm" id="sh-div-declare"><i class="fa-solid fa-plus"></i> Declare Dividend</button>` : ''}
+      ${can('CREATE_DIVIDEND_SHAREPRODUCT') ? `<button class="btn-primary btn-sm" id="sh-div-declare"><i class="fa-solid fa-plus"></i> Declare Dividend</button>` : ''}
     </div>
     <div class="text-muted small mb-2">
       Dividends are declared at the share product level; shown here for this account's product.
@@ -331,9 +337,9 @@ async function loadShareDividends(c, productId) {
             <td class="text-right">${fmt(d.amount || d.dividendAmount || 0)}</td>
             <td>${sb(d.status?.value || (approved ? 'Approved' : 'Pending'))}</td>
             <td class="text-right">
-              ${!approved && can('UPDATE_DIVIDEND') ? `<button class="btn-mini" data-edit-div="${d.id}">Edit</button>` : ''}
-              ${!approved && can('APPROVE_DIVIDEND') ? `<button class="btn-mini btn-success" data-approve-div="${d.id}">Approve</button>` : ''}
-              ${!approved && can('DELETE_DIVIDEND') ? `<button class="btn-mini btn-danger" data-del-div="${d.id}">Delete</button>` : ''}
+              ${!approved && can('UPDATE_SHAREPRODUCT') ? `<button class="btn-mini" data-edit-div="${d.id}">Edit</button>` : ''}
+              ${!approved && can('APPROVE_DIVIDEND_SHAREPRODUCT') ? `<button class="btn-mini btn-success" data-approve-div="${d.id}">Approve</button>` : ''}
+              ${!approved && can('DELETE_DIVIDEND_SHAREPRODUCT') ? `<button class="btn-mini btn-danger" data-del-div="${d.id}">Delete</button>` : ''}
             </td>
           </tr>`;
         }).join('')}</tbody>
@@ -400,11 +406,10 @@ async function loadShareNotes(c, id) {
   wrap.innerHTML = `
     <h3>Notes</h3>
     <div id="sh-note-list"><div class="empty-state-row">Loading…</div></div>
-    ${can('CREATE_NOTE') ? `
       <div class="mt-3">
         <textarea id="sh-note-input" class="form-control" rows="2" placeholder="Add a note…"></textarea>
         <button class="btn-primary mt-2" id="sh-note-save"><i class="fa-solid fa-plus"></i> Add</button>
-      </div>` : ''}`;
+      </div>`;
 
   wrap.querySelector('#sh-note-save')?.addEventListener('click', async () => {
     const inp = wrap.querySelector('#sh-note-input');

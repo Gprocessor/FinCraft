@@ -20,8 +20,12 @@ export async function loadAdhocQueries(c) {
           <span class="text-muted">${list.length} quer${list.length !== 1 ? 'ies' : 'y'}</span>
         </div>
         <div>
-          ${list.length && can('EXECUTE_ADHOCQUERY') ? `<button class="btn-secondary mr-2" id="btn-run-all-adhoc"><i class="fa-solid fa-bolt"></i> Run All</button>` : ''}
-          ${can('CREATE_ADHOCQUERY') ? `<button class="btn-primary" id="btn-new-adhoc"><i class="fa-solid fa-plus"></i> New Query</button>` : ''}
+          <!-- FLAGGED, NOT VERIFIED: no EXECUTE_ADHOC(QUERY) permission exists in the 961-code set, and
+               AdHocApiResource's parsed methods show no "execute" command either — api.adhocQueries.runAll()
+               posts ?command=execute to a resource that may not support command dispatch at all. Gating on
+               CREATE_ADHOC as the closest real code; confirm against a live server. -->
+          ${list.length && can('CREATE_ADHOC') ? `<button class="btn-secondary mr-2" id="btn-run-all-adhoc"><i class="fa-solid fa-bolt"></i> Run All</button>` : ''}
+          ${can('CREATE_ADHOC') ? `<button class="btn-primary" id="btn-new-adhoc"><i class="fa-solid fa-plus"></i> New Query</button>` : ''}
         </div>
       </div>
       <div class="text-muted small mb-2">
@@ -40,8 +44,8 @@ export async function loadAdhocQueries(c) {
               <td>${escapeHtml(q.tableFields || '—')}</td>
               <td>${q.isActive ? sb('Active') : sb('Inactive')}</td>
               <td class="text-right">
-                ${can('UPDATE_ADHOCQUERY') ? `<button class="btn-mini" data-edit-adhoc="${q.id}">Edit</button>` : ''}
-                ${can('DELETE_ADHOCQUERY') ? `<button class="btn-mini btn-danger" data-del-adhoc="${q.id}">Delete</button>` : ''}
+                ${can('UPDATE_ADHOC') ? `<button class="btn-mini" data-edit-adhoc="${q.id}">Edit</button>` : ''}
+                ${can('DELETE_ADHOC') ? `<button class="btn-mini btn-danger" data-del-adhoc="${q.id}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
         </table>` : '<div class="empty-state-row">No adhoc queries defined</div>'}`;

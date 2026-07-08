@@ -11,7 +11,7 @@ export async function loadSavingsNotes(c, id) {
   wrap.innerHTML = `
     <h3>Notes</h3>
     <div id="sv-note-list"><div class="empty-state-row">Loading…</div></div>
-    ${can('CREATE_NOTE') ? `
+    ${can('CREATE_SAVINGNOTE') ? `
       <div class="mt-3">
         <textarea id="sv-note-input" class="form-control" rows="2" placeholder="Add a note…"></textarea>
         <button class="btn-primary mt-2" id="sv-note-save"><i class="fa-solid fa-plus"></i> Add</button>

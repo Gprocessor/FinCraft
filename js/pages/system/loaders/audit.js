@@ -61,7 +61,7 @@ export async function loadJobs(c) {
     const jobs = await api.jobs.list();
     const list = Array.isArray(jobs) ? jobs : [];
 
-    const canRun = can('EXECUTEJOB_JOB') || can('UPDATE_JOB');
+    const canRun = can('EXECUTEJOB_SCHEDULER') || can('UPDATE_SCHEDULER');
 
     el.innerHTML = `
       <div class="section-header mb-2">
@@ -84,7 +84,7 @@ export async function loadJobs(c) {
                 <td class="text-right">
                   <button class="btn-mini" data-job-history="${jobId}" data-job-name="${escapeHtml(j.displayName || j.name || '')}">History</button>
                   ${canRun ? `<button class="btn-mini btn-success" data-run-job="${jobId}">Run</button>` : ''}
-                  ${can('UPDATE_JOB') ? `<button class="btn-mini" data-edit-job="${jobId}">Edit</button>` : ''}
+                  ${can('UPDATE_SCHEDULER') ? `<button class="btn-mini" data-edit-job="${jobId}">Edit</button>` : ''}
                 </td>
               </tr>
               <tr id="job-hist-${jobId}" style="display:none">

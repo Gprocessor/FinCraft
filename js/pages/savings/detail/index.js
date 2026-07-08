@@ -43,7 +43,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     const canPostInterest   = isActive   && can('POSTINTEREST_SAVINGSACCOUNT');
     const canCalcInterest   = isActive   && can('CALCULATEINTEREST_SAVINGSACCOUNT');
     const canApplyAnnualFee = isActive   && can('APPLYANNUALFEE_SAVINGSACCOUNT');
-    const canAssignStaff    = isActive   && can('ASSIGNSTAFF_SAVINGSACCOUNT');
+    const canAssignStaff    = isActive   && (can('UPDATESAVINGSOFFICER_SAVINGSACCOUNT') || can('REMOVESAVINGSOFFICER_SAVINGSACCOUNT'));
     const canEdit           = (isPending || isApproved) && can('UPDATE_SAVINGSACCOUNT');
     const canDelete         = (isPending || status === 'Rejected') && can('DELETE_SAVINGSACCOUNT');
 
@@ -92,9 +92,9 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           <button class="tab" data-svtab="overview">Overview</button>
           <button class="tab" data-svtab="transactions">Transactions</button>
           <button class="tab" data-svtab="charges">Charges</button>
-          ${can('READ_STANDINGINSTRUCTION') ? `<button class="tab" data-svtab="si">Standing Instructions</button>` : ''}
+          ${can('READ_ACCOUNTTRANSFER') ? `<button class="tab" data-svtab="si">Standing Instructions</button>` : ''}
           <button class="tab" data-svtab="onhold">On-hold Funds</button>
-          ${can('READ_NOTE') ? `<button class="tab" data-svtab="notes">Notes</button>` : ''}
+          ${can('READ_SAVINGNOTE') ? `<button class="tab" data-svtab="notes">Notes</button>` : ''}
           ${can('READ_DOCUMENT') ? `<button class="tab" data-svtab="documents">Documents</button>` : ''}
         </div>
 

@@ -82,14 +82,14 @@ export async function loadTwoFactorConfig(c) {
         <table class="table">
           <thead><tr>
             <th>Setting</th><th>Current Value</th>
-            <th>${can('UPDATE_TWOFACTOR_CONFIG') ? 'New Value' : ''}</th>
+            <th>${can('UPDATE_TWOFACTOR_CONFIGURATION') ? 'New Value' : ''}</th>
           </tr></thead>
           <tbody>${entries.map((e, i) => {
             const isBool = typeof e.value === 'boolean' || ['true', 'false'].includes(String(e.value).toLowerCase());
             const isNum = !isBool && (!isNaN(parseFloat(e.value)) && isFinite(e.value));
             const inputId = `tfa-${i}`;
             let input = '';
-            if (can('UPDATE_TWOFACTOR_CONFIG')) {
+            if (can('UPDATE_TWOFACTOR_CONFIGURATION')) {
               if (isBool) {
                 input = `<select id="${inputId}" class="form-control" data-name="${escapeHtml(e.name)}">
                   <option value="true" ${e.value === true || e.value === 'true' ? 'selected' : ''}>true</option>
@@ -111,7 +111,7 @@ export async function loadTwoFactorConfig(c) {
         </table>
 
         <div class="mt-3">
-          ${can('UPDATE_TWOFACTOR_CONFIG') ? `<button class="btn-primary" id="btn-save-tfa">Save Changes</button>` : ''}
+          ${can('UPDATE_TWOFACTOR_CONFIGURATION') ? `<button class="btn-primary" id="btn-save-tfa">Save Changes</button>` : ''}
         </div>` : `
         <div class="empty-state">
           <i class="fa-solid fa-shield"></i>

@@ -52,9 +52,9 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           ${canMembers || can('READ_GROUP') ? `<button class="tab" data-grptab="members">Members (${(g.clientMembers || []).length})</button>` : ''}
           ${can('READ_LOAN') || can('READ_SAVINGSACCOUNT') ? `<button class="tab" data-grptab="accounts">Accounts</button>` : ''}
           ${can('READ_MEETING') ? `<button class="tab" data-grptab="meetings">Meetings</button>` : ''}
-          ${can('READ_GROUPCHARGE') ? `<button class="tab" data-grptab="charges">Charges</button>` : ''}
-          ${can('READ_STANDINGINSTRUCTION') ? `<button class="tab" data-grptab="si">Standing Instructions</button>` : ''}
-          ${can('READ_NOTE') ? `<button class="tab" data-grptab="notes">Notes</button>` : ''}
+          <button class="tab" data-grptab="charges">Charges</button>
+          ${can('READ_ACCOUNTTRANSFER') ? `<button class="tab" data-grptab="si">Standing Instructions</button>` : ''}
+          ${can('READ_GROUPNOTE') ? `<button class="tab" data-grptab="notes">Notes</button>` : ''}
           ${can('READ_DOCUMENT') ? `<button class="tab" data-grptab="documents">Documents</button>` : ''}
         </div>
 

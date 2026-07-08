@@ -26,7 +26,7 @@ export async function loadRunAccruals(c) {
       </div>
 
       <div class="mt-3">
-        ${can('EXECUTE_ACCRUAL') ? `<button class="btn-primary" id="btn-run-accruals">Run Accruals</button>` : ''}
+        ${can('EXECUTE_PERIODICACCRUALACCOUNTING') ? `<button class="btn-primary" id="btn-run-accruals">Run Accruals</button>` : ''}
       </div>
       <div id="acc-run-result" class="mt-3"></div>
 
@@ -144,9 +144,9 @@ export async function loadProvisioning(c) {
         <h3>Provisioning</h3>
         <div>
           <span class="text-muted mr-2">${clist.length} criteria</span>
-          ${elist.length && can('CREATE_PROVISIONINGENTRY') ? `<button class="btn-secondary" id="btn-prov-journal"><i class="fa-solid fa-receipt"></i> Create Journal Entry</button>` : ''}
-          ${can('CREATE_PROVISIONINGENTRY') ? `<button class="btn-secondary" id="btn-prov-entry"><i class="fa-solid fa-plus"></i> Create Provisioning Entry</button>` : ''}
-          ${can('CREATE_PROVISIONINGCRITERIA') ? `<button class="btn-primary" id="btn-prov-new"><i class="fa-solid fa-plus"></i> New Criteria</button>` : ''}
+          ${elist.length && can('CREATE_PROVISIONJOURNALENTRIES') ? `<button class="btn-secondary" id="btn-prov-journal"><i class="fa-solid fa-receipt"></i> Create Journal Entry</button>` : ''}
+          ${can('CREATE_PROVISIONENTRIES') ? `<button class="btn-secondary" id="btn-prov-entry"><i class="fa-solid fa-plus"></i> Create Provisioning Entry</button>` : ''}
+          ${can('CREATE_PROVISIONCRITERIA') ? `<button class="btn-primary" id="btn-prov-new"><i class="fa-solid fa-plus"></i> New Criteria</button>` : ''}
         </div>
       </div>
 
@@ -160,8 +160,8 @@ export async function loadProvisioning(c) {
               <td>${escapeHtml(p.criteriaName || p.name || '—')}</td>
               <td>${escapeHtml(p.createdBy || '—')}</td>
               <td class="text-right">
-                ${can('UPDATE_PROVISIONINGCRITERIA') ? `<button class="btn-mini" data-edit-prov="${p.id}">Edit</button>` : ''}
-                ${can('DELETE_PROVISIONINGCRITERIA') ? `<button class="btn-mini btn-danger" data-del-prov="${p.id}">Delete</button>` : ''}
+                ${can('UPDATE_PROVISIONCRITERIA') ? `<button class="btn-mini" data-edit-prov="${p.id}">Edit</button>` : ''}
+                ${can('DELETE_PROVISIONCRITERIA') ? `<button class="btn-mini btn-danger" data-del-prov="${p.id}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
         </table>` : '<div class="empty-state-row">No provisioning criteria</div>'}`;

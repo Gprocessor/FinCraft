@@ -73,9 +73,9 @@ export async function loadLoanTransactions(c, loanId) {
                 <td class="text-right">
                   ${!reversed && !accrual && can('ADJUST_LOAN') ?
                     `<button class="btn-mini" data-adjust-tx="${tx.id}" title="Adjust">Adjust</button>` : ''}
-                  ${!reversed && !accrual && can('UNDO_LOANTRANSACTION') ?
+                  ${!reversed && !accrual && can('UPDATE_LOAN') ?
                     `<button class="btn-mini btn-warning" data-reverse-tx="${tx.id}" title="Reverse">Reverse</button>` : ''}
-                  ${(tx.type?.value || '').toLowerCase() === 'repayment' && can('CHARGEBACK_LOANTRANSACTION') ?
+                  ${(tx.type?.value || '').toLowerCase() === 'repayment' && can('CHARGEBACK_LOAN') ?
                     `<button class="btn-mini btn-warning" data-chargeback-tx="${tx.id}" title="Chargeback">Chargeback</button>` : ''}
                 </td>
               </tr>`;
@@ -191,7 +191,7 @@ export async function loadLoanCharges(c, loanId) {
 export async function loadLoanDisbursements(c, loanId) {
   const wrap = c.querySelector('#ln-disb-wrap');
   wrap.innerHTML = `
-    ${can('UPDATE_DISBURSEMENT') ? `
+    ${can('UPDATE_LOAN') ? `
       <div class="section-header mb-2">
         <h3>Tranches / Disbursements</h3>
         <div>
@@ -236,7 +236,7 @@ export async function loadLoanDisbursements(c, loanId) {
             <td class="text-right">${fmt(d.netDisbursalAmount || 0)}</td>
             <td>${d.actualDisbursementDate ? sb('Disbursed') : sb('Pending')}</td>
             <td class="text-right">
-              ${!d.actualDisbursementDate && can('UPDATE_DISBURSEMENT') ?
+              ${!d.actualDisbursementDate && can('UPDATE_LOAN') ?
                 `<button class="btn-mini" data-edit-tranche="${d.id}">Edit</button>` : ''}
             </td>
           </tr>`).join('')}</tbody>

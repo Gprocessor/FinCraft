@@ -19,7 +19,7 @@ export async function loadLoanOriginators(c) {
           <h3>Loan Originators</h3>
           <span class="text-muted">${list.length} originator${list.length !== 1 ? 's' : ''}</span>
         </div>
-        ${can('CREATE_LOANORIGINATOR') ? `<button class="btn-primary" id="btn-new-orig"><i class="fa-solid fa-plus"></i> New Originator</button>` : ''}
+        ${can('CREATE_LOAN_ORIGINATOR') ? `<button class="btn-primary" id="btn-new-orig"><i class="fa-solid fa-plus"></i> New Originator</button>` : ''}
       </div>
       <div class="text-muted small mb-2">
         <i class="fa-solid fa-circle-info"></i>
@@ -37,15 +37,15 @@ export async function loadLoanOriginators(c) {
               <td>${escapeHtml(o.type?.value || o.originatorType || '—')}</td>
               <td>${o.active !== false ? sb('Active') : sb('Inactive')}</td>
               <td class="text-right">
-                ${can('UPDATE_LOANORIGINATOR') ? `<button class="btn-mini" data-edit-orig="${o.id}">Edit</button>` : ''}
-                ${can('DELETE_LOANORIGINATOR') ? `<button class="btn-mini btn-danger" data-del-orig="${o.id}">Delete</button>` : ''}
+                ${can('UPDATE_LOAN_ORIGINATOR') ? `<button class="btn-mini" data-edit-orig="${o.id}">Edit</button>` : ''}
+                ${can('DELETE_LOAN_ORIGINATOR') ? `<button class="btn-mini btn-danger" data-del-orig="${o.id}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
         </table>` : `
         <div class="empty-state">
           <i class="fa-solid fa-handshake"></i>
           <h3>No loan originators defined</h3>
-          ${can('CREATE_LOANORIGINATOR') ? `<div class="text-muted mt-2">Create your first originator using the button above.</div>` : ''}
+          ${can('CREATE_LOAN_ORIGINATOR') ? `<div class="text-muted mt-2">Create your first originator using the button above.</div>` : ''}
         </div>`}`;
 
     el.querySelector('#btn-new-orig')?.addEventListener('click', () =>
@@ -106,8 +106,12 @@ export async function loadExternalAssetOwners(c) {
               <td>${escapeHtml(o.type?.value || o.ownerType || '—')}</td>
               <td>${num(o.activeTransfers || 0)}</td>
               <td class="text-right">
-                ${can('UPDATE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-mini" data-edit-eao="${o.id || o.externalId}">Edit</button>` : ''}
-                ${can('DELETE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-mini btn-danger" data-del-eao="${o.id || o.externalId}">Delete</button>` : ''}
+                <!-- Same ambiguity flagged in api/loans.js makeExternalAssetOwnersAPI(): the map shows no PUT/DELETE
+                     path on ExternalAssetOwnersApiResource at all, only the broad CREATE_EXTERNAL_ASSET_OWNER code
+                     covering create/search/transfer. Reusing it here rather than inventing UPDATE_/DELETE_ variants
+                     that don't exist in the 961-code permission set — confirm against your instance. -->
+                ${can('CREATE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-mini" data-edit-eao="${o.id || o.externalId}">Edit</button>` : ''}
+                ${can('CREATE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-mini btn-danger" data-del-eao="${o.id || o.externalId}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
         </table>

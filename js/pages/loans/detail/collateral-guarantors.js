@@ -127,7 +127,7 @@ export async function loadLoanGuarantors(c, loanId) {
 export async function loadLoanOriginators(c, loanId) {
   const wrap = c.querySelector('#ln-orig-wrap');
   wrap.innerHTML = `
-    ${can('CREATE_LOANORIGINATOR') ? `
+    ${can('CREATE_LOAN_ORIGINATOR') ? `
       <div class="section-header mb-2">
         <h3>Loan Originators</h3>
         <button class="btn-primary btn-sm" id="ln-attach-orig"><i class="fa-solid fa-plus"></i> Attach Originator</button>
@@ -157,7 +157,7 @@ export async function loadLoanOriginators(c, loanId) {
             <td>${escapeHtml(o.externalId || '—')}</td>
             <td>${fmtDate(o.attachedOn || o.createdOn) || '—'}</td>
             <td class="text-right">
-              ${can('DELETE_LOANORIGINATOR') ? `<button class="btn-mini btn-danger" data-detach-orig="${o.originatorId || o.id}">Detach</button>` : ''}
+              ${can('DELETE_LOAN_ORIGINATOR') ? `<button class="btn-mini btn-danger" data-detach-orig="${o.originatorId || o.id}">Detach</button>` : ''}
             </td>
           </tr>`).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No originators attached to this loan</div>';
@@ -181,8 +181,13 @@ export async function loadLoanEAO(c, loanId) {
     <div class="section-header mb-2">
       <h3>External Asset Owner Transfers</h3>
       <div>
-        ${can('CREATE_EXTERNAL_ASSET_OWNER_TRANSFER') ? `<button class="btn-primary btn-sm" id="ln-eao-transfer"><i class="fa-solid fa-arrow-right-from-bracket"></i> Transfer to Owner</button>` : ''}
-        ${can('CREATE_EXTERNAL_ASSET_OWNER_TRANSFER') ? `<button class="btn-secondary btn-sm" id="ln-eao-buyback"><i class="fa-solid fa-arrow-right-to-bracket"></i> Buy-back</button>` : ''}
+        ${can('CREATE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-primary btn-sm" id="ln-eao-transfer"><i class="fa-solid fa-arrow-right-from-bracket"></i> Transfer to Owner</button>` : ''}
+        ${can('BUYBACK_LOAN') ? `<button class="btn-secondary btn-sm" id="ln-eao-buyback"><i class="fa-solid fa-arrow-right-to-bracket"></i> Buy-back</button>` : ''}
+        <!-- FLAGGED, NOT ASSUMED: api.loans.eaoTransfer/eaoBuyBack call /loans/{id}/external-asset-owners/transfer|buy-back,
+             which does not match any @Path in ExternalAssetOwnersApiResource per the source-derived API map (only
+             /v1/external-asset-owners/transfers/loans/{loanId} exists, with no separate buy-back sub-path). Permission
+             codes above are corrected to real values; the URL shape needs confirmation against a live server/OpenAPI
+             spec before this feature is trusted in production — do not treat this comment as "fixed". -->
       </div>
     </div>
     <div class="text-muted small mb-2">
