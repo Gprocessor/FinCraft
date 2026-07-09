@@ -109,9 +109,9 @@ export async function openLoanOriginatorModal(existing, onSuccess) {
 }
 
 export async function openExternalAssetOwnerModal(existing, onSuccess) {
-  const isEdit = !!(existing?.id || existing?.externalId);
-  const ownerKey = existing?.id || existing?.externalId;
-
+  // ExternalAssetOwnersApiResource has no GET-by-id, PUT, or DELETE in Fineract (confirmed via the source-derived
+  // API map: only bare list/create/search and the transfer sub-paths exist) — this modal is create-only. The
+  // `existing` param is accepted for API-shape stability but is never populated by any caller.
   const typeOptions = [
     { id: 'INVESTOR',             name: 'Investor' },
     { id: 'BANK',                 name: 'Bank' },
@@ -127,14 +127,14 @@ export async function openExternalAssetOwnerModal(existing, onSuccess) {
   modalEl.setAttribute('aria-modal', 'true');
   modalEl.innerHTML = `
     <div class="modal modal-md">
-      <div class="modal-header"><h3>${isEdit ? 'Edit' : 'New'} External Asset Owner</h3><button data-close-modal>&times;</button></div>
+      <div class="modal-header"><h3>New External Asset Owner</h3><button data-close-modal>&times;</button></div>
       <div class="modal-body">
         <div class="form-grid">
           <label>Owner Name *
             <input id="eao-name" class="form-control" value="${escapeHtml(existing?.name || existing?.displayName || '')}" required/>
           </label>
-          <label>External ID ${isEdit ? '' : '*'}
-            <input id="eao-extid" class="form-control" value="${escapeHtml(existing?.externalId || '')}" ${isEdit ? 'disabled' : 'required'}/>
+          <label>External ID *
+            <input id="eao-extid" class="form-control" value="${escapeHtml(existing?.externalId || '')}" required/>
           </label>
           <label>Owner Type
             <select id="eao-type" class="form-control">
@@ -161,7 +161,7 @@ export async function openExternalAssetOwnerModal(existing, onSuccess) {
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" data-close-modal>Cancel</button>
-        <button class="btn-primary" id="eao-save">${isEdit ? 'Update' : 'Create'}</button>
+        <button class="btn-primary" id="eao-save">Create</button>
       </div>
     </div>`;
   document.getElementById('modalRoot').appendChild(modalEl);
@@ -174,13 +174,9 @@ export async function openExternalAssetOwnerModal(existing, onSuccess) {
     const name = modalEl.querySelector('#eao-name').value.trim();
     const externalId = modalEl.querySelector('#eao-extid').value.trim();
     if (!name) { toast('warn', 'Enter owner name', ''); return; }
-    if (!isEdit && !externalId) { toast('warn', 'Enter external ID', ''); return; }
+    if (!externalId) { toast('warn', 'Enter external ID', ''); return; }
 
-    const payload = {};
-    payload.name = name;
-    payload.ownerType = modalEl.querySelector('#eao-type').value;
-    payload.locale = LOCALE;
-    if (!isEdit) payload.externalId = externalId;
+    const payload = { name, externalId, ownerType: modalEl.querySelector('#eao-type').value, locale: LOCALE };
     const email = modalEl.querySelector('#eao-email').value.trim();
     if (email) payload.email = email;
     const phone = modalEl.querySelector('#eao-phone').value.trim();
@@ -189,10 +185,9 @@ export async function openExternalAssetOwnerModal(existing, onSuccess) {
     if (desc) payload.description = desc;
 
     try {
-      if (isEdit) await api.externalAssetOwners.update(ownerKey, payload);
-      else        await api.externalAssetOwners.create(payload);
+      await api.externalAssetOwners.create(payload);
       modalEl.remove();
-      toast('success', isEdit ? 'Owner updated' : 'Owner created', name);
+      toast('success', 'Owner created', name);
       onSuccess();
     } catch (e) {
       toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message);

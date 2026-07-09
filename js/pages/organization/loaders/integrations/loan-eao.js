@@ -106,12 +106,9 @@ export async function loadExternalAssetOwners(c) {
               <td>${escapeHtml(o.type?.value || o.ownerType || '—')}</td>
               <td>${num(o.activeTransfers || 0)}</td>
               <td class="text-right">
-                <!-- Same ambiguity flagged in api/loans.js makeExternalAssetOwnersAPI(): the map shows no PUT/DELETE
-                     path on ExternalAssetOwnersApiResource at all, only the broad CREATE_EXTERNAL_ASSET_OWNER code
-                     covering create/search/transfer. Reusing it here rather than inventing UPDATE_/DELETE_ variants
-                     that don't exist in the 961-code permission set — confirm against your instance. -->
-                ${can('CREATE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-mini" data-edit-eao="${o.id || o.externalId}">Edit</button>` : ''}
-                ${can('CREATE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-mini btn-danger" data-del-eao="${o.id || o.externalId}">Delete</button>` : ''}
+                <!-- No Edit/Delete: ExternalAssetOwnersApiResource has no GET-by-id, PUT, or DELETE at all —
+                     confirmed via the source-derived API map (only bare list/create/search and the transfer
+                     sub-paths exist). These always 404'd; removed rather than left as a dead end. -->
               </td>
             </tr>`).join('')}</tbody>
         </table>
@@ -127,27 +124,6 @@ export async function loadExternalAssetOwners(c) {
 
     el.querySelector('#btn-new-eao')?.addEventListener('click', () =>
       openExternalAssetOwnerModal(null, () => loadExternalAssetOwners(c)));
-
-    el.querySelectorAll('[data-edit-eao]').forEach(b => b.addEventListener('click', async () => {
-      try {
-        const existing = await api.externalAssetOwners.get(b.dataset.editEao);
-        openExternalAssetOwnerModal(existing, () => loadExternalAssetOwners(c));
-      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
-    }));
-
-    el.querySelectorAll('[data-del-eao]').forEach(b => b.addEventListener('click', async () => {
-      if (!await modalConfirm({
-        title: 'Delete external asset owner?',
-        message: 'This will fail if any active loan transfers reference this owner.',
-        danger: true,
-        confirmText: 'Delete'
-      })) return;
-      try {
-        await api.externalAssetOwners.delete(b.dataset.delEao);
-        toast('success', 'Owner deleted', '');
-        loadExternalAssetOwners(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
-    }));
   } catch (e) {
     el.innerHTML = `<div class="empty-state-row text-muted">External Asset Owners not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
   }

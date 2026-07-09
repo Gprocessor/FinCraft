@@ -6,7 +6,12 @@ import { setActiveNav, setBreadcrumb } from './ui.js';
 /**
  * `requiredPermission` is a single Fineract permission code OR an array (any-of).
  * `null` = authenticated user only. Use `'ALL_FUNCTIONS'` to bypass (admin-only).
+ * The sentinel `ANY_CHECKER_PERMISSION` below is a special third form, handled by
+ * `isAllowed()`, for routes gated on "holds CHECKER_SUPER_USER or any entity-level
+ * `..._CHECKER` permission" rather than one fixed code or a fixed list of codes.
  */
+export const ANY_CHECKER_PERMISSION = Symbol('ANY_CHECKER_PERMISSION');
+
 const PAGES = {
   dashboard:    { mod: () => import('./pages/dashboard.js'),    label: 'Dashboard',     icon: 'fa-gauge-high',     requiredPermission: null },
   clients:      { mod: () => import('./pages/clients.js'),      label: 'Clients',       icon: 'fa-users',          requiredPermission: 'READ_CLIENT' },
@@ -21,7 +26,7 @@ const PAGES = {
   transfers:    { mod: () => import('./pages/transfers.js'),    label: 'Transfers',     icon: 'fa-right-left',     requiredPermission: 'READ_ACCOUNTTRANSFER' },
   remittances:  { mod: () => import('./pages/misc.js'),         label: 'Remittances',   icon: 'fa-paper-plane',    view: 'remittances', requiredPermission: 'READ_ACCOUNTTRANSFER' },
   accounting:   { mod: () => import('./pages/accounting.js'),   label: 'Accounting',    icon: 'fa-calculator',     requiredPermission: 'READ_JOURNALENTRY' },
-  tasks:        { mod: () => import('./pages/tasks.js'),        label: 'Checker Inbox', icon: 'fa-inbox',          requiredPermission: 'CHECKER_SUPER_USER' }, // CHECKER_APPROVE/REJECT/DELETE are not real Fineract permission codes (maker-checker is per-entity, e.g. CREATE_ROLE_CHECKER) — removed
+  tasks:        { mod: () => import('./pages/tasks.js'),        label: 'Checker Inbox', icon: 'fa-inbox',          requiredPermission: ANY_CHECKER_PERMISSION }, // gated on CHECKER_SUPER_USER OR any real entity "..._CHECKER" permission (e.g. CREATE_ROLE_CHECKER) — see store.hasAnyCheckerPermission()
   reports:      { mod: () => import('./pages/reports.js'),      label: 'Reports',       icon: 'fa-file-chart-column', requiredPermission: 'READ_REPORT' },
   products:     { mod: () => import('./pages/products.js'),     label: 'Products',      icon: 'fa-cubes',          requiredPermission: 'READ_LOANPRODUCT' },
   charges:      { mod: () => import('./pages/charges.js'),      label: 'Charges',       icon: 'fa-tags',           requiredPermission: 'READ_CHARGE' },
@@ -60,6 +65,7 @@ export function isAllowed(def) {
   if (!def) return false;
   const need = def.requiredPermission;
   if (need === null || need === undefined) return true;            // public-to-authenticated
+  if (need === ANY_CHECKER_PERMISSION) return store.hasAnyCheckerPermission();
   const codes = Array.isArray(need) ? need : [need];
   return codes.some(c => store.hasPermission(c));
 }

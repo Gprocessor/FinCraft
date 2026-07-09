@@ -120,7 +120,8 @@ export function makeStandingInstructionsAPI(self) {
     template:(params)  => self._g('/standinginstructions/template', params),
     create:  (body)    => self._p('/standinginstructions', body),
     update:  (id, b)   => self._u(`/standinginstructions/${id}`, b),
-    delete:  (id)      => self._d(`/standinginstructions/${id}`),
+    // No delete() — StandingInstructionApiResource exposes template/create/update/retrieveAll/retrieveOne only,
+    // no DELETE, per Fineract source (confirmed even though DELETE_STANDINGINSTRUCTION is a real permission code).
     history: (params)  => self._g('/standinginstructionrunhistory', params)
   };
 }
@@ -145,11 +146,11 @@ export function makeBulkImportsAPI(self) {
   return {
       template: (entity)        => self._g(`/${entity}/downloadtemplate`),
       upload:   (entity, formData) => self._req('POST', `/${entity}/uploadtemplate`, { body: formData, headers: {} }),
-      // ---- Generic /imports endpoints ----
-      list:     (params)        => self._g('/imports', params),
-      get:      (importId)      => self._g(`/imports/${importId}`),
-      delete:   (importId)      => self._d(`/imports/${importId}`),
-      download: (importId)      => self._req('GET', `/imports/${importId}/downloadOutputTemplate`, { raw: true }),
-      types:    ()              => self._g('/imports/getEntityTypes')
+      // ---- Generic /imports endpoint ----
+      // BulkImportApiResource has exactly 3 real methods: bare GET /v1/imports (list, filterable via params),
+      // GET getOutputTemplateLocation, and GET downloadOutputTemplate — none take a per-import id, there is no
+      // DELETE, and there is no "getEntityTypes" endpoint. get()/delete()/download()/types() were removed rather
+      // than left calling routes that don't exist in Fineract.
+      list:     (params)        => self._g('/imports', params)
     };
 }

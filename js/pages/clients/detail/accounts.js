@@ -142,15 +142,10 @@ export async function loadClientStandingInstructions(c, id) {
             <td class="text-right">${fmt(si.amount ?? 0)}</td>
             <td>${sb(si.status?.value || '—')}</td>
             <td class="text-right">
-              ${can('DELETE_STANDINGINSTRUCTION') ? `<button class="btn-mini btn-danger" data-del-si="${si.id}">Delete</button>` : ''}
+              <!-- No delete: DELETE_STANDINGINSTRUCTION is a real permission code, but StandingInstructionApiResource
+                   has no DELETE method at all in Fineract (only template/create/update/retrieveAll/retrieveOne). -->
             </td>
           </tr>`).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No standing instructions</div>';
-
-    wrap.querySelectorAll('[data-del-si]').forEach(b => b.addEventListener('click', async () => {
-      if (!await confirm({ title: 'Delete standing instruction?', danger: true, confirmText: 'Delete' })) return;
-      try { await api.standingInstructions.delete(b.dataset.delSi); toast('success', 'Deleted', ''); loadClientStandingInstructions(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
-    }));
   } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

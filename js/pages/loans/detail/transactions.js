@@ -208,15 +208,11 @@ export async function loadLoanDisbursements(c, loanId) {
 
   const listEl = wrap.querySelector('#ln-disb-list');
   try {
-    let list = [];
-    try {
-      const r = await api.loans.disbursements(loanId);
-      list = Array.isArray(r) ? r : [];
-    } catch {
-      // Some loans don't expose disbursements endpoint — fall back to embedded data
-      const l = await api.loans.get(loanId, 'disbursementDetails');
-      list = l.disbursementDetails || [];
-    }
+    // LoanDisbursementDetailApiResource has no GET on the bare /loans/{id}/disbursements collection path per
+    // Fineract source (only per-id GET/PUT and the editDisbursements PUT exist) — go straight to the real source
+    // of this data: disbursementDetails embedded in the loan account via the associations query param.
+    const l = await api.loans.get(loanId, 'disbursementDetails');
+    const list = l.disbursementDetails || [];
     listEl.innerHTML = list.length ? `
       <table class="table">
         <thead><tr>

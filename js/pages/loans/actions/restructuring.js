@@ -128,7 +128,7 @@ export async function openTrancheEditorModal(loanId, existing, onSuccess) {
     if (isNaN(payload.principal)) { toast('warn', 'Enter principal', ''); return; }
     try {
       if (isEdit) await api.loans.updateDisbursement(loanId, existing.id, payload);
-      else        await api.loans.addDisbursement(loanId, { disbursementData: [payload] });
+      else        await api.loans.editDisbursements(loanId, { disbursementData: [payload] });
       el.remove();
       toast('success', isEdit ? 'Tranche updated' : 'Tranche added', '');
       onSuccess();
@@ -139,8 +139,10 @@ export async function openTrancheEditorModal(loanId, existing, onSuccess) {
 export async function openBulkTrancheEditorModal(loanId, onSuccess) {
   let list = [];
   try {
-    const r = await api.loans.disbursements(loanId);
-    list = (Array.isArray(r) ? r : []).filter(d => !d.actualDisbursementDate);
+    // No bare GET /loans/{id}/disbursements collection endpoint exists per Fineract source — read the real
+    // source of this data: disbursementDetails embedded in the loan account via the associations query param.
+    const l = await api.loans.get(loanId, 'disbursementDetails');
+    list = (l.disbursementDetails || []).filter(d => !d.actualDisbursementDate);
   } catch (e) {
     toast('error', 'Failed to load tranches', e.detail?.defaultUserMessage || e.message); return;
   }

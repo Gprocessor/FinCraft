@@ -99,9 +99,10 @@ export function makeLoansAPI(self) {
     deleteGuarantor:(id, gid)            => self._d(`/loans/${id}/guarantors/${gid}`),
 
     // ---- Disbursements / Tranches ----
-    disbursements:  (id)                 => self._g(`/loans/${id}/disbursements`),
+    // No bare-collection disbursements()/addDisbursement() — LoanDisbursementDetailApiResource has no GET or PUT
+    // on the plain /loans/{id}/disbursements path per Fineract source. Use api.loans.get(id,'disbursementDetails')
+    // to read the list, and editDisbursements() below to add/remove tranches.
     disbursement:   (id, disbId)         => self._g(`/loans/${id}/disbursements/${disbId}`),
-    addDisbursement:(id, body)           => self._u(`/loans/${id}/disbursements`, body),
     updateDisbursement: (id, disbId, body) => self._u(`/loans/${id}/disbursements/${disbId}`, body),
     // Distinct from updateDisbursement — edits the full set of tranches in one call.
     editDisbursements: (id, body)        => self._u(`/loans/${id}/disbursements/editDisbursements`, body),
@@ -204,25 +205,14 @@ export function makeLoanOriginatorsAPI(self) {
 
 export function makeExternalAssetOwnersAPI(self) {
   return {
-    // NOTE: the API reference documents GET-single/PUT/DELETE for this resource
-    // and the loan-transfer/buy-back actions under different paths than what's
-    // already wired into the UI (e.g. doc says POST
-    // /external-asset-owners/transfers/loans/{loanId}, existing code uses
-    // /loans/{id}/external-asset-owners/transfer). Since both the doc and the
-    // existing, already-in-use code could be right depending on Fineract version,
-    // this hasn't been changed — flagging for verification against your instance
-    // rather than guessing which side to trust.
+    // ExternalAssetOwnersApiResource has no GET-by-id, PUT, or DELETE at all in Fineract — confirmed via the
+    // source-derived API map (only bare list/create/search and the transfer sub-paths below exist).
     list:           (params)     => self._g('/external-asset-owners', params),
-    get:            (ownerId)    => self._g(`/external-asset-owners/${ownerId}`),
     create:         (body)       => self._p('/external-asset-owners', body),
-    update:         (ownerId, b) => self._u(`/external-asset-owners/${ownerId}`, b),
-    delete:         (ownerId)    => self._d(`/external-asset-owners/${ownerId}`),
     journalEntries: (transferId, params) => self._g(`/external-asset-owners/transfers/${transferId}/journal-entries`, params),
     ownerJournalEntriesByExternalId: (ownerExternalId, params) => self._g(`/external-asset-owners/owners/external-id/${ownerExternalId}/journal-entries`, params),
-    transferLoans:  (transferId) => self._g(`/external-asset-owners/transfers/${transferId}/loans`),
     transfers:      (params)     => self._g('/external-asset-owners/transfers', params),
     activeTransfer: (params)     => self._g('/external-asset-owners/transfers/active-transfer', params),
-    transfer:       (transferId) => self._g(`/external-asset-owners/transfers/${transferId}`),
     transferAsset:  (id, body)   => self._p(`/external-asset-owners/transfers/${id}`, body),
     search:         (body)       => self._p('/external-asset-owners/search', body)
   };

@@ -23,7 +23,8 @@ export async function render(c, params = {}) {
       row: p => [p.name, p.shortName, fmt(p.principal || 0), `${p.interestRatePerPeriod || 0}%`],
       newFn: () => openLoanProductModal(null, () => reload(0)),
       editFn: (id) => openLoanProductModal(id, () => reload(0)),
-      deleteFn: (id) => api.loanProducts.delete(id)
+      // LoanProductsApiResource has no DELETE method in Fineract (POST/GET/PUT only) — same situation as Tax below
+      deleteFn: null
     },
     {
       key: 1, label: 'Savings Product', perm: 'SAVINGSPRODUCT', icon: 'fa-piggy-bank', desc: 'Savings account product definitions',
@@ -78,7 +79,8 @@ export async function render(c, params = {}) {
       row: p => [p.name, p.isBaseLendingRate ? 'Yes' : 'No', p.active !== false ? 'Yes' : 'No'],
       newFn: () => openFloatingRateModal(null, () => reload(6)),
       editFn: (id) => openFloatingRateModal(id, () => reload(6)),
-      deleteFn: (id) => api.floatingRates.delete(id)
+      // FloatingRatesApiResource has no DELETE method in Fineract, and no DELETE_FLOATINGRATE permission exists either
+      deleteFn: null
     },
     {
       key: 7, label: 'Tax', perm: 'TAXCOMPONENT', icon: 'fa-percent', desc: 'Tax components & groups',

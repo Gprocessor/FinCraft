@@ -11,14 +11,10 @@ import { can } from '../../shared.js';
 export async function loadBulkImports(c) {
   const el = c.querySelector('#og-13');
   try {
-    // Try the canonical /imports endpoint first; fall back to a static set if not supported
-    let entityTypes = [];
-    try {
-      const types = await api.bulkImports.types();
-      entityTypes = Array.isArray(types) ? types : (types?.entityTypes || []);
-    } catch {
-      // Fallback to documented Fineract import entities
-      entityTypes = [
+    // BulkImportApiResource has exactly 3 real methods (list, getOutputTemplateLocation, downloadOutputTemplate)
+    // — there is no "getEntityTypes" endpoint, so don't attempt a doomed request; use the documented entity list
+    // that Fineract's own downloadtemplate/uploadtemplate resources actually support.
+    const entityTypes = [
         { entity: 'clients',                      label: 'Clients' },
         { entity: 'centers',                      label: 'Centers' },
         { entity: 'groups',                       label: 'Groups' },
@@ -34,7 +30,6 @@ export async function loadBulkImports(c) {
         { entity: 'journalentries',               label: 'Journal Entries' },
         { entity: 'shareaccounts',                label: 'Share Accounts' }
       ];
-    }
 
     // Fetch import history (may not exist on all Fineract versions)
     let history = [];
@@ -95,8 +90,9 @@ export async function loadBulkImports(c) {
               <td class="text-right text-success">${num(h.successfulRecords || h.successCount || 0)}</td>
               <td class="text-right text-error">${num(h.failedRecords || h.failureCount || 0)}</td>
               <td class="text-right">
-                ${h.id ? `<button class="btn-mini" data-imp-download="${h.id}">Download Output</button>` : ''}
-                ${h.id && can('DELETE_DOCUMENT') ? `<button class="btn-mini btn-danger" data-imp-del="${h.id}">Delete</button>` : ''}
+                <!-- No per-row download/delete: BulkImportApiResource has no per-id GET, no DELETE, and its one
+                     real download method (downloadOutputTemplate) takes no id — there is no way to retrieve or
+                     remove a single historical import via this API. Buttons removed rather than left doomed. -->
               </td>
             </tr>`).join('')}</tbody>
         </table>` : '<div class="empty-state-row">No imports in history yet. Upload a template above to start.</div>'}`;
@@ -162,34 +158,6 @@ export async function loadBulkImports(c) {
       } catch (e) { toast('error', 'Upload failed', e.detail?.defaultUserMessage || e.message); }
       finally { ev.target.value = ''; }
     });
-
-    // Download output (results) of a past import
-    el.querySelectorAll('[data-imp-download]').forEach(b => b.addEventListener('click', async () => {
-      try {
-        const res = await api.bulkImports.download(b.dataset.impDownload);
-        const blob = await res.blob();
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        const cd = res.headers.get('Content-Disposition') || '';
-        a.download = /filename="?([^";]+)"?/.exec(cd)?.[1] || `import_${b.dataset.impDownload}_output.xlsx`;
-        a.click();
-        toast('success', 'Output downloaded', '');
-      } catch (e) { toast('error', 'Download failed', e.detail?.defaultUserMessage || e.message); }
-    }));
-
-    // Delete a past import record
-    el.querySelectorAll('[data-imp-del]').forEach(b => b.addEventListener('click', async () => {
-      if (!await modalConfirm({
-        title: 'Delete import record?',
-        message: 'Imported records remain — only the audit log entry is removed.',
-        danger: true, confirmText: 'Delete'
-      })) return;
-      try {
-        await api.bulkImports.delete(b.dataset.impDel);
-        toast('success', 'Import record deleted', '');
-        loadBulkImports(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
-    }));
   } catch (e) {
     el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
   }

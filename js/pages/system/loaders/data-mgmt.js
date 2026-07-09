@@ -164,11 +164,13 @@ export async function loadSurveys(c) {
                 <td>${num((s.questionDatas || s.questions || []).length)}</td>
                 <td>${isActive ? sb('Active') : sb('Inactive')}</td>
                 <td class="text-right">
-                  <!-- FLAGGED, NOT VERIFIED: only REGISTER_SURVEY exists as a real permission code for this resource;
-                       SpmApiResource's edit/activate/deactivate endpoints show unresolved permission literals in the
-                       source-derived map (no UPDATE_SURVEY/ACTIVATE_SURVEY/etc. exist anywhere in the 961-code set).
-                       Reusing REGISTER_SURVEY for all actions here as a single-permission-per-resource fallback —
-                       confirm against a live server. -->
+                  <!-- Edit/Activate/Deactivate hit real SpmApiResource endpoints (editSurvey PUT, and
+                       activateOrDeactivateSurvey POST with command=activate|deactivate) — confirmed via source
+                       parse. Only the gating permission is uncertain: no UPDATE_SURVEY/ACTIVATE_SURVEY/etc. exist
+                       in the 961-code set, so REGISTER_SURVEY (the one real code tied to this resource) is used
+                       as a fallback for all three — confirm against a live server if precise gating matters.
+                       Delete is different: SpmApiResource has no DELETE method at all, so that button is removed
+                       below rather than gated on a fallback permission for an endpoint that doesn't exist. -->
                   ${can('REGISTER_SURVEY') ? `<button class="btn-mini" data-edit-survey="${s.id}">Edit</button>` : ''}
                   ${isActive && can('REGISTER_SURVEY')
                     ? `<button class="btn-mini btn-warning" data-deactivate-survey="${s.id}">Deactivate</button>`
@@ -176,7 +178,6 @@ export async function loadSurveys(c) {
                   ${!isActive && can('REGISTER_SURVEY')
                     ? `<button class="btn-mini btn-success" data-activate-survey="${s.id}">Activate</button>`
                     : ''}
-                  ${can('REGISTER_SURVEY') ? `<button class="btn-mini btn-danger" data-del-survey="${s.id}">Delete</button>` : ''}
                 </td>
               </tr>`;
           }).join('')}</tbody>
@@ -210,20 +211,6 @@ export async function loadSurveys(c) {
         toast('success', 'Survey deactivated', '');
         loadSurveys(c);
       } catch (e) { toast('error', 'Deactivation failed', e.detail?.defaultUserMessage || e.message); }
-    }));
-
-    el.querySelectorAll('[data-del-survey]').forEach(b => b.addEventListener('click', async () => {
-      if (!await modalConfirm({
-        title: 'Delete survey?',
-        message: 'This permanently removes the survey and its question definitions. Responses are preserved.',
-        danger: true,
-        confirmText: 'Delete'
-      })) return;
-      try {
-        await api.surveysAdmin.delete(b.dataset.delSurvey);
-        toast('success', 'Survey deleted', '');
-        loadSurveys(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
     }));
   } catch (e) {
     el.innerHTML = `<div class="empty-state-row text-muted">Surveys not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;

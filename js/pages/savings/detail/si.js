@@ -2,7 +2,6 @@
    Auto-split from the original monolithic pages/savings/detail.js for maintainability. */
 
 import { api } from '../../../api.js';
-import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, sb } from '../../../utils.js';
 import { can } from '../shared.js';
 
@@ -49,17 +48,11 @@ export async function loadSavingsSI(c, id, savings) {
             <td>${escapeHtml(si.transferType?.value || si.instructionType?.value || '—')}</td>
             <td>${sb(si.status?.value || '—')}</td>
             <td class="text-right">
-              ${can('DELETE_STANDINGINSTRUCTION')
-                ? `<button class="btn-mini btn-danger" data-del-si="${si.id}">Delete</button>` : ''}
+              <!-- No delete: DELETE_STANDINGINSTRUCTION is a real permission code, but StandingInstructionApiResource
+                   has no DELETE method at all in Fineract (only template/create/update/retrieveAll/retrieveOne). -->
             </td>
           </tr>`).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No standing instructions for this account</div>';
-
-    listEl.querySelectorAll('[data-del-si]').forEach(b => b.addEventListener('click', async () => {
-      if (!await confirm({ title: 'Delete standing instruction?', danger: true, confirmText: 'Delete' })) return;
-      try { await api.standingInstructions.delete(b.dataset.delSi); toast('success', 'Deleted', ''); loadSavingsSI(c, id, savings); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
-    }));
   } catch (e) {
     listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
   }

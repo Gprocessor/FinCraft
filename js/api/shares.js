@@ -38,7 +38,11 @@ export function makeSharesAPI(self) {
     getDividend:    (productId, divId) => self._g(`/shareproduct/${productId}/dividend/${divId}`),
     postDividend:   (productId, body)  => self._p(`/shareproduct/${productId}/dividend`, body),
     updateDividend: (productId, divId, body) => self._u(`/shareproduct/${productId}/dividend/${divId}`, body),
-    approveDividend:(productId, divId) => self._p(`/shareproduct/${productId}/dividend/${divId}?command=approve`, {}),
+    // FLAGGED, PARTIALLY VERIFIED: ShareDividendApiResource's {dividendId} sub-path only has GET/PUT/DELETE per the
+    // source-derived map (no POST at all) — the original POST call here was guaranteed wrong. Switched to PUT,
+    // which is confirmed to exist on this path. The "?command=approve" query param itself is unverified (the parsed
+    // source shows only plain CRUD methods, no command dispatch) — confirm against a live server.
+    approveDividend:(productId, divId) => self._u(`/shareproduct/${productId}/dividend/${divId}?command=approve`, {}),
     deleteDividend: (productId, divId) => self._d(`/shareproduct/${productId}/dividend/${divId}`),
 
     // ---- Generic command escape hatch ----

@@ -99,10 +99,9 @@ export function makeSurveysAdminAPI(self) {
   return {
     list:       () => self._g('/surveys'),
     get:        (id) => self._g(`/surveys/${id}`),
-    template:   () => self._g('/surveys/template'),
     create:     (body) => self._p('/surveys', body),
     update:     (id, b) => self._u(`/surveys/${id}`, b),
-    delete:     (id) => self._d(`/surveys/${id}`),
+    // No template() or delete() — SpmApiResource has no /surveys/template endpoint and no DELETE method at all.
     activate:   (id) => self._p(`/surveys/${id}?command=activate`, {}),
     deactivate: (id) => self._p(`/surveys/${id}?command=deactivate`, {})
   };

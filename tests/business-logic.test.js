@@ -53,28 +53,39 @@ export async function runTests({ assert: a = assert } = {}) {
   store.set('perms', ['ALL_FUNCTIONS']);
   a.strictEqual(isAllowed({ requiredPermission: 'SOME_RANDOM_PERM' }), true);
 
-  // Array of alternatives (any-of match) — the actual shape used by the Checker Inbox route
-  store.set('perms', ['CHECKER_APPROVE']);
+  // Array of alternatives (any-of match) — general isAllowed() array support, using two
+  // real Fineract codes (unrelated to the Checker Inbox case below).
+  store.set('perms', ['READ_LOAN']);
   a.strictEqual(
-    isAllowed({ requiredPermission: ['CHECKER_SUPER_USER', 'CHECKER_APPROVE', 'CHECKER_REJECT', 'CHECKER_DELETE'] }),
+    isAllowed({ requiredPermission: ['READ_CLIENT', 'READ_LOAN'] }),
     true,
     'a user with just one of the array permissions should be allowed in'
   );
   store.set('perms', []);
   a.strictEqual(
-    isAllowed({ requiredPermission: ['CHECKER_SUPER_USER', 'CHECKER_APPROVE', 'CHECKER_REJECT', 'CHECKER_DELETE'] }),
+    isAllowed({ requiredPermission: ['READ_CLIENT', 'READ_LOAN'] }),
     false,
     'a user with none of the array permissions should still be denied'
   );
 
-  // Direct regression test for audit item 1: the live 'tasks' route definition must be an
-  // array (any-of), not a single 'CHECKER_SUPER_USER' string — a checker-role user who can
-  // only approve/reject/delete (the overwhelmingly common case) must not be locked out.
-  store.set('perms', ['CHECKER_REJECT']);
+  // Direct regression test for audit item 1: the live 'tasks' route definition must admit
+  // ANY real entity-level "..._CHECKER" permission (e.g. CREATE_ROLE_CHECKER,
+  // DISBURSE_LOAN_CHECKER — Fineract has no single "CHECKER_APPROVE" umbrella code), not
+  // just the special CHECKER_SUPER_USER bypass — a checker-role user who can only approve
+  // a specific entity's actions (the overwhelmingly common case) must not be locked out.
+  store.set('perms', ['DISBURSE_LOAN_CHECKER']);
   a.strictEqual(
     isAllowed(PAGE_REGISTRY.tasks),
     true,
-    'Checker Inbox route must admit users with any CHECKER_* permission, not just CHECKER_SUPER_USER'
+    'Checker Inbox route must admit users with any real "..._CHECKER" permission, not just CHECKER_SUPER_USER'
+  );
+  store.set('perms', ['CHECKER_SUPER_USER']);
+  a.strictEqual(isAllowed(PAGE_REGISTRY.tasks), true, 'CHECKER_SUPER_USER must still work as the global bypass');
+  store.set('perms', ['READ_LOAN']);
+  a.strictEqual(
+    isAllowed(PAGE_REGISTRY.tasks),
+    false,
+    'a user with no checker-related permission at all must still be denied'
   );
 
   /* ---------------------------------------------------------------- */

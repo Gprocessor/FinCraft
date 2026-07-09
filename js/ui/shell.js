@@ -2,7 +2,7 @@
    Auto-split from the original monolithic ui.js for maintainability. */
 
 import { store } from '../store.js';
-import { navigate, PAGE_REGISTRY } from '../router.js';
+import { navigate, PAGE_REGISTRY, isAllowed } from '../router.js';
 import { escapeHtml } from '../utils.js';
 import { api } from '../api.js';
 import { sidebar } from './core.js';
@@ -24,12 +24,10 @@ const NAV_GROUPS = [
 function _isNavVisible(pageKey) {
   const def = PAGE_REGISTRY[pageKey];
   if (!def) return false;
-  const need = def.requiredPermission;
-  if (need == null) return true;
+  if (def.requiredPermission == null) return true;
   const perms = store.get('perms') || [];
   if (perms.length === 0) return true;
-  const codes = Array.isArray(need) ? need : [need];
-  return codes.some(c => store.hasPermission(c));
+  return isAllowed(def);
 }
 
 // ════════════════════════════════════════════════════════════
