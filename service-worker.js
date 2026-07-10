@@ -1,4 +1,4 @@
-const CACHE = 'fincraft-v9'; // bumped: split components.css into cards/tables/forms/modals.css (audit item 9)
+const CACHE = 'fincraft-v10'; // bumped: network-first fetch strategy (audit item 10 — cache-first was serving stale/broken JS+CSS after redeploys until the SW file itself changed)
 const ASSETS = [
   './',
   './index.html',
@@ -52,12 +52,24 @@ self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   // Never cache API calls — always go to the network
   if (u.pathname.includes('/fineract-provider/')) return;
-  // Network-first for HTML (so updates ship immediately) — cache-first otherwise
-  if (e.request.mode === 'navigate' || e.request.destination === 'document') {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
-    );
-    return;
-  }
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+  // Network-first for EVERYTHING we control (HTML, JS, CSS), falling back to
+  // the cache only when the network is unavailable. This used to be
+  // cache-first for JS/CSS, which meant a broken deploy (missing/half-cloned
+  // frontend, wrong config.js, etc.) got cached in the browser and kept
+  // being served — blank screen — even after the server-side issue was
+  // fixed, until this service-worker.js file itself changed. Network-first
+  // means a fix on the server is picked up on the very next load.
+  e.respondWith(
+    fetch(e.request)
+      .then(r => {
+        const copy = r.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        return r;
+      })
+      .catch(() => caches.match(e.request).then(r => r || (
+        (e.request.mode === 'navigate' || e.request.destination === 'document')
+          ? caches.match('./index.html')
+          : undefined
+      )))
+  );
 });
