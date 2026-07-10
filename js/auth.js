@@ -331,10 +331,10 @@ function showApp() {
   import('./ui.js').then(m => {
     m.mountAppShell();
     import('./router.js').then(r => {
-      r.initRouter();
       if (!location.hash || location.hash === '#') {
         r.navigate(store.get('lastPage') || 'dashboard');
       }
+      r.initRouter();
     });
   });
 }

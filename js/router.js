@@ -146,7 +146,20 @@ export async function handleHash() {
 
 export function navigate(page, params = {}) { location.hash = buildHash(page, params); }
 
+let _hashListenerBound = false;
+
+/**
+ * Registers the hashchange listener (once ever — safe to call again on
+ * re-login within the same page session) and renders whatever route is
+ * currently in location.hash. Callers that need to redirect to a default
+ * page for an empty hash (see auth.js showApp()) must set location.hash
+ * BEFORE calling this, not after — calling navigate() afterwards would
+ * fire the listener a second time and double-render/double-fetch the page.
+ */
 export function initRouter() {
-  window.addEventListener('hashchange', handleHash);
+  if (!_hashListenerBound) {
+    window.addEventListener('hashchange', handleHash);
+    _hashListenerBound = true;
+  }
   handleHash();
 }

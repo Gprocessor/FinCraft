@@ -9,8 +9,14 @@ import { loadAuditTrails } from './audit.js';
 import { loadNotifications } from './feed.js';
 import { TABS, _autoRefresh, setAutoRefresh, startPolling, stopPolling } from './shared.js';
 
+let _unsubCurrentPage = null;
+
 export async function render(c) {
   stopPolling();
+  // Undo the previous render()'s store.subscribe() before creating a new one — otherwise
+  // every visit to this page adds another closure that never gets cleaned up, and they all
+  // fire (redundantly) on every future navigation for the rest of the session.
+  if (_unsubCurrentPage) { _unsubCurrentPage(); _unsubCurrentPage = null; }
   c.innerHTML = `
     <div class="page-header">
       <div>
@@ -69,7 +75,7 @@ export async function render(c) {
   await loadNotifications(c);
 
   // Clean up polling when user navigates away
-  store.subscribe('currentPage', page => {
+  _unsubCurrentPage = store.subscribe('currentPage', page => {
     if (page !== 'notifications') stopPolling();
   });
 }

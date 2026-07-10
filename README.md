@@ -241,6 +241,55 @@ was audited and corrected to the right number of `../` for its new location (29 
 
 ---
 
+## Round 4: permission-gating fix, a double-render/double-fetch stud, and a full audit sweep
+
+**Checker Inbox lockout bug, fixed.** The `tasks` route (Checker Inbox nav item) was gated
+on the single permission `CHECKER_SUPER_USER` — a real Fineract code, but a *global bypass*,
+not the normal grant. Fineract's maker-checker model has no umbrella "approve" permission;
+approval rights are granted per entity-action via a `..._CHECKER` suffix (e.g.
+`CREATE_ROLE_CHECKER`, `DISBURSE_LOAN_CHECKER` — 100+ real codes in the 961-code set). Gating
+on `CHECKER_SUPER_USER` alone locked out the overwhelmingly common case: a checker-role user
+who only holds one or two specific entity `_CHECKER` grants. Fixed with a new
+`store.hasAnyCheckerPermission()` (true for `CHECKER_SUPER_USER` **or** any permission ending
+in `_CHECKER`) and a matching `ANY_CHECKER_PERMISSION` sentinel in `router.js`, consumed by
+both `isAllowed()` and the sidebar nav-visibility check in `ui/shell.js` (which had its own
+duplicate copy of the gating logic — now delegates to `router.js` so there's one source of
+truth). Covered by a regression test in `tests/business-logic.test.js`.
+
+**A double-render/double-API-call stud, found by tracing the boot sequence end to end.**
+`auth.js`'s `showApp()` called `router.js`'s `initRouter()` — which registers the
+`hashchange` listener *and* synchronously renders whatever's in `location.hash` — and only
+*then* checked whether `location.hash` was empty and, if so, called `navigate()` to redirect
+to the last/default page. Setting `location.hash` fires a `hashchange` event, so on **every
+fresh login or first visit with no hash in the URL** (the single most common entry path),
+the initial page rendered twice and every one of its API calls fired twice: once from
+`initRouter()`'s own synchronous render, once more from the `hashchange` event the redirect
+triggered a moment later. Separately, `initRouter()` had no guard against being called more
+than once — logging out and back in within the same SPA session (no full page reload) added
+a second `hashchange` listener, so from that point on every navigation for the rest of the
+session rendered twice, compounding by one more render per additional login. Fixed two ways:
+`initRouter()` now only ever registers the listener once (module-level flag), and `showApp()`
+now performs the empty-hash redirect *before* calling `initRouter()`, not after, so there's
+exactly one render pass no matter how many times a user logs in and out in one session.
+Covered by a regression test asserting the listener is added exactly once across three
+consecutive `initRouter()` calls.
+
+**Full-codebase stud sweep, clean otherwise.** Checked for: TODO/FIXME/stub markers (none —
+prior hits were all HTML `placeholder=` attributes), duplicate handler-registry keys within
+and across all 33 `ui/handlers/*.js` files (none), every literal permission-code string
+against the ground-truth 961-code set — 258 direct `hasPermission()`/`can()` calls plus a
+broader sweep of all 277 distinct ALL-CAPS-with-underscore string literals in the codebase
+(zero invented codes; the only non-permission hits were legitimate enum/status strings like
+`BUSINESS_DATE`, `OTP_REQUIRED`, `PREFIX_OFFICE_NAME`), copy-pasted duplicate `await api.*`
+call lines close together in the same function (2 candidates found, both false positives —
+mutually-exclusive `if`/`else` branches and independent on-demand section loaders, not
+double-fires), and overlapping `document`-level click-delegation selectors in
+`modal-init.js` (found one case where two listeners both match the same trigger element, but
+they set independent, non-conflicting pieces of modal state — intentional layering, not a
+bug). `npm test`: 3/3 passing. All 295 `js/` files pass `node --check`.
+
+---
+
 ## Backlog — newer Fineract modules (not implemented)
 
 Per the July 2026 technical audit (item 11): Working Capital Loans, Credit Bureau Integration,

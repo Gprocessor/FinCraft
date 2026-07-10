@@ -3,6 +3,10 @@
    business rules with realistic fixture data:
      1. Route-permission gating (js/router.js :: isAllowed) — including a direct
         regression test for the Checker Inbox lockout bug (audit item 1).
+     1b. initRouter() hashchange-listener idempotency (js/router.js :: initRouter) —
+        regression test for the double-render/double-API-call-per-page-load stud
+        found on the following pass (every re-login within an SPA session used to
+        stack another 'hashchange' listener).
      2. Permission-code extraction from all 3 payload shapes Fineract's
         /authentication and /userdetails responses can take (js/auth.js :: _extractPerms).
      3. NPL-ratio parsing from a PortfolioAtRisk genericResultSet fixture
@@ -87,6 +91,37 @@ export async function runTests({ assert: a = assert } = {}) {
     false,
     'a user with no checker-related permission at all must still be denied'
   );
+
+  /* ---------------------------------------------------------------- */
+  /* 1b. initRouter() must not double-register its hashchange listener */
+  /*     (js/router.js :: initRouter) — regression test for the        */
+  /*     double-render/double-fetch-on-every-page-load stud: initRouter*/
+  /*     used to add a fresh 'hashchange' listener on every call (e.g. */
+  /*     logout -> log back in within the same SPA session), so every  */
+  /*     navigation after the Nth login re-rendered the page N times,  */
+  /*     firing every one of that page's API calls N times over.       */
+  /* ---------------------------------------------------------------- */
+  {
+    const { initRouter } = await import('../js/router.js');
+    let listenerCount = 0;
+    const realAdd = window.addEventListener.bind(window);
+    window.addEventListener = (type, ...rest) => {
+      if (type === 'hashchange') listenerCount++;
+      return realAdd(type, ...rest);
+    };
+    try {
+      initRouter();
+      initRouter();
+      initRouter();
+    } finally {
+      window.addEventListener = realAdd;
+    }
+    a.strictEqual(
+      listenerCount,
+      1,
+      'initRouter() must register the hashchange listener at most once no matter how many times it is called'
+    );
+  }
 
   /* ---------------------------------------------------------------- */
   /* 2. Permission-code extraction fixtures (js/auth.js :: _extractPerms) */
