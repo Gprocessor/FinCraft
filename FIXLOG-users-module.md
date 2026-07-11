@@ -98,7 +98,37 @@ session, when a `tfaToken` is present. Verified the header-building in
 request goes out with the correct auth headers before `api.reset()` runs on
 the next line — ordering is safe.
 
-## Verified clean (no changes needed)
+### 6. Create/Edit User (and the rest of the module) swallowed the real validation reason
+**Files:** `js/pages/users/account/detail.js`, `js/pages/users/account/list.js`,
+`js/pages/users/roles.js`, `js/pages/users/security.js`,
+`js/pages/self-service/portal-users.js`, `js/pages/misc/profile.js`
+
+Reported via screenshots: Create User and Edit User both failed with a
+useless toast — "Validation errors exist." — with no indication of which
+field or why. Root cause: every error handler in these files built its
+message as `e.detail?.defaultUserMessage || e.message`. Fineract's actual
+error payload puts the generic top-level message
+(`defaultUserMessage: "Validation errors exist."`) alongside an `errors[]`
+array whose entries carry the real, field-specific `defaultUserMessage`
+(e.g. which field failed and why) — the code was only ever reading the
+generic one and discarding the specific one.
+
+The app already has `extractFineractError()` (`js/ui/dom-helpers.js`),
+which correctly prefers `e.detail.errors[0].defaultUserMessage`, falling
+back through `e.detail.defaultUserMessage` → `e.detail.errors[0].developerMessage`
+→ `e.detail.developerMessage` → `e.message`. It's already used by ~20
+other handler files (`js/ui/handlers/*.js`) — the newer per-module pages
+under `js/pages/**` just never picked it up.
+
+**Fix:** imported `extractFineractError` and replaced every
+`e.detail?.defaultUserMessage || e.message` occurrence with
+`extractFineractError(e)` across all six files above (18 call sites total:
+4 in `detail.js`, 3 in `list.js`, 7 in `roles.js`, 4 in `security.js`, 3 in
+`portal-users.js`, 1 in `profile.js`). Behavior is unchanged for errors
+that don't have a field-level `errors[]` entry — those still fall through
+to the same generic message as before.
+
+
 
 - `js/pages/users/account/list.js` — CREATE_USER / READ_USER / UPDATE_USER /
   DELETE_USER gating all correct; `api.users.list/create/update/delete` all

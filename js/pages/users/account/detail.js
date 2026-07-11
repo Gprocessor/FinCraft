@@ -4,6 +4,7 @@
 import { api } from '../../../api.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmtDate, ini } from '../../../utils.js';
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 import { can } from '../shared.js';
 
 export async function renderUserDetail(c, userId) {
@@ -98,7 +99,7 @@ export async function renderUserDetail(c, userId) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load user</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }
@@ -111,7 +112,7 @@ export async function openUserFormModal(userId, onSuccess) {
     tpl = await api.users.template();
     if (isEdit) existing = await api.users.get(userId);
   } catch (e) {
-    toast('error', 'Could not load form data', e.detail?.defaultUserMessage || e.message);
+    toast('error', 'Could not load form data', extractFineractError(e));
     return;
   }
 
@@ -238,7 +239,7 @@ export async function openUserFormModal(userId, onSuccess) {
       toast('success', isEdit ? 'User updated' : 'User created', username);
       onSuccess();
     } catch (e) {
-      toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e));
     }
   });
 }
@@ -291,6 +292,6 @@ function openResetPasswordModal(userId, username) {
       await api.password.change(userId, payload);
       modalEl.remove();
       toast('success', 'Password reset', 'User notified to log in with new password');
-    } catch (e) { toast('error', 'Reset failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Reset failed', extractFineractError(e)); }
   });
 }

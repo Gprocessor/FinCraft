@@ -6,6 +6,7 @@ import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { escapeHtml, ini, num, sb } from '../../../utils.js';
 import { can } from '../shared.js';
 import { openUserFormModal } from './detail.js';
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 
 export async function loadUsersList(c) {
   const el = c.querySelector('#usr-0');
@@ -102,7 +103,7 @@ export async function loadUsersList(c) {
           await api.users.update(b.dataset.unlockUser, { accountNonLocked: true });
           toast('success', 'Account unlocked', '');
           loadUsersList(c);
-        } catch (e) { toast('error', 'Unlock failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Unlock failed', extractFineractError(e)); }
       }));
       tableWrap.querySelectorAll('[data-del-user]').forEach(b => b.addEventListener('click', async () => {
         if (!await modalConfirm({
@@ -114,7 +115,7 @@ export async function loadUsersList(c) {
           await api.users.delete(b.dataset.delUser);
           toast('success', 'User deleted', '');
           loadUsersList(c);
-        } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
       }));
     }
 
@@ -146,6 +147,6 @@ export async function loadUsersList(c) {
 
     draw(list);
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

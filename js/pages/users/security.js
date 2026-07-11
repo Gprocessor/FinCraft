@@ -5,6 +5,7 @@ import { api } from '../../api.js';
 import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 import { can } from './shared.js';
+import { extractFineractError } from '../../ui/dom-helpers.js';
 
 export async function loadPasswordPolicy(c) {
   const el = c.querySelector('#usr-2');
@@ -55,10 +56,10 @@ export async function loadPasswordPolicy(c) {
         await api.password.updatePreferences({ validationPolicyId: parseInt(selected.value) });
         toast('success', 'Password policy updated', '');
         loadPasswordPolicy(c);
-      } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
     });
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Password preferences not available: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Password preferences not available: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -133,9 +134,9 @@ export async function loadTwoFactorConfig(c) {
         await api.twoFactor.config.update(payload);
         toast('success', '2FA config saved', '');
         loadTwoFactorConfig(c);
-      } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
     });
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">2FA configuration not available on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">2FA configuration not available on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
