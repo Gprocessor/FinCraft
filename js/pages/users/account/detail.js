@@ -41,7 +41,7 @@ export async function renderUserDetail(c, userId) {
         </div>
         <div class="page-actions">
           <button class="btn-secondary" data-back-users><i class="fa-solid fa-arrow-left"></i> Back</button>
-          ${can('UPDATE_USER') ? `<button class="btn-secondary" id="btn-reset-pw"><i class="fa-solid fa-key"></i> Reset Password</button>` : ''}
+          ${can('CHANGEPWD_USER') ? `<button class="btn-secondary" id="btn-reset-pw"><i class="fa-solid fa-key"></i> Reset Password</button>` : ''}
           ${can('UPDATE_USER') ? `<button class="btn-primary" id="btn-edit-user"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
         </div>
       </div>
@@ -283,7 +283,12 @@ function openResetPasswordModal(userId, username) {
     if (modalEl.querySelector('#rpw-must-change').checked) payload.shouldRenewPassword = true;
 
     try {
-      await api.users.update(userId, payload);
+      // Fineract exposes a dedicated POST /users/{userId}/pwd for password
+      // changes (UsersApiResource#changePassword, gated by CHANGEPWD_USER).
+      // The generic PUT /users/{userId} update endpoint is a different
+      // resource and isn't guaranteed to validate/accept a password change
+      // the same way — see js/api/auth-account.js:makePasswordAPI().
+      await api.password.change(userId, payload);
       modalEl.remove();
       toast('success', 'Password reset', 'User notified to log in with new password');
     } catch (e) { toast('error', 'Reset failed', e.detail?.defaultUserMessage || e.message); }

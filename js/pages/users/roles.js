@@ -165,14 +165,14 @@ export async function renderRoleDetail(c, roleId) {
         </div>
         <div class="page-actions">
           <button class="btn-secondary" data-back-roles><i class="fa-solid fa-arrow-left"></i> Back</button>
-          ${can('UPDATE_ROLE') ? `<button class="btn-primary" id="btn-save-perms"><i class="fa-solid fa-save"></i> Save Permissions</button>` : ''}
+          ${can('PERMISSIONS_ROLE') ? `<button class="btn-primary" id="btn-save-perms"><i class="fa-solid fa-save"></i> Save Permissions</button>` : ''}
         </div>
       </div>
 
       <div class="card">
         <div class="filter-bar mb-3">
           <input id="perm-search" class="form-control" placeholder="Filter permissions…" autocomplete="off"/>
-          ${can('UPDATE_ROLE') ? `
+          ${can('PERMISSIONS_ROLE') ? `
             <button class="btn-secondary" id="perm-select-all">Select All</button>
             <button class="btn-secondary" id="perm-clear-all">Clear All</button>
             <button class="btn-secondary" id="perm-select-readonly">Read-only Only</button>` : ''}
@@ -188,13 +188,13 @@ export async function renderRoleDetail(c, roleId) {
                   <h4><i class="fa-solid fa-chevron-down"></i> ${escapeHtml(g)}</h4>
                   <div>
                     <span class="text-muted">${groupSelected}/${perms.length}</span>
-                    ${can('UPDATE_ROLE') ? `<button class="btn-mini" data-group-toggle="${escapeHtml(g)}">Toggle All</button>` : ''}
+                    ${can('PERMISSIONS_ROLE') ? `<button class="btn-mini" data-group-toggle="${escapeHtml(g)}">Toggle All</button>` : ''}
                   </div>
                 </div>
                 <div class="perm-list" style="padding:8px 12px">
                   ${perms.map(p => `
                     <label class="checkbox-row" style="display:flex; align-items:center; padding:3px 0">
-                      <input type="checkbox" class="perm-chk" data-code="${escapeHtml(p.code)}" data-group="${escapeHtml(g)}" ${p.selected ? 'checked' : ''} ${can('UPDATE_ROLE') ? '' : 'disabled'}/>
+                      <input type="checkbox" class="perm-chk" data-code="${escapeHtml(p.code)}" data-group="${escapeHtml(g)}" ${p.selected ? 'checked' : ''} ${can('PERMISSIONS_ROLE') ? '' : 'disabled'}/>
                       <code style="margin-left:8px">${escapeHtml(p.code)}</code>
                       ${p.actionName && p.entityName ? `<span class="text-muted small" style="margin-left:auto">${escapeHtml(p.actionName)} ${escapeHtml(p.entityName)}</span>` : ''}
                     </label>`).join('')}
