@@ -84,6 +84,9 @@ immediately by hand:
 
 ## Maintenance
 - Backups nightly 2 AM -> ./backups/ (all tenant DBs, 7-day). Manual: ./backup.sh
+  Restore: ./restore.sh --list, then ./restore.sh <file> (drops+reloads one
+  database, confirms first). ./restore.sh --from-drive <db-name> if using
+  ./setup-gdrive-backup.sh.
 - Cert renewal auto (3 AM). Auto-update every 60s.
 - Health: ./check-deployment.sh | ./monitor.sh
 - Logs: sudo docker logs fineract-server --tail 100 ; /var/log/fincraft-*.log
@@ -99,4 +102,6 @@ immediately by hand:
 - certbot failed: dig +short YOUR-DOMAIN must show this IP; open 80/443 at the
   cloud level; re-run ./setup-vm.sh.
 - VM change: re-clone the repo, cd into deploy/, ./setup-vm.sh (TLS
-  re-issues, Fineract re-migrates). Restore a dump from ./backups/ for data.
+  re-issues, Fineract re-migrates). Then ./restore.sh <path-to-dump> for
+  each database, or ./restore.sh --from-drive <db-name> if backups are
+  uploading to Drive (./setup-gdrive-backup.sh).
