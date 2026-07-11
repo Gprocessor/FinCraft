@@ -252,6 +252,13 @@ export function canDo(code) { return store.hasPermission(code); }
 /* Logout                                                              */
 /* ------------------------------------------------------------------ */
 export function logout() {
+  // Fineract's docs: "Two factor access tokens should be invalidated on
+  // logout." Best-effort — fire it off but never let a network hiccup
+  // block the user from actually signing out.
+  const auth = store.get('auth');
+  if (auth?.tfaToken) {
+    api.twoFactor.invalidate(auth.tfaToken).catch(() => {});
+  }
   _clearSession();
   showLogin();
 }

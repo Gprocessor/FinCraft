@@ -99,7 +99,9 @@ export async function profile(c) {
     // Update password
     try {
       if (!auth.userId) throw new Error('Session missing user ID — sign out and back in');
-      await api.users.update(auth.userId, { password: nw, repeatPassword: cfm });
+      // POST /users/{userId}/pwd (UsersApiResource#changePassword), not the
+      // generic PUT /users/{userId} update endpoint — see api/auth-account.js.
+      await api.password.change(auth.userId, { password: nw, repeatPassword: cfm });
       toast('success', 'Password updated', 'Use the new password on next sign-in');
       c.querySelector('#pw-cur').value = '';
       c.querySelector('#pw-new').value = '';

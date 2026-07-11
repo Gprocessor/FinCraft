@@ -84,7 +84,7 @@ export async function loadPortalUsers(c) {
                 ${u.accountNonLocked !== false && !u.passwordExpired ? sb('Active') : ''}
               </td>
               <td class="text-right">
-                ${can('UPDATE_USER') ? `<button class="btn-mini" data-ss-reset="${u.id}" data-ss-username="${escapeHtml(u.username)}">Reset Password</button>` : ''}
+                ${can('CHANGEPWD_USER') ? `<button class="btn-mini" data-ss-reset="${u.id}" data-ss-username="${escapeHtml(u.username)}">Reset Password</button>` : ''}
                 ${can('UPDATE_USER') && u.accountNonLocked === false ? `<button class="btn-mini btn-success" data-ss-unlock="${u.id}">Unlock</button>` : ''}
                 ${u.clientId ? `<button class="btn-mini" data-ss-view-client="${u.clientId}">View Client</button>` : ''}
               </td>
@@ -179,7 +179,9 @@ function openResetPortalPasswordModal(userId, username) {
     if (modalEl.querySelector('#rpp-must-change').checked) payload.shouldRenewPassword = true;
 
     try {
-      await api.users.update(userId, payload);
+      // POST /users/{userId}/pwd (UsersApiResource#changePassword), not the
+      // generic PUT /users/{userId} update endpoint — see api/auth-account.js.
+      await api.password.change(userId, payload);
       modalEl.remove();
       toast('success', 'Password reset', 'User must log in with new password');
     } catch (e) { toast('error', 'Reset failed', e.detail?.defaultUserMessage || e.message); }

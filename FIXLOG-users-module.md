@@ -4,6 +4,9 @@ Scope: `js/pages/users/**` (Users tab, Roles & Permissions tab, Password Policy 
 Two-Factor Auth tab) and the API layers backing it, `js/api/admin.js`
 (`makeUsersAPI`, `makeRolesAPI`, `makePermissionsAPI`) and `js/api/auth-account.js`
 (`makePasswordAPI`, `makeTwoFactorAPI`, `makeTenantOidcAPI`, `makeUserDetailsAPI`).
+Widened on request to also cover the same password-reset and 2FA flows
+wherever they appear elsewhere in the app: `js/pages/self-service/portal-users.js`,
+`js/pages/misc/profile.js`, and `js/auth.js` (logout).
 
 Method: every endpoint call was cross-checked against `fineract_api_raw.json`
 (`UsersApiResource`, `RolesApiResource`, `PermissionsApiResource`,
@@ -11,6 +14,9 @@ Method: every endpoint call was cross-checked against `fineract_api_raw.json`
 `TwoFactorApiResource`, `TwoFactorConfigurationApiResource`,
 `TenantOidcConfigApiResource`, `UserDetailsApiResource`), and every `can('...')`
 permission code was cross-checked against `fineract_permissions_raw.json`.
+The 2FA-invalidate request/response shape was confirmed against Fineract's
+published API docs (https://fineract.apache.org/docs/legacy/) since neither
+raw JSON captures request bodies.
 
 ## Bugs found & fixed
 
@@ -54,6 +60,44 @@ matrix to `can('PERMISSIONS_ROLE')`. The one `can('UPDATE_ROLE')` check that
 gates the actual "Edit" (name/description) button on the roles list was left
 untouched — that one is correct as-is.
 
+### 3. Self-service portal-user "Reset Password" hit the wrong endpoint
+**File:** `js/pages/self-service/portal-users.js` → `openResetPortalPasswordModal()`
+
+Same bug as fix #1: called `api.users.update(userId, payload)` instead of the
+dedicated `POST /users/{userId}/pwd` endpoint.
+
+**Fix:** call `api.password.change(userId, payload)` instead. Also re-gated
+the "Reset Password" button from `can('UPDATE_USER')` to `can('CHANGEPWD_USER')`,
+same reasoning as fix #1. The adjacent "Unlock" button correctly stays on
+`api.users.update` / `UPDATE_USER` — unlocking (`accountNonLocked`) is a
+genuine field on the generic user-update resource, not a password change.
+
+### 4. Profile page "change my password" hit the wrong endpoint
+**File:** `js/pages/misc/profile.js` → change-password handler
+
+Same bug again: called `api.users.update(auth.userId, {password, repeatPassword})`
+instead of `api.password.change()`. Self-service flow, no permission gating
+needed — matches the pattern already used correctly in `js/auth.js`.
+
+**Fix:** call `api.password.change(auth.userId, payload)` instead.
+
+### 5. 2FA access token was never invalidated on logout
+**Files:** `js/api/auth-account.js` (`makeTwoFactorAPI`), `js/auth.js` (`logout()`)
+
+`TwoFactorApiResource` exposes `POST /twofactor/invalidate` with body
+`{ "token": "<tfaToken>" }`. Fineract's own API docs state plainly:
+"Two factor access tokens should be invalidated on logout." There was no
+binding for this endpoint anywhere in the codebase, and `logout()` only
+ever cleared local session state — the token stayed valid server-side after
+sign-out.
+
+**Fix:** added `api.twoFactor.invalidate(token)` and call it best-effort
+(fire-and-forget, errors swallowed) from `logout()` before clearing the
+session, when a `tfaToken` is present. Verified the header-building in
+`api/core.js` happens synchronously before the `fetch()` call, so the
+request goes out with the correct auth headers before `api.reset()` runs on
+the next line — ordering is safe.
+
 ## Verified clean (no changes needed)
 
 - `js/pages/users/account/list.js` — CREATE_USER / READ_USER / UPDATE_USER /
@@ -71,21 +115,22 @@ untouched — that one is correct as-is.
   `makeTenantOidcAPI`, `makeUserDetailsAPI` matches a real route in
   `fineract_api_raw.json`.
 
-## Noted, not fixed in this pass (different modules — will hit these when we get there)
+## Noted, not fixed in this pass
 
-- `js/pages/self-service/portal-users.js` — the portal-user "Reset Password"
-  modal has the exact same bug as fix #1 (`api.users.update` instead of
-  `api.password.change`). Belongs to the Self-Service module.
-- `js/pages/misc/profile.js` — the logged-in user's own "change my password"
-  form also calls `api.users.update(auth.userId, {password, repeatPassword})`
-  instead of `api.password.change()`. Belongs to the Misc/Profile module.
-- `TwoFactorApiResource#updateConfiguration` (`POST /twofactor/invalidate`,
-  permission `INVALIDATE_TWOFACTOR_ACCESSTOKEN`) has no API binding or UI
-  anywhere — a genuine gap, not a bug, deferred as a possible future
-  enhancement to the 2FA tab.
 - `js/ui/handlers/user.js` (`UserHandlers['submit-user']`) is a second,
   legacy code path for creating a user (used by the old `modals.html` /
-  `modal-init.js` quick-action system, parallel to
-  `pages/users/account/detail.js:openUserFormModal`). Its `api.users.create`
-  call is correct as written, but it's a duplicate implementation worth
-  flagging for consolidation later.
+  `modal-init.js` quick-action system via the Cmd+K "New User" command,
+  parallel to `pages/users/account/detail.js:openUserFormModal`). Its
+  `api.users.create` call is correct as written (`POST /v1/users`, verified
+  against `UsersApiResource` in `fineract_api_raw.json`) — not a bug, just a
+  duplicate implementation worth consolidating later.
+- The Cmd+K "New User" command (`js/cmd.js`, `id:'create:user'`) opens that
+  same legacy modal with **no `CREATE_USER` permission check** — a user
+  without `CREATE_USER` can reach the form via the command palette and get a
+  403 on submit, instead of never seeing the option (the equivalent button
+  on the Users tab list *is* correctly gated). Not fixed here: all 15
+  `create:*` entries in `cmd.js` have this same gap (client, loan, savings,
+  staff, office, …) — `cmd.js` doesn't import `can` at all. This is a
+  cross-cutting command-palette issue, not specific to the user module, and
+  fixing just `create:user` in isolation would leave 14 inconsistent
+  siblings. Flagging for a dedicated command-palette/global-search pass.

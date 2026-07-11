@@ -28,6 +28,9 @@ export function makeTwoFactorAPI(self) {
     methods:  ()       => self._g('/twofactor'),
     request:  (params) => self._req('POST', '/twofactor',          { params }),
     validate: (token)  => self._req('POST', '/twofactor/validate', { params: { token } }),
+    /** Invalidate a 2FA access token — Fineract's docs specify this should
+     *  be called on logout: POST /twofactor/invalidate { "token": "..." }. */
+    invalidate: (token) => self._p('/twofactor/invalidate', { token }),
     config:   {
       get:    ()  => self._g('/twofactor/configure'),
       update: (b) => self._u('/twofactor/configure', b)
