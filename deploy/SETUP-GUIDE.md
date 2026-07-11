@@ -52,13 +52,29 @@ tenant on restart, and the restart triggers the Liquibase migration for the
 new tenant schema (a brand-new, fully isolated database — not a shared
 table). Wait ~1-2 min. It also registers darkvera.duckdns.org -> 'darkvera'
 in TENANT_DOMAINS (.env) and regenerates+reloads the frontend's config.js
-for you. Then:
+for you, AND configures Gmail SMTP for the new tenant (see below). Then:
   1. DuckDNS: darkvera.duckdns.org -> SAME server IP
   2. .env: DOMAINS="fincraft.duckdns.org darkvera.duckdns.org" (primary first)
   3. ./setup-vm.sh   (extends TLS cert)
   4. ./rotate-admin-password.sh 'StrongPass' darkvera
 Browse https://darkvera.duckdns.org/ -- UI auto-selects tenant AND server URL
 by hostname.
+
+## Outbound email (Gmail)
+Fineract has its own built-in Gmail SMTP relay (no bolt-on integration) —
+set GMAIL_ADDRESS + GMAIL_APP_PASSWORD (quoted — Google displays it with
+spaces) in .env before running ./setup-vm.sh and it's configured
+automatically for the first ('fincraft') tenant. ./add-tenant.sh configures
+it again for each new tenant, reusing the same .env values unless you pass
+overrides: ./add-tenant.sh <id> <domain> "Name" [gmail-address] [app-password].
+Needs a Gmail *App Password* (2-Step Verification must be ON first):
+Gmail Account -> Security -> 2-Step Verification -> App passwords.
+Skipped automatically (with a note) if GMAIL_ADDRESS/GMAIL_APP_PASSWORD are
+blank — run ./configure-email.sh <tenant> anytime to set it up later, or
+after rotating the admin password (set FINERACT_ADMIN_PASSWORD in .env first).
+Caveat: regular Gmail accounts cap outbound mail at ~500/day (~2000/day on
+Google Workspace) — fine for account notifications and OTPs at moderate
+volume, not a bulk-mail replacement.
 
 ## Updating (frontend, infra scripts, or docker-compose.yml)
 Push changes to your repo's remote. The auto-update timer (installed by

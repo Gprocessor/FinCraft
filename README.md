@@ -54,6 +54,11 @@ cp .env.example .env && nano .env   # set DOMAINS, LETSENCRYPT_EMAIL at minimum
 ./setup-vm.sh
 ```
 
+Set `GMAIL_ADDRESS` + `GMAIL_APP_PASSWORD` in `.env` first if you want outbound
+email (OTPs, notifications) configured automatically via Fineract's built-in
+Gmail SMTP relay — otherwise it's skipped with a note and can be run later via
+`./configure-email.sh <tenant>`.
+
 `setup-vm.sh` installs Docker, starts Postgres/Fineract/nginx, generates the
 frontend's tenant config, issues a TLS certificate, and installs auto-update,
 backups, and monitoring. First boot takes 5–10 minutes.
@@ -75,6 +80,7 @@ Run these from inside `deploy/`:
 |---|---|
 | Redeploy immediately (normally automatic, ~60s) | `./redeploy.sh` |
 | Add a tenant | `./add-tenant.sh <identifier> <domain> "Display Name"` |
+| Configure/reconfigure Gmail SMTP for a tenant | `./configure-email.sh <tenant>` |
 | Manual backup | `./backup.sh` |
 | Health check | `./check-deployment.sh` or `./monitor.sh` |
 | Rotate admin password | `./rotate-admin-password.sh '<password>' [tenant]` |

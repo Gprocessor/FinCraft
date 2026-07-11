@@ -3,20 +3,21 @@ set -euo pipefail
 cd "$(dirname "$0")"
 set -a; . ./.env; set +a
 
-IDENT="${1:-}"; DOMAIN="${2:-}"; DISPLAY="${3:-$IDENT}"
+IDENT="${1:-}"; DOMAIN="${2:-}"; DISPLAY="${3:-$IDENT}"; GMAIL_USER_ARG="${4:-}"; GMAIL_PASS_ARG="${5:-}"
 if [ -z "$IDENT" ] || [ -z "$DOMAIN" ]; then
-  echo "Usage: ./add-tenant.sh <tenant_identifier> <domain> [\"Display Name\"]"
+  echo "Usage: ./add-tenant.sh <tenant_identifier> <domain> [\"Display Name\"] [gmail-address] [gmail-app-password]"
   echo "  e.g. ./add-tenant.sh darkvera darkvera.duckdns.org \"DarkVera Ltd\""
+  echo "  Gmail address/app-password default to GMAIL_ADDRESS/GMAIL_APP_PASSWORD in .env if omitted."
   exit 1
 fi
 SCHEMA="fineract_${IDENT}"
 
 PSQL() { sudo docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" -i fineract-postgres psql -v ON_ERROR_STOP=1 -U postgres "$@"; }
 
-echo "[1/5] Creating tenant database '${SCHEMA}'..."
+echo "[1/6] Creating tenant database '${SCHEMA}'..."
 PSQL -d postgres -c "CREATE DATABASE ${SCHEMA} OWNER fineract_app;" || echo "  (may already exist)"
 
-echo "[2/5] Registering tenant '${IDENT}' in registry..."
+echo "[2/6] Registering tenant '${IDENT}' in registry..."
 PSQL -d fineract_tenants <<SQL
 DO \$\$
 DECLARE conn_cols text; ten_cols text; new_conn_id bigint;
@@ -33,12 +34,12 @@ END
 \$\$;
 SQL
 
-echo "[3/5] *** RESTARTING Fineract to run Liquibase migrations for '${SCHEMA}' ***"
+echo "[3/6] *** RESTARTING Fineract to run Liquibase migrations for '${SCHEMA}' ***"
 echo "      (Fineract only picks up a NEW tenant on restart -- this is required.)"
 sudo docker restart fineract-server >/dev/null
 echo "      Fineract restarted. Give it ~1-2 min to migrate the new tenant DB."
 
-echo "[4/5] Registering '${DOMAIN}' -> '${IDENT}' in TENANT_DOMAINS (.env) and regenerating config.js..."
+echo "[4/6] Registering '${DOMAIN}' -> '${IDENT}' in TENANT_DOMAINS (.env) and regenerating config.js..."
 if grep -q "^TENANT_DOMAINS=" .env; then
   # append, avoiding a duplicate entry for the same domain
   CURRENT=$(grep "^TENANT_DOMAINS=" .env | sed 's/^TENANT_DOMAINS=//; s/^"//; s/"$//')
@@ -51,7 +52,13 @@ fi
 chmod +x regen-frontend-config.sh
 ./regen-frontend-config.sh .. --reload
 
-echo "[5/5] Done."
+echo "[5/6] Configuring outbound email (Gmail SMTP) for tenant '${IDENT}'..."
+echo "      (waits for the new tenant's schema migration from step 3 to finish)"
+chmod +x configure-email.sh
+./configure-email.sh "${IDENT}" "${GMAIL_USER_ARG}" "${GMAIL_PASS_ARG}" "${DISPLAY}" \
+  || echo "      Email setup skipped/failed — re-run: ./configure-email.sh ${IDENT}"
+
+echo "[6/6] Done."
 echo
 echo "Next: add '${DOMAIN}' to DOMAINS in .env (comma/space-separated, primary"
 echo "first), point its DNS to this SAME server IP, then re-run ./setup-vm.sh"

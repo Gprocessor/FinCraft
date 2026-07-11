@@ -174,7 +174,7 @@ sudo tee /etc/logrotate.d/fincraft >/dev/null <<'ROTATE'
 }
 ROTATE
 
-chmod +x backup.sh monitor.sh renew-cert.sh rotate-admin-password.sh add-tenant.sh setup-deploy-key.sh regen-frontend-config.sh redeploy.sh check-deployment.sh
+chmod +x backup.sh monitor.sh renew-cert.sh rotate-admin-password.sh add-tenant.sh setup-deploy-key.sh regen-frontend-config.sh redeploy.sh check-deployment.sh configure-email.sh
 CRON_TMP=$(mktemp)
 crontab -l 2>/dev/null | grep -v "$DEPLOY_DIR/backup.sh" \
   | grep -v "$DEPLOY_DIR/monitor.sh" \
@@ -185,6 +185,9 @@ echo "0 3 * * * $DEPLOY_DIR/renew-cert.sh" >> "$CRON_TMP"
 crontab "$CRON_TMP"; rm -f "$CRON_TMP"
 
 ./check-deployment.sh --wait
+
+log "Configuring outbound email (Gmail SMTP) for tenant '${DEFAULT_TENANT_IDENTIFIER:-fincraft}'"
+./configure-email.sh "${DEFAULT_TENANT_IDENTIFIER:-fincraft}" || warn "Email setup skipped/failed — see above. Re-run ./configure-email.sh ${DEFAULT_TENANT_IDENTIFIER:-fincraft} any time."
 
 echo
 echo "=================================================="
