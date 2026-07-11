@@ -1,0 +1,21 @@
+# Secrets / local config
+deploy/.env
+
+# Generated at deploy time (regen-frontend-config.sh regenerates this in
+# place on every deploy — the tracked copy in git is just a demo default for
+# local frontend dev, e.g. `npx serve .`)
+# NOTE: intentionally NOT ignoring js/config.js — it stays tracked so a
+# fresh clone has a working demo default before the first deploy runs.
+
+# TLS material and ACME state
+deploy/nginx-certs/
+deploy/certbot-webroot/
+
+# Backups
+deploy/backups/
+
+# Node
+node_modules/
+
+# OS cruft
+.DS_Store

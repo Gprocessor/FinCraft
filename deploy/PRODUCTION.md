@@ -1,0 +1,1 @@
+# Production: PostgreSQL + official Fineract (bundled pg driver) + nginx static FinCraft, same-origin /fineract/ proxy, tool-free 20FB healthcheck, complete domain-aware config.js, multi-domain Let's Encrypt + auto-renew, fail2ban+unattended-upgrades, .env 600, nightly all-tenant backups, monitoring + 60s auto-update. First run: ./rotate-admin-password.sh 'Strong'.
