@@ -10,12 +10,7 @@ import { can } from '../shared.js';
 export async function renderUserDetail(c, userId) {
   c.innerHTML = `<div class="empty-state-row">Loading user…</div>`;
   try {
-    const [user, roles, allPerms] = await Promise.all([
-      api.users.get(userId),
-      api.roles.list(),
-      api.permissions.list().catch(() => [])
-    ]);
-    const roleList = Array.isArray(roles) ? roles : [];
+    const user = await api.users.get(userId);
     const userRoles = user.selectedRoles || [];
 
     // Compute inherited permissions from selected roles

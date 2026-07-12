@@ -123,6 +123,52 @@ services:
     networks:
       - fineract-net
 
+  # Keycloak — the OAuth2/OIDC identity provider FinCraft will eventually
+  # authenticate against instead of Fineract's own Basic Auth. Bound to
+  # 127.0.0.1 only for now, deliberately not exposed publicly or wired into
+  # nginx yet — see deploy/KEYCLOAK-SETUP.md for how to reach the admin
+  # console safely (SSH tunnel) and what to configure once you're in.
+  # Fineract's own login is completely unaffected until we explicitly flip
+  # its OAuth env vars in a later step, once this is verified working.
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: fincraft-keycloak
+    restart: unless-stopped
+    command: start --hostname-strict=false --proxy-headers=xforwarded
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      TZ: UTC
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000;
+          echo -e "GET /health/ready HTTP/1.1\r\nHost: localhost:9000\r\nConnection: close\r\n\r\n" >&3;
+          if cat <&3 | grep -q '"status": "UP"'; then exit 0; else exit 1; fi
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - fineract-net
+
 volumes:
   postgres-data:
 

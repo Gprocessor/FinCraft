@@ -43,6 +43,27 @@ services:
     networks:
       - oauth-test-net
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: fincraft-oauth-test-keycloak
+    command: start-dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      TZ: UTC
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: throwaway
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: throwaway
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "127.0.0.1:18080:8080"
+    networks:
+      - oauth-test-net
+
   fineract:
     image: apache/fineract:latest
     container_name: fineract-oauth-test-server
@@ -63,9 +84,17 @@ services:
       FINERACT_DEFAULT_TENANTDB_PWD: throwaway
       FINERACT_DEFAULT_TENANTDB_NAME: fineract_default
       FINERACT_DEFAULT_TENANTDB_IDENTIFIER: default
-      # === the only thing actually under test ===
+      # === the only things actually under test ===
       FINERACT_SECURITY_BASICAUTH_ENABLED: "false"
       FINERACT_SECURITY_OAUTH_ENABLED: "true"
+      # Standard Spring Boot OAuth2 resource-server property, via Spring's
+      # relaxed env-var binding. NOT independently confirmed against
+      # Fineract's own docs (couldn't find one) — reasoned from Fineract
+      # being a standard Spring Boot + Spring Security app, and this is
+      # exactly what our earlier test already showed active
+      # (WWW-Authenticate: Bearer). This test verifies the inference before
+      # it goes anywhere near production.
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "http://keycloak:8080/realms/default"
     ports:
       - "127.0.0.1:18443:8443"
     networks:

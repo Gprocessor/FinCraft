@@ -16,7 +16,7 @@ if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sudo sh
   sudo usermod -aG docker "$USER" || true
 fi
-sudo apt-get install -y -q git openssl ufw cron curl fail2ban unattended-upgrades certbot >/dev/null 2>&1 || true
+sudo apt-get install -y -q git openssl ufw cron curl fail2ban unattended-upgrades certbot jq >/dev/null 2>&1 || true
 sudo systemctl enable --now docker
 sudo systemctl enable --now fail2ban 2>/dev/null || true
 sudo dpkg-reconfigure -f noninteractive unattended-upgrades 2>/dev/null || true
@@ -222,7 +222,7 @@ sudo tee /etc/logrotate.d/fincraft >/dev/null <<'ROTATE'
 }
 ROTATE
 
-chmod +x backup.sh restore.sh monitor.sh renew-cert.sh rotate-admin-password.sh add-tenant.sh setup-deploy-key.sh setup-gdrive-backup.sh regen-frontend-config.sh redeploy.sh check-deployment.sh configure-email.sh daily-report.sh
+chmod +x backup.sh restore.sh monitor.sh renew-cert.sh rotate-admin-password.sh add-tenant.sh setup-deploy-key.sh setup-gdrive-backup.sh create-keycloak-realm.sh regen-frontend-config.sh redeploy.sh check-deployment.sh configure-email.sh daily-report.sh
 CRON_TMP=$(mktemp)
 crontab -l 2>/dev/null | grep -v "$DEPLOY_DIR/backup.sh" \
   | grep -v "$DEPLOY_DIR/monitor.sh" \
