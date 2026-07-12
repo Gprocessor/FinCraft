@@ -245,4 +245,13 @@ echo " Deployment complete. TLS: ${TLS_MODE}  Repo private: ${REPO_PRIVATE}"
 for d in $DOMAINS; do echo "   https://$d -> tenant '$(grep "^$d:" <<<"$TENANT_DOMAINS" | cut -d: -f2)'"; done
 echo " Login: mifos / password (tenant: ${DEFAULT_TENANT_IDENTIFIER:-fincraft})"
 echo " Next: ./rotate-admin-password.sh 'YourStrongPass'"
+echo
+echo " Already running automatically, no action needed:"
+echo "   - Nightly DB backups to ./backups (2 AM) + daily log digest email (7 AM)"
+echo "   - Auto-deploy watcher (pulls + redeploys on new commits, every 60s)"
+echo
+echo " Optional, needs one manual step from you:"
+echo "   - Backups only save locally right now. For off-site Google Drive"
+echo "     uploads (one-time Google sign-in, then fully automatic): "
+echo "     ./setup-gdrive-backup.sh"
 echo "=================================================="

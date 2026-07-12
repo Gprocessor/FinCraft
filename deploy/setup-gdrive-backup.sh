@@ -28,30 +28,44 @@ else
   cat <<INSTRUCTIONS
 
 ==================================================================
- One-time Google sign-in needed — this VM has no browser, so do
- this part from a machine that DOES (your laptop, or OCI Cloud
- Shell's own browser tab — NOT this SSH session):
+ One-time Google sign-in needed — this VM has no browser, so this
+ needs a machine that DOES (your laptop, or OCI Cloud Shell's own
+ browser tab — NOT this SSH session) for one step in the middle.
 ==================================================================
 
- 1. On that other machine, install rclone if it isn't already there:
-      curl https://rclone.org/install.sh | sudo bash
-    (or: brew install rclone / choco install rclone / etc.)
+ Right here, on THIS VM, run:
+   rclone config
 
- 2. Run this on that machine and follow the browser prompt to sign
-    in to the Google account you want backups to land in:
+ Then answer the prompts exactly like this:
+   n) New remote
+   name>              ${REMOTE}
+   Storage>           drive          (Google Drive — pick its number from the list)
+   client_id>         <blank, just press Enter>
+   client_secret>     <blank, just press Enter>
+   scope>             1              (Full access)
+   service_account_file>  <blank, just press Enter>
+   Edit advanced config?  n
+   Use auto config?       n          <- THE IMPORTANT ONE: say N, this VM has no browser
+
+ At that point it prints something like:
+   Option config_token.
+   Execute the following on a machine with a web browser:
       rclone authorize "drive"
 
- 3. It prints a long token blob starting with something like:
-      {"access_token":"...
-    Copy the ENTIRE line.
+ NOW switch to the machine WITH a browser (laptop / Cloud Shell tab):
+   1. Install rclone there if needed: curl https://rclone.org/install.sh | sudo bash
+      (or: brew install rclone / choco install rclone / etc.)
+   2. Run:  rclone authorize "drive"
+   3. Approve it in the browser tab that opens.
+   4. It prints a long token blob starting with {"access_token":...
+      Copy that entire line.
 
- 4. Back HERE, on this VM, run:
-      rclone config create ${REMOTE} drive scope drive config_is_local false
-    then paste that token blob when it asks for it.
-
+ BACK HERE on this VM, at the "config_token>" prompt, paste that
+ line, then answer "n" to "Configure this as a Shared Drive?" and
+ "y" to confirm the remote looks right.
 ==================================================================
 INSTRUCTIONS
-  read -rp "Press Enter once you've completed steps 1-4 above (or Ctrl+C to stop here and finish later)... " _
+  read -rp "Press Enter once you've run 'rclone config' and finished the steps above (or Ctrl+C to stop here and finish later)... " _
   if ! rclone listremotes | grep -q "^${REMOTE}:$"; then
     echo "Remote '${REMOTE}' still isn't configured — re-run this script once you've finished the steps above."
     exit 1

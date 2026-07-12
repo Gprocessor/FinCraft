@@ -1,5 +1,10 @@
 # Fix Log — Users Module
 
+**Status: closed.** 9 bugs found and fixed across two audit passes; one item
+(`#4` under "Verification pass" below) remains open pending a live look at
+the actual `GET /passwordpreferences` response — see that entry for what's
+needed to close it out.
+
 Scope: `js/pages/users/**` (Users tab, Roles & Permissions tab, Password Policy tab,
 Two-Factor Auth tab) and the API layers backing it, `js/api/admin.js`
 (`makeUsersAPI`, `makeRolesAPI`, `makePermissionsAPI`) and `js/api/auth-account.js`
@@ -128,7 +133,7 @@ under `js/pages/**` just never picked it up.
 that don't have a field-level `errors[]` entry — those still fall through
 to the same generic message as before.
 
-
+## Verified clean (no changes needed)
 
 - `js/pages/users/account/list.js` — CREATE_USER / READ_USER / UPDATE_USER /
   DELETE_USER gating all correct; `api.users.list/create/update/delete` all
@@ -164,3 +169,55 @@ to the same generic message as before.
   cross-cutting command-palette issue, not specific to the user module, and
   fixing just `create:user` in isolation would leave 14 inconsistent
   siblings. Flagging for a dedicated command-palette/global-search pass.
+
+## Verification pass (2026-07-12) — found, then fixed same day
+
+Full re-audit of every file in scope, without fixing anything until confirmed.
+Re-confirmed: every endpoint in `makeUsersAPI`/`makeRolesAPI`/`makePermissionsAPI`
+(admin.js) and `makeUserDetailsAPI`/`makeTwoFactorAPI`/`makeTenantOidcAPI`
+(auth-account.js) matches `fineract_api_raw.json` exactly, and all 14
+permission codes referenced anywhere in the module exist in
+`fineract_permissions_raw.json` with correct entity/action semantics.
+`roles.js`, `list.js`, `index.js`, `shared.js`, both barrel files, and
+`profile.js`'s change-password flow were all read line-by-line — no issues.
+
+Three bugs found and fixed:
+
+1. **`js/pages/users/account/detail.js`, `renderUserDetail`** — fetched both
+   `api.roles.list()` and `api.permissions.list()` into `roles`/`allPerms` on
+   every single user-detail page view, but neither result was ever used
+   anywhere in the function (a second look while fixing caught that `roles`/
+   `roleList` was just as dead as `allPerms` — the original verification pass
+   only flagged the permissions fetch). Two full dead fetches per page view,
+   one of them pulling the entire system permission list (900+ entries) for
+   nothing. **Fixed:** removed both — `renderUserDetail` now only calls
+   `api.users.get(userId)`, the one result it actually uses.
+
+2. **`js/pages/self-service/portal-users.js:79`** — the "Linked Client" cell
+   built malformed HTML: `` `${u.clientId}">${escapeHtml(...)}</a>` `` was
+   missing the opening `<a href="#" data-ss-view-client="` entirely, so it
+   rendered as broken markup instead of a clickable link. **Fixed:** restored
+   the missing anchor tag. Bonus: since the existing click handler already
+   does `querySelectorAll('[data-ss-view-client]')` (matching both this link
+   and the separate "View Client" button by the same attribute), the link is
+   now fully wired up and navigates correctly — not just visually fixed.
+
+3. **`js/pages/self-service/portal-users.js:41`** — the "About Self-Service"
+   button (a static help modal, no API call at all) was gated on
+   `can('CREATE_USER')` — the wrong permission entirely for a read-only
+   popup, almost certainly copy-pasted from a real create button elsewhere.
+   **Fixed:** removed the gate — it's not a mutating action, so it doesn't
+   need one; it renders for anyone who can reach this tab, same as every
+   other purely-informational element on the page.
+
+One item remains open, still unconfirmed:
+
+4. **`js/pages/users/security.js` `loadPasswordPolicy`** — parses
+   `GET /passwordpreferences` defensively across three different possible
+   response shapes, suggesting the original author never confirmed Fineract's
+   actual contract for this endpoint. `PasswordPreferencesApiResource` is the
+   one resource missing from both raw extracts, and its exact response shape
+   couldn't be pinned down via search either. Prime suspect for the earlier
+   "missing policy" error report, but not confirmed — needs either a live
+   response from the actual server or the real Fineract source to verify
+   before touching it. Left as-is pending that.
