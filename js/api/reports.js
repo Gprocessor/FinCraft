@@ -23,7 +23,14 @@ export function makeRunReportsAPI(self) {
 
 export function makeCollectionSheetAPI(self) {
   return {
-  get:  (params) => self._g('/collectionsheet', params),
+  // FIXLOG #1: CollectionSheetApiResource#generateCollectionSheet is POST-only (per
+  // fineract_api_raw.json — the class exposes exactly one method, POST "", with the
+  // saveCollectionSheet command dispatched off the same endpoint below). This was
+  // previously firing as a GET, which Fineract has no route for (405/404) — the
+  // "Load Sheet" button on the Collections page could never have worked. officeId/
+  // staffId/meetingDate/etc. are query params on Fineract's side, so they still go
+  // in as `params`; the body is the empty JSON object Fineract expects for this call.
+  get:  (params) => self._p('/collectionsheet', {}, { params }),
   save: (body)   => self._p('/collectionsheet?command=saveCollectionSheet', body)
 };
 }

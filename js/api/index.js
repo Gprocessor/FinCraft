@@ -22,7 +22,7 @@ import { makeFixedDepositsAPI, makeRecurringDepositsAPI, makeSavingsAPI } from '
 import { makeSharesAPI } from './shares.js';
 import { makeCalendarsAPI, makeCentersAPI, makeGroupLevelsAPI, makeGroupsAPI, makeMeetingsAPI } from './groups-centers.js';
 import { makeCodesAPI, makeCurrenciesAPI, makeFundsAPI, makeHolidaysAPI, makeOfficesAPI, makePaymentTypesAPI, makeStaffAPI, makeTellerJournalAPI, makeTellersAPI, makeWorkingDaysAPI } from './organization.js';
-import { makeFdProductsAPI, makeFloatingRatesAPI, makeLoanProductsAPI, makeProductMixAPI, makeRdProductsAPI, makeSavingsProductsAPI, makeShareProductsAPI } from './products.js';
+import { makeFdProductsAPI, makeFloatingRatesAPI, makeLoanProductsAPI, makeProductMixAPI, makeRatesAPI, makeRdProductsAPI, makeSavingsProductsAPI, makeShareProductsAPI } from './products.js';
 import { makeAccountingRulesAPI, makeFinancialActivityAccountsAPI, makeGlAccountsAPI, makeGlClosuresAPI, makeJournalEntriesAPI, makeOpeningBalancesAPI, makeProvisioningAPI, makeRunAccrualsAPI, makeTaxComponentsAPI, makeTaxGroupsAPI } from './accounting.js';
 import { makeAdhocQueriesAPI, makeCollectionSheetAPI, makeDataTablesAPI, makeEntityDatatableChecksAPI, makeReportsAPI, makeRunReportsAPI } from './reports.js';
 import { makeAccountNumberPreferencesAPI, makeAuditsAPI, makeConfigurationsAPI, makeEntityToEntityMappingsAPI, makeJobsAPI, makeMakercheckerAPI, makePermissionsAPI, makeRolesAPI, makeSurveysAdminAPI, makeUsersAPI } from './admin.js';
@@ -67,6 +67,7 @@ export class FineractAPIFull extends FineractAPI {
     this.rdProducts = makeRdProductsAPI(this);
     this.productMix = makeProductMixAPI(this);
     this.floatingRates = makeFloatingRatesAPI(this);
+    this.rates = makeRatesAPI(this);
     this.delinquencyBuckets = makeDelinquencyBucketsAPI(this);
     this.collateralManagement = makeCollateralManagementAPI(this);
     this.journalEntries = makeJournalEntriesAPI(this);

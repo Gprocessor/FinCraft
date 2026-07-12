@@ -3,7 +3,7 @@
 
 import { api } from '../../../api.js';
 import { can } from '../shared.js';
-import { escapeHtml, fmtDate, num, sb } from '../../../utils.js';
+import { escapeHtml, num, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openSetBusinessDateModal, openWebhookModal, viewServiceConfig } from '../actions.js';
 
@@ -208,17 +208,10 @@ export async function loadExternalEvents(c) {
   const el = c.querySelector('#sy-10');
   el.innerHTML = '<div class="empty-state-row">Loading external event configuration…</div>';
   try {
-    const [eventsRes, configRes] = await Promise.allSettled([
-      api.externalEvents.list({ limit: 50 }),
-      api.externalEvents.configurations()
-    ]);
+    // FIXLOG #3: externalEvents.list() removed — no public Fineract route backs it.
+    const configRes = await api.externalEvents.configurations().catch(() => null);
 
-    const recentEvents = eventsRes.status === 'fulfilled'
-      ? (Array.isArray(eventsRes.value) ? eventsRes.value : (eventsRes.value?.pageItems || []))
-      : [];
-    const configList = configRes.status === 'fulfilled'
-      ? (Array.isArray(configRes.value) ? configRes.value : (configRes.value?.externalEventConfiguration || []))
-      : [];
+    const configList = Array.isArray(configRes) ? configRes : (configRes?.externalEventConfiguration || []);
 
     const canEdit = can('UPDATE_EXTERNAL_EVENT_CONFIGURATION');
 
@@ -255,22 +248,7 @@ export async function loadExternalEvents(c) {
         </table>
 
         ${canEdit ? `<div class="mt-3"><button class="btn-primary" id="ee-save">Save Changes</button></div>` : ''}
-      ` : '<div class="empty-state-row">No event configurations available</div>'}
-
-      <h3 class="mt-4">Recent Events (last 50)</h3>
-      ${recentEvents.length ? `
-        <table class="table table-compact">
-          <thead><tr>
-            <th>ID</th><th>Type</th><th>Status</th><th>Created</th>
-          </tr></thead>
-          <tbody>${recentEvents.slice(0, 50).map(e => `
-            <tr>
-              <td>#${e.id || '—'}</td>
-              <td>${escapeHtml(e.type || e.eventType || '—')}</td>
-              <td>${escapeHtml(e.status || e.eventStatus || '—')}</td>
-              <td>${fmtDate(e.createdAt || e.creationDate) || '—'}</td>
-            </tr>`).join('')}</tbody>
-        </table>` : '<div class="empty-state-row">No recent events recorded</div>'}`;
+      ` : '<div class="empty-state-row">No event configurations available</div>'}`;
 
     el.querySelector('#ee-search')?.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase().trim();

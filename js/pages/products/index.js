@@ -6,7 +6,7 @@
 import { api } from '../../api.js';
 import { escapeHtml, fmt, sb } from '../../utils.js';
 import { confirm as modalConfirm, toast } from '../../ui.js';
-import { openDelinquencyModal, openFDProductModal, openFloatingRateModal, openLoanProductModal, openProductMixModal, openRDProductModal, openSavingsProductModal, openShareProductModal, openTaxModal } from './actions.js';
+import { openDelinquencyModal, openFDProductModal, openFloatingRateModal, openLoanProductModal, openProductMixModal, openRateModal, openRDProductModal, openSavingsProductModal, openShareProductModal, openTaxModal } from './actions.js';
 import { loadProductMixList } from './loaders.js';
 import { can, resetGlCache } from './shared.js';
 import { renderSectionHub } from '../../ui/section-hub.js';
@@ -83,7 +83,18 @@ export async function render(c, params = {}) {
       deleteFn: null
     },
     {
-      key: 7, label: 'Tax', perm: 'TAXCOMPONENT', icon: 'fa-percent', desc: 'Tax components & groups',
+      key: 7, label: 'Rate', perm: 'RATE', icon: 'fa-percent', desc: 'Named percentage rates for products & charges',
+      fn: () => api.rates.list(),
+      cols: ['Name','Percentage'],
+      row: p => [p.name, `${p.percentage ?? 0}%`],
+      newFn: () => openRateModal(null, () => reload(7)),
+      editFn: (id) => openRateModal(id, () => reload(7)),
+      // RateApiResource has no DELETE method in Fineract, and no DELETE_RATE permission exists either
+      // — same situation as Floating Rate.
+      deleteFn: null
+    },
+    {
+      key: 8, label: 'Tax', perm: 'TAXCOMPONENT', icon: 'fa-percent', desc: 'Tax components & groups',
       fn: async () => {
         const [tc, tg] = await Promise.all([api.taxComponents.list(), api.taxGroups.list()]);
         return [
@@ -93,13 +104,13 @@ export async function render(c, params = {}) {
       },
       cols: ['Name','Type'],
       row: p => [p.name, p._type],
-      newFn: () => openTaxModal(null, null, () => reload(7)),
-      editFn: (id, item) => openTaxModal(item._type === 'Component' ? 'component' : 'group', id, () => reload(7)),
+      newFn: () => openTaxModal(null, null, () => reload(8)),
+      editFn: (id, item) => openTaxModal(item._type === 'Component' ? 'component' : 'group', id, () => reload(8)),
       // Tax CRUD: components/groups don't expose DELETE in Fineract — handled via deactivation
       deleteFn: null
     },
     {
-      key: 8, label: 'Delinquency Bucket', perm: 'DELINQUENCY_BUCKET', icon: 'fa-triangle-exclamation', desc: 'Arrears classification buckets',
+      key: 9, label: 'Delinquency Bucket', perm: 'DELINQUENCY_BUCKET', icon: 'fa-triangle-exclamation', desc: 'Arrears classification buckets',
       fn: async () => {
         const [b, r] = await Promise.all([api.delinquencyBuckets.list(), api.delinquencyBuckets.ranges()]);
         return (Array.isArray(b) ? b : []).map(bk => ({
@@ -112,8 +123,8 @@ export async function render(c, params = {}) {
         p.name,
         (p._ranges || []).map(r => `${r.classification || r.minimumAgeDays + 'd'}`).join(', ') || '—'
       ],
-      newFn: () => openDelinquencyModal(null, () => reload(8)),
-      editFn: (id) => openDelinquencyModal(id, () => reload(8)),
+      newFn: () => openDelinquencyModal(null, () => reload(9)),
+      editFn: (id) => openDelinquencyModal(id, () => reload(9)),
       deleteFn: (id) => api.delinquencyBuckets.delete(id)
     }
   ];

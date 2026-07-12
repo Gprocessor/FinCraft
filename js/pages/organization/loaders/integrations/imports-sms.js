@@ -14,21 +14,32 @@ export async function loadBulkImports(c) {
     // BulkImportApiResource has exactly 3 real methods (list, getOutputTemplateLocation, downloadOutputTemplate)
     // — there is no "getEntityTypes" endpoint, so don't attempt a doomed request; use the documented entity list
     // that Fineract's own downloadtemplate/uploadtemplate resources actually support.
+    // NOTE: api.bulkImports.template()/.upload() build the URL as `/${entity}/downloadtemplate` /
+    // `/${entity}/uploadtemplate`, so any entity whose template lives under a *nested* resource path
+    // (e.g. loan repayments, savings transactions) must include that nested segment in its `entity` value —
+    // a bare 'loanrepayments' or 'savingstransactions' does not exist as a top-level resource and 404s.
     const entityTypes = [
-        { entity: 'clients',                      label: 'Clients' },
-        { entity: 'centers',                      label: 'Centers' },
-        { entity: 'groups',                       label: 'Groups' },
-        { entity: 'staff',                        label: 'Staff' },
-        { entity: 'offices',                      label: 'Offices' },
-        { entity: 'loans',                        label: 'Loans' },
-        { entity: 'loanrepayments',               label: 'Loan Repayments' },
-        { entity: 'savingsaccounts',              label: 'Savings Accounts' },
-        { entity: 'savingstransactions',          label: 'Savings Transactions' },
-        { entity: 'fixeddepositaccounts',         label: 'Fixed Deposit Accounts' },
-        { entity: 'recurringdepositaccounts',     label: 'Recurring Deposit Accounts' },
-        { entity: 'chartofaccounts',              label: 'Chart of Accounts' },
-        { entity: 'journalentries',               label: 'Journal Entries' },
-        { entity: 'shareaccounts',                label: 'Share Accounts' }
+        { entity: 'clients',                        label: 'Clients' },
+        { entity: 'centers',                        label: 'Centers' },
+        { entity: 'groups',                         label: 'Groups' },
+        { entity: 'staff',                          label: 'Staff' },
+        { entity: 'offices',                        label: 'Offices' },
+        { entity: 'users',                          label: 'Users' },
+        { entity: 'loans',                          label: 'Loans' },
+        { entity: 'loans/repayments',               label: 'Loan Repayments' },
+        { entity: 'savingsaccounts',                label: 'Savings Accounts' },
+        { entity: 'savingsaccounts/transactions',   label: 'Savings Transactions' },
+        { entity: 'fixeddepositaccounts',           label: 'Fixed Deposit Accounts' },
+        { entity: 'fixeddepositaccounts/transaction', label: 'Fixed Deposit Transactions' },
+        { entity: 'recurringdepositaccounts',       label: 'Recurring Deposit Accounts' },
+        { entity: 'recurringdepositaccounts/transactions', label: 'Recurring Deposit Transactions' },
+        // GLAccountsApiResource's class_path is /v1/glaccounts — "chartofaccounts" is not a real resource
+        // and 404s; keep the human label but use the real path segment as the value.
+        { entity: 'glaccounts',                     label: 'Chart of Accounts' },
+        { entity: 'journalentries',                 label: 'Journal Entries' }
+        // 'shareaccounts' intentionally omitted: there is no ShareAccounts template/upload endpoint in
+        // Fineract (only ShareDividendApiResource exists under /v1/shareproduct/{productId}/dividend),
+        // so this option previously 404'd on every attempt.
       ];
 
     // Fetch import history (may not exist on all Fineract versions)
@@ -112,20 +123,17 @@ export async function loadBulkImports(c) {
       const entity = el.querySelector('#imp-entity').value;
       if (!entity) { toast('warn', 'Select an entity first', ''); return; }
       try {
+        // api.bulkImports.template() now returns the raw fetch Response (see js/api/misc.js) —
+        // this endpoint streams a binary .xlsx, so it must go through res.blob(), never res.json()/text().
         const res = await api.bulkImports.template(entity);
-        // Fineract returns either a redirect URL or a binary blob depending on version
-        if (typeof res === 'string' && res.startsWith('http')) {
-          window.open(res, '_blank');
-        } else if (res?.url) {
-          window.open(res.url, '_blank');
-        } else {
-          // Treat as blob fallback
-          const blob = new Blob([res], { type: 'application/vnd.ms-excel' });
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = `${entity}_import_template.xlsx`;
-          a.click();
-        }
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        // entity may contain '/' for nested resources (e.g. 'loans/repayments') — replace before
+        // using it as a filename so the browser doesn't treat it as a path separator.
+        a.download = `${entity.replace(/\//g, '-')}_import_template.xlsx`;
+        a.click();
+        URL.revokeObjectURL(a.href);
         toast('success', 'Template downloaded', entity);
       } catch (e) { toast('error', 'Template download failed', e.detail?.defaultUserMessage || e.message); }
     });

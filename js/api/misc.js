@@ -144,7 +144,13 @@ export function makeCobAPI(self) {
 
 export function makeBulkImportsAPI(self) {
   return {
-      template: (entity)        => self._g(`/${entity}/downloadtemplate`),
+      // IMPORTANT: this endpoint streams a binary .xlsx file, not JSON. Without `raw: true`,
+      // core.js's default response handling falls through to `r.text()` for any non-JSON
+      // content-type, which decodes the binary workbook bytes as UTF-8 text and corrupts them —
+      // the resulting Blob is an unreadable/broken "template" file (this was the download bug).
+      // Every other binary-download call in the app (reports, document attachments, images)
+      // uses this same `raw: true` + `res.blob()` pattern — see js/ui/handlers/run-report.js.
+      template: (entity)        => self._req('GET', `/${entity}/downloadtemplate`, { raw: true }),
       upload:   (entity, formData) => self._req('POST', `/${entity}/uploadtemplate`, { body: formData, headers: {} }),
       // ---- Generic /imports endpoint ----
       // BulkImportApiResource has exactly 3 real methods: bare GET /v1/imports (list, filterable via params),

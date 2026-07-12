@@ -122,7 +122,9 @@ export async function loadNotifications(c) {
                   <td title="${escapeHtml(String(n.createdAt || ''))}">${timeAgo(n.createdAt)}</td>
                   <td class="text-right">
                     ${link ? `<button class="btn-ghost btn-xs" data-go-link="${link}" title="Open entity"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>` : ''}
-                    ${!n.isRead ? `<button class="btn-ghost btn-xs" data-mark-read="${n.id}" title="Mark as read"><i class="fa-solid fa-check"></i></button>` : ''}
+                    ${''/* FIXLOG #2: per-row "mark as read" removed — Fineract's NotificationApiResource
+                           has no per-notification endpoint, only list + mark-all-read. See
+                           js/api/integrations.js makeNotificationsAPI for details. */}
                   </td>
                 </tr>`;
               }).join('')}
@@ -130,18 +132,8 @@ export async function loadNotifications(c) {
           </table>
         </div>`;
 
-      // Mark individual as read
-      listEl.querySelectorAll('[data-mark-read]').forEach(b =>
-        b.addEventListener('click', async () => {
-          try {
-            await api.notifications.markRead(b.dataset.markRead);
-            toast('success', 'Marked as read', '');
-            loadNotifications(c);
-          } catch (e) {
-            toast('error', 'Failed', e.detail?.defaultUserMessage || e.message);
-          }
-        })
-      );
+      // FIXLOG #2: per-row mark-as-read handler removed along with the button above —
+      // Fineract has no per-notification mark-read endpoint (see makeNotificationsAPI).
 
       // Open entity link
       listEl.querySelectorAll('[data-go-link]').forEach(b =>

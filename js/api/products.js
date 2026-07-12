@@ -79,3 +79,15 @@ export function makeFloatingRatesAPI(self) {
       // No delete() — FloatingRatesApiResource exposes POST/GET/PUT only, no DELETE, per Fineract source.
     };
 }
+
+export function makeRatesAPI(self) {
+  return {
+      list:   ()        => self._g('/rates'),
+      get:    (id)      => self._g(`/rates/${id}`),
+      create: (b)       => self._p('/rates', b),
+      update: (id, b)   => self._u(`/rates/${id}`, b)
+      // No delete() — RateApiResource exposes POST/GET/PUT only, no DELETE, and there's no
+      // DELETE_RATE permission in fineract_permissions_raw.json either — same situation as
+      // Floating Rate above.
+    };
+}

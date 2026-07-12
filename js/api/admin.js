@@ -84,8 +84,12 @@ export function makeConfigurationsAPI(self) {
     getById:     (id)       => self._g(`/configurations/${id}`),
     update:      (id, body) => self._u(`/configurations/${id}`, body),
     updateByName:(name, body) => self._u(`/configurations/name/${name}`, body),
-    cache:       ()         => self._g('/configurations/cache'),
-    updateCache: (b)        => self._u('/configurations/cache', b),
+    // FIXLOG #4: cache()/updateCache() previously called `/configurations/cache`, which
+    // GlobalConfigurationApiResource has no route for — CacheApiResource's real
+    // `/v1/caches` (GET/PUT) is the only cache-toggle endpoint Fineract exposes, and
+    // it's already correctly wired below as cacheTypes()/switchCache(), which is what
+    // js/pages/system/loaders/info.js actually calls. Removed the dead/broken pair
+    // rather than leave unused code pointing at a route that doesn't exist.
     cacheTypes:  ()         => self._g('/caches'),
     switchCache: (body)     => self._u('/caches', body),
     globalConfig: {

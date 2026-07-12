@@ -183,11 +183,11 @@ export async function loadLoanEAO(c, loanId) {
       <div>
         ${can('CREATE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-primary btn-sm" id="ln-eao-transfer"><i class="fa-solid fa-arrow-right-from-bracket"></i> Transfer to Owner</button>` : ''}
         ${can('BUYBACK_LOAN') ? `<button class="btn-secondary btn-sm" id="ln-eao-buyback"><i class="fa-solid fa-arrow-right-to-bracket"></i> Buy-back</button>` : ''}
-        <!-- FLAGGED, NOT ASSUMED: api.loans.eaoTransfer/eaoBuyBack call /loans/{id}/external-asset-owners/transfer|buy-back,
-             which does not match any @Path in ExternalAssetOwnersApiResource per the source-derived API map (only
-             /v1/external-asset-owners/transfers/loans/{loanId} exists, with no separate buy-back sub-path). Permission
-             codes above are corrected to real values; the URL shape needs confirmation against a live server/OpenAPI
-             spec before this feature is trusted in production — do not treat this comment as "fixed". -->
+        <!-- FIXLOG #6: api.loans.eaoTransfer/eaoBuyBack now call the confirmed real route
+             /external-asset-owners/transfers/loans/{loanId} (see js/api/loans.js). The request
+             body shape (how Fineract distinguishes sale vs. buy-back, and the eaoList filter
+             param) is still NOT confirmed against a live server/OpenAPI spec — do not treat
+             this comment as fully resolved, only the URL is. -->
       </div>
     </div>
     <div class="text-muted small mb-2">

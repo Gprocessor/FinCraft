@@ -131,7 +131,9 @@ export function makeLoansAPI(self) {
 
     // ---- Buy-down fees & Capitalized income (progressive loan) ----
     buyDownFees:    (id)                 => self._g(`/loans/${id}/buydown-fees`),
-    buyDownFeeAllocation: (id, txId)     => self._g(`/loans/${id}/buydown-fees/${txId}/allocation`),
+    // FIXLOG #5: real route is GET {loanId}/buydown-fees/{loanTransactionId} — no
+    // trailing "/allocation" segment. Was 404ing (unused in the UI today, fixed anyway).
+    buyDownFeeAllocation: (id, txId)     => self._g(`/loans/${id}/buydown-fees/${txId}`),
     capitalizedIncomes: (id)             => self._g(`/loans/${id}/capitalized-incomes`),
     deferredIncome: (id)                 => self._g(`/loans/${id}/deferredincome`),
 
@@ -151,9 +153,22 @@ export function makeLoansAPI(self) {
     deletePostDatedCheck: (id, pdcId)    => self._d(`/loans/${id}/postdatedchecks/${pdcId}`),
 
     // ---- External Asset Owners (per loan) ----
-    eaoList:        (id)                 => self._g(`/loans/${id}/external-asset-owners`),
-    eaoTransfer:    (id, body)           => self._p(`/loans/${id}/external-asset-owners/transfer`, body),
-    eaoBuyBack:     (id, body)           => self._p(`/loans/${id}/external-asset-owners/buy-back`, body),
+    // FIXLOG #6: eaoTransfer/eaoBuyBack previously called `/loans/{id}/external-asset-owners/
+    // transfer|buy-back`, which doesn't match any route on ExternalAssetOwnersApiResource —
+    // per fineract_api_raw.json the only loan-scoped route is POST
+    // `/external-asset-owners/transfers/loans/{loanId}` (transferRequestWithLoanId), with no
+    // separate buy-back sub-path; sale vs. buy-back is presumably distinguished by the request
+    // body Fineract expects there, which the raw API map doesn't capture (no request-body
+    // schemas). Corrected both to the confirmed real path. eaoList has no per-loan equivalent
+    // at all on this resource — the closest real route is the global GET
+    // `/external-asset-owners/transfers` (getTransfers), so it's wired to that with a `loanId`
+    // filter param, but the filter param name is NOT confirmed against the raw map (its
+    // query_params are empty in the extraction) — flagging this explicitly rather than
+    // asserting it's correct. Body/query shape here should be verified against a live server
+    // before this feature is trusted in production.
+    eaoList:        (id)                 => self._g('/external-asset-owners/transfers', { loanId: id }),
+    eaoTransfer:    (id, body)           => self._p(`/external-asset-owners/transfers/loans/${id}`, body),
+    eaoBuyBack:     (id, body)           => self._p(`/external-asset-owners/transfers/loans/${id}`, body),
 
     // ---- Originators (per loan) ----
     originators:    (id)                 => self._g(`/loans/${id}/originators`),
