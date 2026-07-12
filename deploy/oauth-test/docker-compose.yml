@@ -1,0 +1,76 @@
+# FinCraft · deploy/oauth-test/ — THROWAWAY test rig, not part of the real deploy.
+#
+# Purpose: answer one question safely — does the standard apache/fineract:latest
+# image (the same one deploy/docker-compose.yml uses in production) actually
+# start up in OAuth2 mode via env vars, or does it need the documented
+# -Psecurity=oauth source rebuild?
+#
+# Deliberately isolated from production:
+#   - different container names (fineract-oauth-test-*, won't collide)
+#   - different host ports (18443/15432, won't collide with prod's 8443/5432)
+#   - its own throwaway named volume, deleted on teardown
+#   - no nginx/UI container — we only care whether Fineract itself boots
+#
+# DO NOT run this on the production VM if you'd rather keep it fully separate
+# from anything real — any machine with Docker works (a scratch VM, your own
+# laptop with Docker Desktop, a fresh Cloud Shell session, etc).
+#
+# Usage:
+#   cd deploy/oauth-test
+#   docker compose up          # watch the logs directly, don't detach
+#   ... read the result (see README.md for what to look for) ...
+#   docker compose down -v     # tear down completely, including the volume
+
+services:
+  db:
+    image: postgres:16
+    container_name: fineract-oauth-test-db
+    environment:
+      POSTGRES_PASSWORD: throwaway
+      POSTGRES_DB: fineract_tenants
+      FINERACT_DB_PASSWORD: throwaway
+      DEFAULT_TENANT_DB_NAME: fineract_default
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    networks:
+      - oauth-test-net
+
+  fineract:
+    image: apache/fineract:latest
+    container_name: fineract-oauth-test-server
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      TZ: UTC
+      JAVA_TOOL_OPTIONS: "-Xms512m -Xmx2g"
+      FINERACT_HIKARI_DRIVER_SOURCE_CLASS_NAME: org.postgresql.Driver
+      FINERACT_HIKARI_JDBC_URL: jdbc:postgresql://db:5432/fineract_tenants
+      FINERACT_HIKARI_USERNAME: fineract_app
+      FINERACT_HIKARI_PASSWORD: throwaway
+      FINERACT_SERVER_SSL_ENABLED: "true"
+      FINERACT_DEFAULT_TENANTDB_HOSTNAME: db
+      FINERACT_DEFAULT_TENANTDB_PORT: 5432
+      FINERACT_DEFAULT_TENANTDB_UID: fineract_app
+      FINERACT_DEFAULT_TENANTDB_PWD: throwaway
+      FINERACT_DEFAULT_TENANTDB_NAME: fineract_default
+      FINERACT_DEFAULT_TENANTDB_IDENTIFIER: default
+      # === the only thing actually under test ===
+      FINERACT_SECURITY_BASICAUTH_ENABLED: "false"
+      FINERACT_SECURITY_OAUTH_ENABLED: "true"
+    ports:
+      - "127.0.0.1:18443:8443"
+    networks:
+      - oauth-test-net
+
+networks:
+  oauth-test-net:
+    driver: bridge
