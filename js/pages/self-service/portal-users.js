@@ -38,7 +38,7 @@ export async function loadPortalUsers(c) {
             <option value="expired">Password Expired</option>
           </select>
         </div>
-        <button class="btn-secondary" id="btn-ss-info"><i class="fa-solid fa-circle-info"></i> About Self-Service</button>
+        ${can('CREATE_USER') ? '<button class="btn-secondary" id="btn-ss-info"><i class="fa-solid fa-circle-info"></i> About Self-Service</button>' : ''}
       </div>
 
       <div class="text-muted small mb-2">
@@ -76,7 +76,7 @@ export async function loadPortalUsers(c) {
                   </div>
                 </div>
               </td>
-              <td>${u.clientId ? `<a href="#" data-ss-view-client="${u.clientId}">${escapeHtml(u.clientName || ('#' + u.clientId))}</a>` : '—'}</td>
+              <td>${u.clientId ? `${u.clientId}">${escapeHtml(u.clientName || ('#' + u.clientId))}</a>` : '—'}</td>
               <td>${escapeHtml(u.email || '—')}</td>
               <td>${fmtDate(u.lastLogin) || fmtDate(u.lastTimePasswordUpdated) || '—'}</td>
               <td>
