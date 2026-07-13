@@ -59,6 +59,17 @@ services:
       KC_DB_USERNAME: postgres
       KC_DB_PASSWORD: throwaway
       KC_HEALTH_ENABLED: "true"
+      # Pins the issuer/frontend URL Keycloak embeds in every token to this
+      # fixed value, regardless of which hostname/port a client actually used
+      # to reach it. Without this, a token requested via the host-mapped
+      # 127.0.0.1:18080 gets iss=127.0.0.1:18080, which won't match
+      # Fineract's issuer-uri below (the internal Docker network name) — a
+      # real mismatch we hit and confirmed via testing, not a hypothetical.
+      # Full URL with explicit port, not just a bare hostname — verified via
+      # live testing that a bare hostname (e.g. just "keycloak") doesn't
+      # fully pin the port component of the issued token's iss claim in this
+      # Keycloak version, causing a mismatch against Fineract's issuer-uri.
+      KC_HOSTNAME: http://keycloak:8080
     ports:
       - "127.0.0.1:18080:8080"
     networks:

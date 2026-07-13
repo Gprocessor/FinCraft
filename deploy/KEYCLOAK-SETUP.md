@@ -94,3 +94,61 @@ re-run `./setup-vm.sh`. Full steps in `PRIVATE-REPO.md`.
 
 Each step verified before moving to the next, same approach as everything
 else in this project.
+
+## UPDATE — full end-to-end chain tested, hit a real upstream Fineract bug
+
+Ran the complete phase-2 test through to the actual finish line: real
+Keycloak realm, real client, a Keycloak user matching Fineract's own seeded
+`mifos` admin, token issuance confirmed working (`iss` correctly matching
+`SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI` once
+`KC_HOSTNAME=http://keycloak:8080` was set — a bare hostname without an
+explicit port doesn't fully pin the issuer in this Keycloak version, learned
+the hard way), then a real authenticated API call against Fineract.
+
+**Result: every piece of our own configuration is confirmed correct.**
+Fineract's Fineract-side stack trace, pulled directly from `docker logs`
+after a failing request, showed the request reaching
+`org.apache.fineract.infrastructure.security.converter.FineractJwtAuthenticationTokenConverter`
+— proof Fineract has real, dedicated code for exactly this bridge (validated
+JWT → local Fineract user lookup → permissions). It then fails inside
+`TenantAwareJpaPlatformUserDetailsService.loadUserByUsername()` with:
+
+```
+org.springframework.expression.spel.SpelEvaluationException: EL1011E:
+Method call: Attempted to call method getTenantIdentifier() on null context object
+```
+
+This is a `@Cacheable` cache-key SpEL expression referencing a tenant-context
+object that isn't populated yet in this specific code path, even though the
+tenant IS resolved correctly by the time this method is reached (via
+`TenantAwareAuthenticationFilter` earlier in the filter chain).
+
+**Why this is likely not fixable from our side:** a GitHub search turned up
+the actual Fineract commit that introduced this exact class —
+**FINERACT-1984 "OAuth2.1"** — this is brand new, actively-developing
+Fineract code, not the years-old documented OAuth support. Since
+`deploy/oauth-test` (and production) both pull `apache/fineract:latest`,
+which tracks the `develop` branch, we've been testing genuinely bleeding-edge
+functionality that appears to have a real, unpolished bug in it — not a
+mistake in our config. Every step we verified (env var activation, resource
+server wiring, issuer trust, token issuance) checked out correctly; this is
+the one piece that's on Fineract's side, not ours.
+
+**Options from here, not yet decided:**
+- Watch for upstream fixes — since `latest` is a moving target, a future
+  `docker compose pull` may simply fix this once Fineract's team patches it.
+  Worth periodically re-running this exact test.
+- File or search for an existing upstream issue for this specific
+  exception, so it's tracked rather than silently waited on.
+- Reconsider the *old* `-Psecurity=oauth` build-flag OAuth path — ironically
+  more mature/stable precisely because it's not brand-new code, at the cost
+  of needing an actual Fineract source rebuild (the thing we originally
+  hoped to avoid).
+- Pin to an older `apache/fineract` image tag that predates FINERACT-1984,
+  trading away OAuth2.1 support entirely to get back to a known-working
+  baseline — defeats the purpose of this whole effort, but worth naming as
+  an option.
+
+Login is still 100% Basic Auth in production either way — nothing about
+this blocks anything currently working. This is genuinely the frontier of
+what Fineract itself currently supports well.

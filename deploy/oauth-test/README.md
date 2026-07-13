@@ -85,3 +85,38 @@ curl -k -i "https://localhost:18443/fineract-provider/api/v1/users" \
 ```
 docker compose down -v
 ```
+
+## Result (2026-07-13): chain fully verified, hit a real upstream Fineract bug
+
+Ran this all the way through: real Keycloak realm/client/user, token
+issuance confirmed correct (`iss` matching Fineract's issuer-uri exactly,
+once `KC_HOSTNAME` used a full URL with explicit port — a bare hostname
+alone doesn't fully pin it), then a real authenticated call against
+Fineract using a Keycloak user matching Fineract's own seeded `mifos` admin.
+
+Every piece of *our* configuration checked out. Fineract's own logs (pulled
+via `docker logs fineract-oauth-test-server` right after a failing request —
+the client-facing 401 gives nothing useful, the server log has everything)
+showed the request reaching Fineract's real, dedicated
+`FineractJwtAuthenticationTokenConverter` — proof Fineract has genuine
+built-in support for this — then failing inside
+`TenantAwareJpaPlatformUserDetailsService.loadUserByUsername()` with:
+
+```
+SpelEvaluationException: EL1011E: Method call: Attempted to call method
+getTenantIdentifier() on null context object
+```
+
+Traced this to Fineract's own very-recent **FINERACT-1984 "OAuth2.1"**
+work — brand new code, not the years-old documented OAuth path. Since this
+rig (and production) pull `apache/fineract:latest`, tracking `develop`,
+we've been testing genuinely bleeding-edge functionality with a real,
+apparently-unpolished bug in it. See `../KEYCLOAK-SETUP.md` for the full
+writeup and options going forward.
+
+**Note for next time:** partway through this test, a code edit made in the
+assistant's sandbox didn't automatically reach this VM — `git pull` showing
+"Already up to date" was the tell. Zip output needs an explicit
+extract → commit → push round trip before a `git pull` here will see it;
+for urgent one-line fixes mid-session, editing directly on the VM (and
+folding that edit back into the next zip afterward) is faster.

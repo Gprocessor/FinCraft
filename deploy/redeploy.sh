@@ -27,6 +27,11 @@ fi
 
 chmod +x regen-frontend-config.sh
 ./regen-frontend-config.sh "$REPO_ROOT"
-sudo docker compose up -d
+COMPOSE_FILES="-f docker-compose.yml"
+if [ "${ENABLE_BIRT_REPORTING:-false}" = "true" ]; then
+  ./build-birt-plugin.sh
+  COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.birt.yml"
+fi
+sudo docker compose $COMPOSE_FILES up -d --build
 sudo docker exec fincraft-ui nginx -s reload || true
 ./check-deployment.sh --wait

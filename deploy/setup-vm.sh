@@ -160,7 +160,16 @@ if [ "\$LOCAL" != "\$REMOTE" ]; then
   COMMITS=\$(git log --oneline "\$LOCAL..\$REMOTE")
   git pull --ff-only origin "$CURRENT_BRANCH" 2>&1 | sudo tee -a "\$LOG" >/dev/null
   "\$DEPLOY_DIR/regen-frontend-config.sh" "\$REPO_ROOT" --reload 2>&1 | sudo tee -a "\$LOG" >/dev/null
-  (cd "\$DEPLOY_DIR" && docker compose up -d) 2>&1 | sudo tee -a "\$LOG" >/dev/null
+  # BIRT reporting (openMF/mifos-reporting-plugin) — opt-in only. Off by
+  # default (see .env's ENABLE_BIRT_REPORTING comment for why): the plugin's
+  # own README lists Fineract-version compatibility as unconfirmed, so this
+  # stays out of the deploy path entirely unless explicitly flipped on.
+  COMPOSE_FILES="-f docker-compose.yml"
+  if [ "\${ENABLE_BIRT_REPORTING:-false}" = "true" ]; then
+    "\$DEPLOY_DIR/build-birt-plugin.sh" 2>&1 | sudo tee -a "\$LOG" >/dev/null
+    COMPOSE_FILES="\$COMPOSE_FILES -f docker-compose.birt.yml"
+  fi
+  (cd "\$DEPLOY_DIR" && docker compose \$COMPOSE_FILES up -d --build) 2>&1 | sudo tee -a "\$LOG" >/dev/null
   log "Deploy complete."
   send_mail "FinCraft deployed on \$(hostname): \$(git rev-parse --short HEAD)" \
 "New commits pulled and deployed on \$(hostname) at \$(date):
