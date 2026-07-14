@@ -1,0 +1,104 @@
+# FinCraft · .github/workflows/build-birt-plugin.yml
+#
+# Builds openMF/mifos-reporting-plugin (BIRT reporting for Fineract) on
+# GitHub's own runners — full internet access, no office-network proxy and
+# no free-tier VM CPU/RAM constraints — and publishes the resulting jars as
+# a GitHub Release asset (moving tag: birt-plugin-latest).
+#
+# deploy/build-birt-plugin.sh (which runs ON the VM, called by setup-vm.sh /
+# redeploy.sh / the auto-update watcher) downloads that release asset
+# instead of running Maven locally.
+#
+# Trigger manually from the Actions tab any time you want to pick up new
+# commits on mifos-reporting-plugin's develop branch, or let the weekly
+# schedule do it.
+
+name: Build BIRT Reporting Plugin
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Every Monday 03:00 UTC — picks up upstream develop changes without
+    # anyone having to remember to click the button.
+    - cron: '0 3 * * 1'
+
+permissions:
+  contents: write   # needed to create/update the release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone mifos-reporting-plugin (develop)
+        run: git clone --branch develop --depth 1 https://github.com/openMF/mifos-reporting-plugin.git plugin-src
+
+      - name: Record plugin commit
+        id: meta
+        run: echo "commit=$(git -C plugin-src rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Read required Java version from plugin's pom.xml
+        id: javaver
+        run: |
+          V=$(grep -m1 -oP '(?<=<java\.version>)[0-9]+' plugin-src/pom.xml || true)
+          if [ -z "$V" ]; then
+            echo "Couldn't read <java.version> from pom.xml — falling back to 21." >&2
+            V=21
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK ${{ steps.javaver.outputs.version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.javaver.outputs.version }}
+          cache: maven
+
+      - name: Build plugin (mvnw clean package, tests skipped)
+        working-directory: plugin-src
+        run: ./mvnw -B -q -Dmaven.test.skip=true clean package
+
+      - name: Collect jars + bundled libs
+        run: |
+          set -euo pipefail
+          mkdir -p plugin-libs
+          cp plugin-src/target/*.jar plugin-libs/ 2>/dev/null || true
+          if [ -d plugin-src/target/lib ]; then
+            cp plugin-src/target/lib/*.jar plugin-libs/ 2>/dev/null || true
+          fi
+
+          JAR_COUNT=$(find plugin-libs -name '*.jar' | wc -l | tr -d ' ')
+          if [ "$JAR_COUNT" = "0" ]; then
+            echo "ERROR: no jars produced by plugin build." >&2
+            exit 1
+          fi
+          echo "Collected ${JAR_COUNT} jar(s)."
+
+          # Recorded inside the zip so the VM-side script can show a
+          # human-readable provenance line after it downloads this.
+          {
+            echo "plugin: openMF/mifos-reporting-plugin"
+            echo "branch: develop"
+            echo "commit: ${{ steps.meta.outputs.commit }}"
+            echo "built:  $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > plugin-libs/PLUGIN_COMMIT.txt
+
+          cd plugin-libs && zip -r ../birt-plugin-libs.zip . && cd ..
+          sha256sum birt-plugin-libs.zip
+
+      - name: Publish/update release (birt-plugin-latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: birt-plugin-latest
+          name: "BIRT plugin (auto-built) — ${{ steps.meta.outputs.commit }}"
+          body: |
+            Auto-built from openMF/mifos-reporting-plugin@develop
+            commit: ${{ steps.meta.outputs.commit }}
+            workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            This release's tag is reused on every run — it always points at
+            the latest successful build. deploy/build-birt-plugin.sh on the
+            VM downloads the `birt-plugin-libs.zip` asset from here.
+          files: birt-plugin-libs.zip
+          # Keep the tag pointing at the newest build instead of accumulating
+          # a birt-plugin-latest-2, -3, ... release history.
+          make_latest: false
