@@ -60,13 +60,6 @@ chmod +x configure-email.sh
 
 echo "[6/6] Done."
 
-if [ -n "${KEYCLOAK_ADMIN_PASSWORD:-}" ]; then
-  echo
-  echo "[bonus] Keycloak is configured on this deployment — creating a matching realm for '${IDENT}'..."
-  chmod +x create-keycloak-realm.sh
-  ./create-keycloak-realm.sh "${IDENT}" \
-    || echo "      Keycloak realm setup failed/skipped — re-run: ./create-keycloak-realm.sh ${IDENT}"
-fi
 echo
 echo "Next: add '${DOMAIN}' to DOMAINS in .env (comma/space-separated, primary"
 echo "first), point its DNS to this SAME server IP, then re-run ./setup-vm.sh"

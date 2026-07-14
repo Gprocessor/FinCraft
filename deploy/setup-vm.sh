@@ -8,10 +8,10 @@ fail() { echo "ERROR: $*" >&2; exit 1; }
 log "FinCraft / Fineract + PostgreSQL + nginx - PRODUCTION (multi-tenant) setup"
 log "Single-repo deploy: run from deploy/. Frontend lives at the repo root (..)."
 
-log "[1/11] Updating system packages"
+log "[1/12] Updating system packages"
 sudo apt-get update -y -q
 
-log "[2/11] Installing Docker, tools and host hardening"
+log "[2/12] Installing Docker, tools and host hardening"
 if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sudo sh
   sudo usermod -aG docker "$USER" || true
@@ -21,7 +21,7 @@ sudo systemctl enable --now docker
 sudo systemctl enable --now fail2ban 2>/dev/null || true
 sudo dpkg-reconfigure -f noninteractive unattended-upgrades 2>/dev/null || true
 
-log "[3/11] Preparing .env (chmod 600)"
+log "[3/12] Preparing .env (chmod 600)"
 if [ ! -f .env ]; then
   cp .env.example .env
   PG_PASS=$(openssl rand -base64 32 | tr -d '/+=')
@@ -42,17 +42,17 @@ if [ -n "$PRIMARY_DOMAIN" ]; then PUBLIC_HOST="$PRIMARY_DOMAIN"; else PUBLIC_HOS
 REPO_PRIVATE=${REPO_PRIVATE:-false}
 DEPLOY_KEY=${DEPLOY_KEY:-$HOME/.ssh/fincraft_deploy}
 
-log "[4/11] Checking frontend is present in this checkout"
+log "[4/12] Checking frontend is present in this checkout"
 # The frontend lives at the repo root (../ from here) as part of THIS repo —
 # fail loudly if it's missing rather than let nginx silently serve a blank
 # page.
 [ -f ../index.html ] || fail "../index.html not found. Did you clone the full repo (frontend at repo root)?"
 
-log "[5/11] Writing COMPLETE domain-aware config.js"
+log "[5/12] Writing COMPLETE domain-aware config.js"
 chmod +x regen-frontend-config.sh
 ./regen-frontend-config.sh ..
 
-log "[6/11] Preparing certificates directory"
+log "[6/12] Preparing certificates directory"
 mkdir -p nginx-certs certbot-webroot
 if [ ! -f nginx-certs/cert.pem ] || [ ! -f nginx-certs/key.pem ]; then
   openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
@@ -61,24 +61,48 @@ if [ ! -f nginx-certs/cert.pem ] || [ ! -f nginx-certs/key.pem ]; then
     -addext "subjectAltName=IP:${PUBLIC_IP:-127.0.0.1},DNS:localhost,DNS:${PUBLIC_HOST}" >/dev/null 2>&1
 fi
 
-log "[7/11] Opening VM firewall ports 22, 80, 443"
+log "[7/12] Opening VM firewall ports 22, 80, 443"
 sudo ufw allow 22/tcp >/dev/null 2>&1 || true
 sudo ufw allow 80/tcp >/dev/null 2>&1 || true
 sudo ufw allow 443/tcp >/dev/null 2>&1 || true
 sudo ufw --force enable >/dev/null 2>&1 || true
 echo "NOTE: On Oracle Cloud you must ALSO open 80/443 in the VCN security list."
 
-log "[8/11] Validating required files"
+log "[8/12] Validating required files"
 [ -f docker-compose.yml ] || fail "docker-compose.yml missing"
 chmod +x init-db/01-init-fineract.sh
 
-log "[9/11] Starting services"
-sudo docker compose down --remove-orphans || true
-sudo docker compose up -d
+log "[9/12] BIRT/Pentaho reporting plugin"
+# Wired into the actual deploy now, not just the auto-update watcher: this
+# is the FIRST time build-birt-plugin.sh runs as part of setup-vm.sh itself,
+# so a fresh VM gets reporting on the very first deploy instead of only on
+# the next git push. Non-fatal by design — the plugin's own README lists
+# Fineract-version compatibility as "TBD" (see setup-birt-reporting.sh's
+# longer explanation), so a build failure here logs a warning and the
+# deploy continues on plain Fineract (no BIRT reports) rather than aborting.
+COMPOSE_FILES="-f docker-compose.yml"
+BIRT_STATUS="disabled (ENABLE_BIRT_REPORTING=false)"
+if [ "${ENABLE_BIRT_REPORTING:-false}" = "true" ]; then
+  chmod +x build-birt-plugin.sh
+  if ./build-birt-plugin.sh; then
+    COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.birt.yml"
+    BIRT_STATUS="enabled and built"
+    echo "BIRT plugin built — will be layered into this deploy."
+  else
+    BIRT_STATUS="enabled but build FAILED — running without reporting, see warning above"
+    warn "BIRT plugin build failed — continuing without reporting. Re-run ./build-birt-plugin.sh, or ./setup-birt-reporting.sh for the full diagnostic walkthrough, any time."
+  fi
+else
+  echo "ENABLE_BIRT_REPORTING is false — skipping (set true in .env to enable)."
+fi
+
+log "[10/12] Starting services"
+sudo docker compose $COMPOSE_FILES down --remove-orphans || true
+sudo docker compose $COMPOSE_FILES up -d --build
 
 TLS_MODE="self-signed"
 if [ -n "$DOMAINS" ] && [ -n "${LETSENCRYPT_EMAIL:-}" ]; then
-  log "[9b/11] Requesting Let's Encrypt certificate for: $DOMAINS"
+  log "[10b/12] Requesting Let's Encrypt certificate for: $DOMAINS"
   DFLAGS=""; for d in $DOMAINS; do DFLAGS="$DFLAGS -d $d"; done
   if sudo certbot certonly --webroot -w "$(pwd)/certbot-webroot" $DFLAGS --email "$LETSENCRYPT_EMAIL" --agree-tos --non-interactive; then
     sudo cp "/etc/letsencrypt/live/${PRIMARY_DOMAIN}/fullchain.pem" nginx-certs/cert.pem
@@ -91,7 +115,7 @@ if [ -n "$DOMAINS" ] && [ -n "${LETSENCRYPT_EMAIL:-}" ]; then
   fi
 fi
 
-log "[10/11] Installing auto-update (pulls THIS repo's own git remote)"
+log "[11/12] Installing auto-update (pulls THIS repo's own git remote)"
 DEPLOY_DIR=$(pwd)                                   # ./deploy — where docker-compose.yml lives
 REPO_ROOT=$(cd .. && pwd)                            # repo root — what git tracks (frontend + deploy/)
 if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
@@ -160,10 +184,10 @@ if [ "\$LOCAL" != "\$REMOTE" ]; then
   COMMITS=\$(git log --oneline "\$LOCAL..\$REMOTE")
   git pull --ff-only origin "$CURRENT_BRANCH" 2>&1 | sudo tee -a "\$LOG" >/dev/null
   "\$DEPLOY_DIR/regen-frontend-config.sh" "\$REPO_ROOT" --reload 2>&1 | sudo tee -a "\$LOG" >/dev/null
-  # BIRT reporting (openMF/mifos-reporting-plugin) — opt-in only. Off by
-  # default (see .env's ENABLE_BIRT_REPORTING comment for why): the plugin's
-  # own README lists Fineract-version compatibility as unconfirmed, so this
-  # stays out of the deploy path entirely unless explicitly flipped on.
+  # BIRT reporting (openMF/mifos-reporting-plugin) — controlled by
+  # ENABLE_BIRT_REPORTING in .env (on by default; see .env.example for the
+  # non-fatal-build-failure caveat). Same build-then-layer-the-overlay
+  # pattern setup-vm.sh uses for the initial deploy.
   COMPOSE_FILES="-f docker-compose.yml"
   if [ "\${ENABLE_BIRT_REPORTING:-false}" = "true" ]; then
     "\$DEPLOY_DIR/build-birt-plugin.sh" 2>&1 | sudo tee -a "\$LOG" >/dev/null
@@ -216,7 +240,7 @@ else
   warn "This directory isn't a git checkout — skipping auto-update timer. Use ./redeploy.sh manually to pick up changes."
 fi
 
-log "[11/11] Installing logrotate, backups, cert renewal and monitoring crons"
+log "[12/12] Installing logrotate, backups, cert renewal and monitoring crons"
 sudo tee /etc/logrotate.d/fincraft >/dev/null <<'ROTATE'
 /var/log/fincraft-autoupdate.log
 /var/log/fincraft-backup.log
@@ -231,7 +255,7 @@ sudo tee /etc/logrotate.d/fincraft >/dev/null <<'ROTATE'
 }
 ROTATE
 
-chmod +x backup.sh restore.sh monitor.sh renew-cert.sh rotate-admin-password.sh add-tenant.sh setup-deploy-key.sh setup-gdrive-backup.sh create-keycloak-realm.sh regen-frontend-config.sh redeploy.sh check-deployment.sh configure-email.sh daily-report.sh
+chmod +x backup.sh restore.sh monitor.sh renew-cert.sh rotate-admin-password.sh add-tenant.sh setup-deploy-key.sh setup-gdrive-backup.sh regen-frontend-config.sh redeploy.sh check-deployment.sh configure-email.sh daily-report.sh
 CRON_TMP=$(mktemp)
 crontab -l 2>/dev/null | grep -v "$DEPLOY_DIR/backup.sh" \
   | grep -v "$DEPLOY_DIR/monitor.sh" \
@@ -254,6 +278,7 @@ echo " Deployment complete. TLS: ${TLS_MODE}  Repo private: ${REPO_PRIVATE}"
 for d in $DOMAINS; do echo "   https://$d -> tenant '$(grep "^$d:" <<<"$TENANT_DOMAINS" | cut -d: -f2)'"; done
 echo " Login: mifos / password (tenant: ${DEFAULT_TENANT_IDENTIFIER:-fincraft})"
 echo " Next: ./rotate-admin-password.sh 'YourStrongPass'"
+echo " BIRT/Pentaho reporting: ${BIRT_STATUS}"
 echo
 echo " Already running automatically, no action needed:"
 echo "   - Nightly DB backups to ./backups (2 AM) + daily log digest email (7 AM)"

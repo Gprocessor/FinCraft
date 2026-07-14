@@ -1,5 +1,19 @@
 # Keycloak setup — status and next steps
 
+> **REMOVED from the stack.** The `keycloak` service, `deploy/init-db/02-init-keycloak.sh`,
+> and `deploy/create-keycloak-realm.sh` have been deleted, and the `add-tenant.sh`
+> integration and `KEYCLOAK_*` env vars are gone too. Reason: Fineract already has its own
+> OAuth2 support, and — per the "UPDATE" section below — the Keycloak-issuer path hit a real
+> unresolved upstream Fineract bug (FINERACT-1984) in `TenantAwareJpaPlatformUserDetailsService`,
+> so the extra Keycloak container was providing no working login path, just an idle
+> (previously crash-looping) service. Login remains Fineract's own Basic Auth, unchanged
+> throughout. This doc is kept as-is below for the investigation record — re-read it before
+> reconsidering an OIDC provider, since the root cause found here may still apply. The
+> `deploy/oauth-test/` throwaway rig referenced below is untouched (it was never part of the
+> real deploy) and still contains the phase-2 test that surfaced the bug.
+
+## Original doc, unchanged below
+
 Migrating FinCraft's login from Fineract's Basic Auth to OAuth2/OIDC via
 Keycloak, so a future Android app (and any other client) can share one real
 identity provider instead of each reinventing auth.
