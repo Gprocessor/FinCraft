@@ -47,10 +47,16 @@ REPORTS_DIR="${REPORTING_DIR}/data/reports"
 FONTS_DIR="${REPORTING_DIR}/data/fonts"
 CONFIG_DIR="${REPORTING_DIR}/data/config"
 
-# --- 1-3. Clone/update, build, and collect jars — shared with the
-# auto-deploy watcher's non-interactive path, see build-birt-plugin.sh
+# --- 1-3. Download the prebuilt jar + report/font/config files from this
+# repo's GitHub Release — shared with the auto-deploy watcher's
+# non-interactive path, see build-birt-plugin.sh. The plugin is no longer
+# built here or on the VM at all (see .github/workflows/build-birt-plugin.yml);
+# this just fetches what that workflow already produced.
 ./build-birt-plugin.sh
-PLUGIN_COMMIT="$(git -C "${REPORTING_DIR}/mifos-reporting-plugin" rev-parse --short HEAD)"
+PLUGIN_COMMIT="unknown"
+if [ -f "${REPORTING_DIR}/PLUGIN_COMMIT.txt" ]; then
+  PLUGIN_COMMIT="$(grep -m1 '^commit:' "${REPORTING_DIR}/PLUGIN_COMMIT.txt" | awk '{print $2}')"
+fi
 BASE_IMAGE="${FINERACT_IMAGE:-apache/fineract:latest}"
 echo "Building fincraft-fineract-birt from base image: ${BASE_IMAGE}"
 docker build \
@@ -68,10 +74,12 @@ cat <<NEXT_STEPS
 This built the image but has NOT flipped ENABLE_BIRT_REPORTING on — your
 auto-deploy watcher and live stack are untouched. Test in isolation first:
 
-1. Drop .rptdesign report files into:
+1. build-birt-plugin.sh (run above) already fetched the plugin's own
+   .rptdesign reports and fonts into:
      ${REPORTS_DIR}/
-   and any required fonts into:
      ${FONTS_DIR}/
+   from its GitHub Release — no manual copying needed. Drop in any
+   additional custom reports/fonts here too if you have them.
 
 2. Bring up a throwaway container using the new image, pointed at
    your existing fineract-net / db, e.g.:

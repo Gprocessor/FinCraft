@@ -17,6 +17,10 @@ name: Build BIRT Reporting Plugin
 
 on:
   workflow_dispatch: {}
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build-birt-plugin.yml'
   schedule:
     # Every Monday 03:00 UTC — picks up upstream develop changes without
     # anyone having to remember to click the button.
@@ -57,21 +61,38 @@ jobs:
         working-directory: plugin-src
         run: ./mvnw -B -q -Dmaven.test.skip=true clean package
 
-      - name: Collect jars + bundled libs
+      - name: Collect jars + report/font/config files
         run: |
           set -euo pipefail
-          mkdir -p plugin-libs
-          cp plugin-src/target/*.jar plugin-libs/ 2>/dev/null || true
-          if [ -d plugin-src/target/lib ]; then
-            cp plugin-src/target/lib/*.jar plugin-libs/ 2>/dev/null || true
-          fi
+          mkdir -p stage/plugin-libs stage/birt/reports stage/birt/fonts stage/birt/config
 
-          JAR_COUNT=$(find plugin-libs -name '*.jar' | wc -l | tr -d ' ')
+          cp plugin-src/target/*.jar stage/plugin-libs/ 2>/dev/null || true
+          if [ -d plugin-src/target/lib ]; then
+            cp plugin-src/target/lib/*.jar stage/plugin-libs/ 2>/dev/null || true
+          fi
+          JAR_COUNT=$(find stage/plugin-libs -name '*.jar' | wc -l | tr -d ' ')
           if [ "$JAR_COUNT" = "0" ]; then
             echo "ERROR: no jars produced by plugin build." >&2
             exit 1
           fi
           echo "Collected ${JAR_COUNT} jar(s)."
+
+          # docker-compose.birt.yml bind-mounts reporting/data/{reports,fonts,config}
+          # into the container at exactly the paths MIFOS_BIRT_REPORTS_PATH /
+          # MIFOS_BIRT_REPORTS_FONTS_PATH / MIFOS_BIRT_REPORTS_FONTS_CONFIG_PATH
+          # point at — those files live in the plugin repo itself under birt/,
+          # not built by Maven, so they have to be copied here rather than
+          # collected from target/.
+          cp plugin-src/birt/reports/*.rptdesign stage/birt/reports/ 2>/dev/null || true
+          cp plugin-src/birt/fonts/*             stage/birt/fonts/   2>/dev/null || true
+          cp plugin-src/birt/config/*            stage/birt/config/ 2>/dev/null || true
+
+          REPORT_COUNT=$(find stage/birt/reports -type f | wc -l | tr -d ' ')
+          FONT_COUNT=$(find stage/birt/fonts -type f | wc -l | tr -d ' ')
+          echo "Collected ${REPORT_COUNT} report(s), ${FONT_COUNT} font(s)."
+          if [ "$REPORT_COUNT" = "0" ]; then
+            echo "WARNING: no .rptdesign files found under plugin-src/birt/reports/ — upstream layout may have changed." >&2
+          fi
 
           # Recorded inside the zip so the VM-side script can show a
           # human-readable provenance line after it downloads this.
@@ -80,9 +101,10 @@ jobs:
             echo "branch: develop"
             echo "commit: ${{ steps.meta.outputs.commit }}"
             echo "built:  $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          } > plugin-libs/PLUGIN_COMMIT.txt
+            echo "jars: ${JAR_COUNT}  reports: ${REPORT_COUNT}  fonts: ${FONT_COUNT}"
+          } > stage/PLUGIN_COMMIT.txt
 
-          cd plugin-libs && zip -r ../birt-plugin-libs.zip . && cd ..
+          cd stage && zip -r ../birt-plugin-libs.zip . && cd ..
           sha256sum birt-plugin-libs.zip
 
       - name: Publish/update release (birt-plugin-latest)

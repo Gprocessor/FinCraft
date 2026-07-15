@@ -16,7 +16,7 @@ if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sudo sh
   sudo usermod -aG docker "$USER" || true
 fi
-sudo apt-get install -y -q git openssl ufw cron curl fail2ban unattended-upgrades certbot jq >/dev/null 2>&1 || true
+sudo apt-get install -y -q git openssl ufw cron curl fail2ban unattended-upgrades certbot jq unzip >/dev/null 2>&1 || true
 sudo systemctl enable --now docker
 sudo systemctl enable --now fail2ban 2>/dev/null || true
 sudo dpkg-reconfigure -f noninteractive unattended-upgrades 2>/dev/null || true
@@ -176,13 +176,20 @@ Last 40 lines of \${LOG}:
 }
 trap on_error ERR
 
-git checkout -- js/config.js 2>&1 | sudo tee -a "\$LOG" >/dev/null || true
 git fetch origin "$CURRENT_BRANCH" --quiet 2>&1 | sudo tee -a "\$LOG" >/dev/null
 LOCAL=\$(git rev-parse HEAD)
 REMOTE=\$(git rev-parse "origin/$CURRENT_BRANCH")
 if [ "\$LOCAL" != "\$REMOTE" ]; then
   COMMITS=\$(git log --oneline "\$LOCAL..\$REMOTE")
-  git pull --ff-only origin "$CURRENT_BRANCH" 2>&1 | sudo tee -a "\$LOG" >/dev/null
+  # This box is pull-only — it should never carry local commits or edits.
+  # A local diff on ANY tracked file (config.js regenerated in place, a
+  # one-off hand-edit made directly on the VM, etc.) must not be able to
+  # block a deploy the way a plain 'git pull --ff-only' does: that command
+  # aborts outright the moment origin touches a file with an uncommitted
+  # local change, which then fails on every timer tick until someone SSHes
+  # in and manually resolves it. Hard-reset onto origin instead, discarding
+  # any local diff unconditionally, since origin is the only source of truth.
+  git reset --hard "origin/$CURRENT_BRANCH" 2>&1 | sudo tee -a "\$LOG" >/dev/null
   "\$DEPLOY_DIR/regen-frontend-config.sh" "\$REPO_ROOT" --reload 2>&1 | sudo tee -a "\$LOG" >/dev/null
   # BIRT reporting (openMF/mifos-reporting-plugin) — controlled by
   # ENABLE_BIRT_REPORTING in .env (on by default; see .env.example for the
@@ -190,8 +197,22 @@ if [ "\$LOCAL" != "\$REMOTE" ]; then
   # pattern setup-vm.sh uses for the initial deploy.
   COMPOSE_FILES="-f docker-compose.yml"
   if [ "\${ENABLE_BIRT_REPORTING:-false}" = "true" ]; then
+    # Non-fatal by design (matches setup-vm.sh's own initial-deploy step):
+    # previously this ran un-guarded under set -euo pipefail, so ANY BIRT
+    # fetch/build failure (e.g. a Maven build timing out, or before this
+    # became a plain download, a proxy/network hiccup) took the ERR trap
+    # and killed the whole deploy — no docker compose up at all — not just
+    # the reporting piece. A failed reporting fetch should never be the
+    # reason a real code change (bug fixes, features) fails to go out.
+    set +e
     "\$DEPLOY_DIR/build-birt-plugin.sh" 2>&1 | sudo tee -a "\$LOG" >/dev/null
-    COMPOSE_FILES="\$COMPOSE_FILES -f docker-compose.birt.yml"
+    BIRT_STATUS=\${PIPESTATUS[0]}
+    set -e
+    if [ "\$BIRT_STATUS" = "0" ]; then
+      COMPOSE_FILES="\$COMPOSE_FILES -f docker-compose.birt.yml"
+    else
+      log "BIRT plugin fetch failed (exit \$BIRT_STATUS) — deploying without reporting."
+    fi
   fi
   (cd "\$DEPLOY_DIR" && docker compose \$COMPOSE_FILES up -d --build) 2>&1 | sudo tee -a "\$LOG" >/dev/null
   log "Deploy complete."
@@ -218,6 +239,12 @@ Type=oneshot
 ExecStart=/usr/local/bin/fincraft-autoupdate.sh
 User=$USER
 WorkingDirectory=$DEPLOY_DIR
+# The BIRT plugin build alone takes ~12 min (Maven clone + compile), on top
+# of docker compose build/pull. systemd's default start timeout (~90s on
+# most distros) would otherwise SIGTERM this mid-build every single run when
+# ENABLE_BIRT_REPORTING=true, well before it ever gets to git-reset or docker
+# compose. 30 min gives comfortable headroom without masking a real hang.
+TimeoutStartSec=1800
 SVC
 
   sudo tee /etc/systemd/system/fincraft-autoupdate.timer >/dev/null <<'TIMER'

@@ -29,8 +29,13 @@ chmod +x regen-frontend-config.sh
 ./regen-frontend-config.sh "$REPO_ROOT"
 COMPOSE_FILES="-f docker-compose.yml"
 if [ "${ENABLE_BIRT_REPORTING:-false}" = "true" ]; then
-  ./build-birt-plugin.sh
-  COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.birt.yml"
+  # Non-fatal by design (matches setup-vm.sh): a BIRT fetch/build hiccup
+  # should degrade to plain Fineract, not take the whole redeploy down.
+  if ./build-birt-plugin.sh; then
+    COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.birt.yml"
+  else
+    echo "WARNING: BIRT plugin fetch failed — redeploying without reporting. Re-run ./build-birt-plugin.sh any time." >&2
+  fi
 fi
 sudo docker compose $COMPOSE_FILES up -d --build
 sudo docker exec fincraft-ui nginx -s reload || true
