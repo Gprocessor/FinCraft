@@ -73,7 +73,15 @@ services:
       interval: 30s
       timeout: 15s
       retries: 30
-      start_period: 300s
+      # On a brand-new deploy, Fineract runs its full Liquibase migration
+      # (creating every table across every module + seeding permissions)
+      # before it ever binds :8443 — that's on top of the JVM's own cold
+      # start. Subsequent redeploys reuse the already-migrated schema and
+      # come up in well under a minute, so this only bites the very first
+      # run. 300s was tight enough that a slow/shared cloud VM could blow
+      # through it mid-migration, which is what cascaded into fincraft-ui
+      # (depends_on: condition: service_healthy) never starting at all.
+      start_period: 600s
     logging:
       driver: json-file
       options:
@@ -110,7 +118,11 @@ services:
       fineract:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      # 'localhost' resolves to ::1 first inside the container, but nginx
+      # only has `listen 80;`/`listen 443 ssl;` (no IPv6) -- that made this
+      # healthcheck fail with "connection refused" even while the site was
+      # serving real traffic fine on IPv4. Target 127.0.0.1 explicitly.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
       interval: 15s
       timeout: 5s
       retries: 5

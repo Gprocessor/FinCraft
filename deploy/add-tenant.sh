@@ -26,10 +26,15 @@ BEGIN
     FROM information_schema.columns WHERE table_name='tenant_server_connections' AND column_name<>'id';
   EXECUTE format('INSERT INTO tenant_server_connections (%1\$s) SELECT %1\$s FROM tenant_server_connections ORDER BY id LIMIT 1 RETURNING id', conn_cols) INTO new_conn_id;
   UPDATE tenant_server_connections SET schema_name='${SCHEMA}' WHERE id=new_conn_id;
+  -- 'identifier' is excluded from the blind copy: it's UNIQUE, and cloning
+  -- the template row's own identifier (e.g. 'fincraft') into a fresh INSERT
+  -- violates tenants_identifier_key immediately -- before the old
+  -- copy-then-UPDATE approach ever got a chance to correct it. The new
+  -- identifier is supplied directly in the INSERT instead.
   SELECT string_agg(quote_ident(column_name), ', ') INTO ten_cols
-    FROM information_schema.columns WHERE table_name='tenants' AND column_name<>'id';
-  EXECUTE format('INSERT INTO tenants (%1\$s) SELECT %1\$s FROM tenants ORDER BY id LIMIT 1', ten_cols);
-  UPDATE tenants SET identifier='${IDENT}', name='${DISPLAY}', oltp_id=new_conn_id WHERE id=(SELECT max(id) FROM tenants);
+    FROM information_schema.columns WHERE table_name='tenants' AND column_name NOT IN ('id','identifier');
+  EXECUTE format('INSERT INTO tenants (identifier, %1\$s) SELECT %2\$L, %1\$s FROM tenants ORDER BY id LIMIT 1', ten_cols, '${IDENT}');
+  UPDATE tenants SET name='${DISPLAY}', oltp_id=new_conn_id WHERE id=(SELECT max(id) FROM tenants);
 END
 \$\$;
 SQL
