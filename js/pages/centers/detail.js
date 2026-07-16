@@ -146,7 +146,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       tabs.forEach(t => t.classList.toggle('active', t.dataset.ctrtab === name));
       panels.forEach(p => p.hidden = p.dataset.ctrpanel !== name);
       if (lazyLoaders[name] && !lazyLoaded[name]) {
-        lazyLoaders;
+        lazyLoaders[name]();
         lazyLoaded[name] = true;
       }
       const params = new URLSearchParams();

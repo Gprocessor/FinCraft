@@ -5,7 +5,7 @@ import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate } from '../../../utils.js';
-import { openFAModal, openProvisioningModal } from '../actions.js';
+import { openFAModal, openProvisioningModal, openProvisioningCategoryModal } from '../actions.js';
 import { can } from '../shared.js';
 
 export async function loadRunAccruals(c) {
@@ -132,12 +132,14 @@ export async function loadGLClosure(c) {
 export async function loadProvisioning(c) {
   const el = c.querySelector('#acc-7');
   try {
-    const [criteria, entries] = await Promise.all([
+    const [criteria, entries, categories] = await Promise.all([
       api.provisioning.criteria(),
-      api.provisioning.entries().catch(() => [])
+      api.provisioning.entries().catch(() => []),
+      api.provisioningCategory.list().catch(() => [])
     ]);
     const clist = Array.isArray(criteria) ? criteria : [];
     const elist = Array.isArray(entries) ? entries : [];
+    const catlist = Array.isArray(categories) ? categories : [];
 
     el.innerHTML = `
       <div class="section-header mb-2">
@@ -164,7 +166,28 @@ export async function loadProvisioning(c) {
                 ${can('DELETE_PROVISIONCRITERIA') ? `<button class="btn-mini btn-danger" data-del-prov="${p.id}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
-        </table>` : '<div class="empty-state-row">No provisioning criteria</div>'}`;
+        </table>` : '<div class="empty-state-row">No provisioning criteria</div>'}
+
+      <div class="section-header mb-2 mt-4">
+        <h3>Provisioning Categories</h3>
+        <div>
+          <span class="text-muted mr-2">${catlist.length} categor${catlist.length === 1 ? 'y' : 'ies'}</span>
+          ${can('CREATE_PROVISIONCATEGORY') ? `<button class="btn-primary" id="btn-pcat-new"><i class="fa-solid fa-plus"></i> New Category</button>` : ''}
+        </div>
+      </div>
+      ${catlist.length ? `
+        <table class="table">
+          <thead><tr><th>Category Name</th><th>Description</th><th></th></tr></thead>
+          <tbody>${catlist.map(cat => `
+            <tr>
+              <td>${escapeHtml(cat.categoryName || cat.name || '—')}</td>
+              <td>${escapeHtml(cat.categoryDescription || cat.description || '—')}</td>
+              <td class="text-right">
+                ${can('UPDATE_PROVISIONCATEGORY') ? `<button class="btn-mini" data-edit-pcat="${cat.id}">Edit</button>` : ''}
+                ${can('DELETE_PROVISIONCATEGORY') ? `<button class="btn-mini btn-danger" data-del-pcat="${cat.id}">Delete</button>` : ''}
+              </td>
+            </tr>`).join('')}</tbody>
+        </table>` : '<div class="empty-state-row">No provisioning categories defined</div>'}`;
 
     el.querySelector('#btn-prov-new')?.addEventListener('click', () => openProvisioningModal(() => loadProvisioning(c)));
     el.querySelectorAll('[data-edit-prov]').forEach(b => b.addEventListener('click', () =>
@@ -191,6 +214,18 @@ export async function loadProvisioning(c) {
       try {
         await api.provisioning.deleteCriteria(b.dataset.delProv);
         toast('success', 'Deleted', '');
+        loadProvisioning(c);
+      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+    }));
+    el.querySelector('#btn-pcat-new')?.addEventListener('click', () =>
+      openProvisioningCategoryModal(() => loadProvisioning(c)));
+    el.querySelectorAll('[data-edit-pcat]').forEach(b => b.addEventListener('click', () =>
+      openProvisioningCategoryModal(() => loadProvisioning(c), catlist.find(cat => String(cat.id) === b.dataset.editPcat))));
+    el.querySelectorAll('[data-del-pcat]').forEach(b => b.addEventListener('click', async () => {
+      if (!await modalConfirm({ title: 'Delete provisioning category?', danger: true, confirmText: 'Delete' })) return;
+      try {
+        await api.provisioningCategory.delete(b.dataset.delPcat);
+        toast('success', 'Category deleted', '');
         loadProvisioning(c);
       } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
     }));

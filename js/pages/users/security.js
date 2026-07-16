@@ -10,16 +10,13 @@ import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadPasswordPolicy(c) {
   const el = c.querySelector('#usr-2');
   try {
-    const prefs = await api.password.preferences();
-    const list = Array.isArray(prefs?.activePasswordValidationPolicy)
-      ? prefs.activePasswordValidationPolicy
-      : (Array.isArray(prefs) ? prefs : (prefs?.policies || []));
-
-    // Fineract returns activePasswordValidationPolicy as single object, with a list of available policies
-    const allPolicies = prefs.activePasswordValidationPolicy
-      ? [prefs.activePasswordValidationPolicy, ...(prefs.policies || [])]
-      : list;
-    const activeId = prefs.activePasswordValidationPolicy?.id || prefs.activePolicyId;
+    // GET /passwordpreferences/template returns an array of every policy, each with its own
+    // `active` flag already on it — confirmed against Apache_Fineract_API_Documentation.html's
+    // worked example. GET /passwordpreferences (no /template) returns a single flat object for
+    // the currently-active policy only and has no `policies`/`activePasswordValidationPolicy`
+    // field, which is why this always rendered "No password policies available" before.
+    const allPolicies = await api.password.preferencesTemplate();
+    const activeId = allPolicies.find(p => p.active)?.id;
 
     el.innerHTML = `
       <div class="section-header mb-2">

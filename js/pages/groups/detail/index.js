@@ -5,10 +5,10 @@ import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate, sb } from '../../../utils.js';
-import { openAddMembersModal, openAssignStaffModal, openCloseGroupModal, openEditGroupModal, openScheduleMeetingModal, openTransferMembersModal } from '../actions.js';
+import { openAddMembersModal, openAssignRoleModal, openAssignStaffModal, openCloseGroupModal, openEditGroupModal, openScheduleMeetingModal, openTransferMembersModal } from '../actions.js';
 import { can } from '../shared.js';
 import { loadCharges, loadMeetings, loadStandingInstructions } from './meetings-charges.js';
-import { loadAccounts, loadMembers } from './members.js';
+import { loadAccounts, loadMembers, loadRoles } from './members.js';
 import { loadDocuments, loadNotes } from './notes-docs.js';
 import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
@@ -23,6 +23,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     const canActivate = status === 'Pending' && can('ACTIVATE_GROUP');
     const canClose    = status === 'Active'  && can('CLOSE_GROUP');
     const canEdit     = can('UPDATE_GROUP');
+    const canDelete   = can('DELETE_GROUP');
     const canAssign   = can('ASSIGNSTAFF_GROUP');
     const canMembers  = can('ASSOCIATECLIENTS_GROUP') || can('DISASSOCIATECLIENTS_GROUP');
     const canCollect  = can('READ_COLLECTIONSHEET');
@@ -43,6 +44,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           ${canClose    ? `<button class="btn-danger"    id="grp-close"><i class="fa-solid fa-circle-xmark"></i> Close</button>` : ''}
           ${canAssign   ? `<button class="btn-secondary" id="grp-assign-staff"><i class="fa-solid fa-user-tag"></i> Staff</button>` : ''}
           ${canCollect  ? `<button class="btn-secondary" id="grp-collection"><i class="fa-solid fa-file-invoice-dollar"></i> Collection Sheet</button>` : ''}
+          ${canDelete   ? `<button class="btn-danger"    id="grp-delete"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
         </div>
       </div>
 
@@ -85,6 +87,12 @@ export async function renderDetail(c, id, initialTab = 'overview') {
               </div>` : ''}
           </div>
           <div id="grp-members-list"><div class="empty-state-row">Loading…</div></div>
+
+          <div class="section-header mt-4">
+            <h3>Member Roles</h3>
+            ${can('ASSIGNROLE_GROUP') ? `<button class="btn-secondary btn-sm" id="grp-assign-role"><i class="fa-solid fa-user-tag"></i> Assign Role</button>` : ''}
+          </div>
+          <div id="grp-roles-list"><div class="empty-state-row">Loading…</div></div>
         </div>
 
         <!-- Accounts -->
@@ -147,7 +155,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     const panels = c.querySelectorAll('[data-grppanel]');
     const lazyLoaded = {};
     const lazyLoaders = {
-      members:    () => loadMembers(c, id, g),
+      members:    () => { loadMembers(c, id, g); loadRoles(c, id); },
       accounts:   () => loadAccounts(c, id),
       meetings:   () => loadMeetings(c, id),
       charges:    () => loadCharges(c, id),
@@ -188,9 +196,22 @@ function switchTab(name) {
     c.querySelector('#grp-collection')?.addEventListener('click', () => {
       import('../../../router.js').then(r => r.navigate('collections', { groupId: id }));
     });
+    c.querySelector('#grp-delete')?.addEventListener('click', async () => {
+      if (!await confirm({
+        title: 'Delete group?',
+        message: 'This permanently deletes the group. Only allowed if it has no members or associated accounts. Continue?',
+        danger: true, confirmText: 'Delete'
+      })) return;
+      try {
+        await api.groups.delete(id);
+        toast('success', 'Group deleted', '');
+        import('../../../router.js').then(r => r.navigate('groups'));
+      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+    });
 
     c.querySelector('#grp-add-members')?.addEventListener('click', () => openAddMembersModal(id, g, () => loadMembers(c, id, g)));
     c.querySelector('#grp-transfer-members')?.addEventListener('click', () => openTransferMembersModal(id, g));
+    c.querySelector('#grp-assign-role')?.addEventListener('click', () => openAssignRoleModal(id, g, () => loadRoles(c, id)));
     c.querySelector('#grp-add-meeting')?.addEventListener('click', () => openScheduleMeetingModal(id, () => loadMeetings(c, id)));
 
     // -------- Notes --------

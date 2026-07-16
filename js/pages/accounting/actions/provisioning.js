@@ -91,6 +91,32 @@ export function provRow(glOptsHtml, idx, existing) {
     </tr>`;
 }
 
+export async function openProvisioningCategoryModal(onSuccess, existing) {
+  const isEdit = !!existing;
+  const mid = 'pcat-' + Date.now();
+  const el = dynModal(mid, isEdit ? 'Edit Provisioning Category' : 'New Provisioning Category', `
+    <label>Category name * <input id="pcat-name" class="form-control" value="${escapeHtml(existing?.categoryName || '')}" required/></label>
+    <label class="full mt-2">Description <textarea id="pcat-desc" class="form-control" rows="2">${escapeHtml(existing?.categoryDescription || '')}</textarea></label>`);
+
+  el.querySelector('#' + mid + '-save').addEventListener('click', async () => {
+    const categoryName = v(el, 'pcat-name');
+    if (!categoryName) { toast('warn', 'Enter a category name', ''); return; }
+    // FLAGGED, NOT VERIFIED: payload field names (categoryName/categoryDescription) assumed by
+    // analogy with the read-side ProvisioningCategoryData shape; not cross-checked against the
+    // ProvisioningCategoryApiConstants source, since ProvisioningCategoryApiResource wasn't captured
+    // with body/param details in fineract_api_raw.json.
+    const payload = { categoryName };
+    const desc = v(el, 'pcat-desc'); if (desc) payload.categoryDescription = desc;
+    try {
+      if (isEdit) await api.provisioningCategory.update(existing.id, payload);
+      else        await api.provisioningCategory.create(payload);
+      el.remove();
+      toast('success', isEdit ? 'Category updated' : 'Category created', categoryName);
+      onSuccess?.();
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
 export async function openFAModal(actOpts, onSuccess) {
   const glAccounts = await glList();
   const glOptsHtml = glAccounts.map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${g.glCode})</option>`).join('');

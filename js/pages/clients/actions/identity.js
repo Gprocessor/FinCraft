@@ -267,3 +267,65 @@ export async function openAddAddressModal(clientId, onSuccess) {
     } catch (e) { toast('error', 'Failed to add', e.detail?.defaultUserMessage || e.message); }
   });
 }
+
+/* Fineract stores at most one address per addressType per client, and
+   ClientAddressApiResource's PUT shares the exact same path as POST (no {addressId}
+   segment) — the addressTypeId in the body is what identifies which address gets
+   updated. That also means the address type itself isn't editable here (changing it
+   would just create/target a different address record), so it's shown read-only. */
+export async function openEditAddressModal(clientId, address, onSuccess) {
+  const addressTypeId = address.addressTypeId ?? address.addressType?.id;
+  if (!addressTypeId) {
+    toast('error', 'Cannot edit address', 'Missing address type on this record'); return;
+  }
+  let countries = [];
+  try {
+    const tpl = await api.clients.addressTemplate();
+    countries = tpl?.countryIdOptions || [];
+  } catch {}
+  const typeLabel = address.addressType?.name || address.addressTypeName || address.addressType || 'Address';
+  const countryId = address.countryId ?? address.country?.id ?? '';
+  const mid = `cl-addr-edit-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Edit Address</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <div class="text-muted mb-2">${escapeHtml(typeLabel)} address</div>
+          <div class="form-grid">
+            <label>Street <input id="addr-edit-street" class="form-control" value="${escapeHtml(address.street || address.addressLine1 || '')}"/></label>
+            <label>City <input id="addr-edit-city" class="form-control" value="${escapeHtml(address.city || '')}"/></label>
+            <label>Postal code <input id="addr-edit-postal" class="form-control" value="${escapeHtml(address.postalCode || '')}"/></label>
+            <label>State / Province <input id="addr-edit-state" class="form-control" value="${escapeHtml(address.stateName || address.stateProvinceId || '')}"/></label>
+            <label>Country
+              <select id="addr-edit-country" class="form-control">
+                <option value="">— Select country —</option>
+                ${countries.map(co => `<option value="${co.id}" ${String(co.id) === String(countryId) ? 'selected' : ''}>${escapeHtml(co.name)}</option>`).join('')}
+              </select>
+            </label>
+            <label class="checkbox-row"><input type="checkbox" id="addr-edit-active" ${address.isActive ? 'checked' : ''}/> Active address</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="addr-edit-save">Save Changes</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#addr-edit-save').addEventListener('click', async () => {
+    try {
+      await api.clients.updateAddress(clientId, {
+        addressTypeId: parseInt(addressTypeId),
+        street: el.querySelector('#addr-edit-street').value.trim() || undefined,
+        city: el.querySelector('#addr-edit-city').value.trim() || undefined,
+        postalCode: el.querySelector('#addr-edit-postal').value.trim() || undefined,
+        stateProvinceId: el.querySelector('#addr-edit-state').value.trim() || undefined,
+        countryId: el.querySelector('#addr-edit-country').value ? parseInt(el.querySelector('#addr-edit-country').value) : undefined,
+        isActive: el.querySelector('#addr-edit-active').checked
+      });
+      el.remove(); toast('success', 'Address updated', ''); onSuccess();
+    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}

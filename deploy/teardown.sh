@@ -9,6 +9,6 @@ sudo docker compose down -v --remove-orphans 2>/dev/null || true
 sudo systemctl disable --now fincraft-autoupdate.timer 2>/dev/null || true
 sudo rm -f /etc/systemd/system/fincraft-autoupdate.service /etc/systemd/system/fincraft-autoupdate.timer
 sudo systemctl daemon-reload
-D=$(pwd); ( crontab -l 2>/dev/null | grep -v "$D/backup.sh" | grep -v "$D/monitor.sh" | grep -v "$D/renew-cert.sh" ) | crontab - 2>/dev/null || true
+D=$(pwd); ( crontab -l 2>/dev/null | grep -v "$D/backup.sh" | grep -v "$D/monitor.sh" | grep -v "$D/renew-cert.sh" | grep -v "$D/daily-report.sh" ) | crontab - 2>/dev/null || true
 sudo docker image prune -f >/dev/null 2>&1 || true
 echo "Teardown complete."

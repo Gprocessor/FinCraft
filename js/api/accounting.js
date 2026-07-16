@@ -47,6 +47,12 @@ export function makeAccountingRulesAPI(self) {
 export function makeProvisioningAPI(self) {
   return {
     entries:        ()     => self._g('/provisioningentries'),
+    // FLAGGED, NOT VERIFIED: retrieveProviioningEntries (GET /provisioningentries/entries) is a
+    // distinct read endpoint from retrieveAllProvisioningEntries (GET /provisioningentries, used by
+    // `entries` above) per fineract_api_raw.json — its exact query params/shape weren't captured by
+    // the extraction tool, so this is a best-effort mapping pending source cross-check.
+    entriesFiltered:(params) => self._g('/provisioningentries/entries', params),
+    getEntry:       (id)   => self._g(`/provisioningentries/${id}`),
     criteria:       ()     => self._g('/provisioningcriteria'),
     criteriaTemplate: ()   => self._g('/provisioningcriteria/template'),
     getCriteria:    (id)   => self._g(`/provisioningcriteria/${id}`),
@@ -54,7 +60,26 @@ export function makeProvisioningAPI(self) {
     updateCriteria: (id,b) => self._u(`/provisioningcriteria/${id}`, b),
     deleteCriteria: (id)   => self._d(`/provisioningcriteria/${id}`),
     createEntry:    (b)    => self._p('/provisioningentries', b),
-    createJournal:  (id)   => self._p(`/provisioningentries/${id}?command=createjournalentry`, {})
+    // FLAGGED, NOT VERIFIED: modifyProvisioningEntry is POST /provisioningentries/{entryId} with no
+    // captured query-param command name. createjournalentry/recreateprovisioningentries follow
+    // Fineract's common ?command= dispatch convention (matching CREATE_PROVISIONJOURNALENTRIES and
+    // RECREATE_PROVISIONENTRIES permissions) but this hasn't been confirmed against source.
+    createJournal:  (id)   => self._p(`/provisioningentries/${id}?command=createjournalentry`, {}),
+    recreateEntry:  (id)   => self._p(`/provisioningentries/${id}?command=recreateprovisioningentries`, {})
+  };
+}
+
+export function makeProvisioningCategoryAPI(self) {
+  // Was entirely unimplemented despite CREATE_PROVISIONCATEGORY / UPDATE_PROVISIONCATEGORY /
+  // DELETE_PROVISIONCATEGORY existing as real permissions and ProvisioningCategoryApiResource
+  // (/v1/provisioningcategory) existing server-side. See FIXLOG for detail.
+  return {
+    list:   ()     => self._g('/provisioningcategory'),
+    // FLAGGED, NOT VERIFIED: create/update payload field name assumed to be `categoryName` by
+    // analogy with provisioning criteria's `criteriaName`; not cross-checked against source.
+    create: (b)    => self._p('/provisioningcategory', b),
+    update: (id,b) => self._u(`/provisioningcategory/${id}`, b),
+    delete: (id)   => self._d(`/provisioningcategory/${id}`)
   };
 }
 

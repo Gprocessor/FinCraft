@@ -55,6 +55,52 @@ export async function loadMembers(c, id, group) {
   } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
 
+export async function loadRoles(c, id) {
+  const wrap = c.querySelector('#grp-roles-list');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
+  try {
+    const fresh = await api.groups.get(id, { associations: 'groupRoles' });
+    // groupRoles' exact response shape isn't shown in the API reference beyond the
+    // write-side (assignRole/updateRole/unassignRole) examples, so this is rendered
+    // defensively against the field names those examples do confirm (clientId, role,
+    // roleId as the resourceId of the assignment) — same approach already used for
+    // glimaccounts/gsimaccounts above.
+    const list = fresh.groupRoles || [];
+    wrap.innerHTML = list.length ? `
+      <table class="table">
+        <thead><tr><th>Member</th><th>Role</th><th></th></tr></thead>
+        <tbody>${list.map(r => {
+          const roleId = r.id ?? r.roleId ?? r.resourceId;
+          const clientName = r.client?.displayName || r.clientName || '—';
+          const roleName = r.role?.name || r.roleName || '—';
+          return `
+          <tr>
+            <td>${escapeHtml(clientName)}</td>
+            <td>${escapeHtml(roleName)}</td>
+            <td class="text-right">
+              ${can('UPDATEROLE_GROUP') ? `<button class="btn-mini" data-update-role="${roleId}">Change</button>` : ''}
+              ${can('UNASSIGNROLE_GROUP') ? `<button class="btn-mini btn-danger" data-unassign-role="${roleId}">Remove</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>` : '<div class="empty-state-row">No roles assigned</div>';
+
+    wrap.querySelectorAll('[data-update-role]').forEach(b => b.addEventListener('click', async () => {
+      const { openAssignRoleModal } = await import('../actions/members.js');
+      openAssignRoleModal(id, { roleId: b.dataset.updateRole }, () => loadRoles(c, id));
+    }));
+    wrap.querySelectorAll('[data-unassign-role]').forEach(b => b.addEventListener('click', async () => {
+      if (!await confirm({ title: 'Remove role?', message: 'Unassign this role from the member?', danger: true, confirmText: 'Remove' })) return;
+      try {
+        await api.groups.unassignRole(id, b.dataset.unassignRole);
+        toast('success', 'Role removed', '');
+        loadRoles(c, id);
+      } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+    }));
+  } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+}
+
 export async function loadAccounts(c, id) {
   const wrap = c.querySelector('#grp-accounts-wrap');
   wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';

@@ -132,14 +132,26 @@ Was listed below under "Not touched in this pass" as entirely unimplemented; now
 same reasoning as the Bulk Import split below (a distinct, self-contained feature addition
 rather than a bug fix within this pass's scope).
 
+## 8. Provisioning Category — closed, see accounting audit
+Also listed below as entirely unimplemented; now built as part of a full accounting-module
+audit. See `fixlogs/FIXLOG-accounting-audit.md`, which also fixed three real payload/field-name
+bugs in the existing GL Account and Accounting Rule flows found during the same pass.
+
+## 9. Checkpoint 13–15 — closed several previously-open items from other fixlogs
+- Password policy loader (`js/pages/users/security.js`) — see `fixlogs/FIXLOG-doc-cross-check.md`.
+- Deployment `teardown.sh` cron cleanup + `docker-compose.birt.yml` doc drift — see
+  `fixlogs/FIXLOG-deployment-review.md`.
+- Duplicate payment-type/reschedule-reason fetches (`js/modal-init.js`) and duplicate
+  active-loan sampling (`js/pages/dashboard.js`) — see `fixlogs/FIXLOG-duplicate-api-calls.md`.
+
 ## Not touched in this pass (tracked in Backlog from the audit, not bugs)
 
 - Entire Working Capital Loan product line (9 backend resource classes, ~150 methods) has zero
   frontend surface.
-- Interoperation, Credit Bureau integration, Interest Rate Charts (+ slabs), Provisioning
-  Category, and the legacy PPI Survey/Likelihood/PovertyLine feature set are all entirely
-  unimplemented. (The standalone `Rate` entity that used to be listed here is now implemented —
-  see `fixlogs/FIXLOG-rate-entity.md`.)
+- Interoperation, Credit Bureau integration, Interest Rate Charts (+ slabs), and the legacy PPI
+  Survey/Likelihood/PovertyLine feature set are all entirely unimplemented. (The standalone
+  `Rate` entity and Provisioning Category that used to be listed here are now implemented — see
+  `fixlogs/FIXLOG-rate-entity.md` and `fixlogs/FIXLOG-accounting-audit.md` respectively.)
 - Bulk CSV import/export (`downloadtemplate`/`uploadtemplate`) is missing across ~15 resources
   — a coherent cross-cutting feature, not a per-module gap. **Update:** the piece of this that
   *was* implemented (the Organization → Bulk Imports tab) turned out to be broken rather than

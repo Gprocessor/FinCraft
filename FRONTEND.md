@@ -290,7 +290,80 @@ bug). `npm test`: 3/3 passing. All 295 `js/` files pass `node --check`.
 
 ---
 
-## Backlog — newer Fineract modules (not implemented)
+## Round 5: full accounting-module audit — three real bugs, two completed gaps
+
+Scoped to "everything to do with accounting" per request: `js/api/accounting.js`, all of
+`js/pages/accounting/**`, and the two command-palette accounting handlers
+(`js/ui/handlers/gl-account.js`, `js/ui/handlers/accounting-rule.js`).
+
+**Bug 1 — GL Account manual-entries flag silently dropped.** The Chart of Accounts tab has
+its own "Add GL Account" flow (`pages/accounting/actions/coa.js`, correct) and a *second*,
+independent one reachable from the command palette (`ui/handlers/gl-account.js` +
+`views/modals.html#glAccountModal`). The second path sent the checkbox as
+`manualEntries: true/false` in the create/update payload. Fineract's actual field name is
+`manualEntriesAllowed` — the API silently ignores the unrecognized key, so every GL account
+created via the command palette got whatever Fineract defaults to, regardless of what the
+checkbox said. Fixed by mapping the form value to the correct payload key.
+
+**Bug 2 — GL Account usage codes reversed in the template-failure fallback.** In
+`actions/coa.js`'s `openGLAccountModal`, if the `/glaccounts/template` call fails, a
+hardcoded fallback list of usage options is shown instead. That fallback had `{id:1:
+'HEADER'}, {id:2: 'DETAIL'}` — backwards from Fineract's real `GLAccountUsage` convention
+(1=DETAIL, 2=HEADER), which the command-palette modal's HTML (`views/modals.html`) had
+right all along. Low-frequency trigger (only fires when the template call itself fails),
+but a real inversion bug when it does — accounts would get created with header/detail
+swapped. Fixed to match.
+
+**Bug 3 — Accounting Rule create/update payload shape, verified against source.** Same
+duplicate-path pattern as Bug 1: `actions/coa.js`'s dynModal-based rule editor sent
+`debitAccounts: [{ glAccountId }]` / `creditAccounts: [{ glAccountId }]`, while the
+command-palette handler (`ui/handlers/accounting-rule.js`) sent singular
+`debitAccountId`/`creditAccountId`. The two disagreed, so at least one had to be wrong.
+Web-searched Fineract's accounting-rule response shape to confirm which: `GET
+/accountingrules/{id}` returns `debitAccounts`/`creditAccounts` as **read-only** nested
+`{id, name, glCode}` objects — that's display data, not the create/update schema. Fineract's
+actual `AccountingRuleJsonInputParams` for a simple (non-multiple-entry) rule are the
+singular `debitAccountId`/`creditAccountId` Long fields, matching the command-palette path.
+Fixed `actions/coa.js` to match, and fixed its edit-mode prefill (`rule.debitAccounts[0].id`,
+not `.glAccountId` — the real field name per the confirmed response shape).
+
+**Gap closed — GL Account edit/delete.** `api.glAccounts.update`/`.delete` and the
+`UPDATE_GLACCOUNT`/`DELETE_GLACCOUNT` permissions existed but had zero UI wired to them —
+Chart of Accounts was create-only. Added Edit/Delete buttons (permission-gated) to both the
+grouped and tree views, an edit mode for `openGLAccountModal`, and a `deleteGLAccountConfirm`
+helper.
+
+**Gap closed — Provisioning Category.** `ProvisioningCategoryApiResource`
+(`/v1/provisioningcategory`) and its three permissions (`CREATE_/UPDATE_/DELETE_
+PROVISIONCATEGORY`) had no client-side implementation at all — confirmed via a
+codebase-wide grep before touching anything. Added `makeProvisioningCategoryAPI` to
+`api/accounting.js`, wired it into `api/index.js` as `api.provisioningCategory`, and added a
+Provisioning Categories list/create/edit/delete section to the Provisioning tab. The
+create/update payload field names (`categoryName`/`categoryDescription`) are inferred by
+analogy with the read-side data shape and marked `FLAGGED, NOT VERIFIED` in code, since
+`ProvisioningCategoryApiResource` wasn't captured with body-param detail in the ground-truth
+extraction — worth a source cross-check before relying on it in production.
+
+**Also added, same flagged caveat:** `recreateEntry`/`entriesFiltered`/`getEntry` on
+`api.provisioning`, filling in `RECREATE_PROVISIONENTRIES` and the second
+`/provisioningentries/entries` read endpoint that existed in the permission set / raw API
+extraction but had no client method. Not wired to UI yet — no safe way to verify the command
+dispatch shape without source access.
+
+**Left alone, flagged in code rather than guessed:** Provisioning Criteria's definition
+row field names (`categoryName`/`minimumAgeDays`/`maximumAgeDays`/`minBalancePercentage`/
+`provisioningPercentage`/`liabilityAccount`/`expenseAccount`) — plausible, internally
+consistent, but not cross-checked against `ProvisioningCriteriaApiConstants` source, so left
+as-is with a flag rather than rewritten on a guess.
+
+New `tests/accounting-fixes.test.js`: a permission-code sweep specific to
+`pages/accounting/**` (36-code whitelist extracted directly from
+`fineract_permissions_raw.json`, groupings `accounting` + `LOAN_PROVISIONING`) plus targeted
+regressions for all three bugs above and for the Provisioning Category wiring. `npm test`:
+4/4 passing. All `js/` files pass `node --check`.
+
+---
+
 
 Per the July 2026 technical audit (item 11): Working Capital Loans, Credit Bureau Integration,
 Email Campaigns, and MIX/PPI reporting are **not implemented** in FinCraft. This is a

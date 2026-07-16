@@ -78,14 +78,18 @@ document.addEventListener('fc:modals-loaded', async () => {
   wireClientSearch('shClientSearch',   'shClientId',   'shClientResults');
   wireClientSearch('ssClientSearch',   'ssClientId',   'ssClientResults'); // self-service portal user
 
-  // Populate payment type dropdowns in journal entry + savings deposit modals
+  // Populate payment type dropdowns in journal entry, savings deposit/withdrawal, and
+  // repayment modals — single fetch, was previously duplicated (see FIXLOG-duplicate-api-calls.md
+  // bug #1) with the second copy racing this one for #sv-dep-paymenttype's final content.
   api.paymentTypes.list().then(pts => {
     const list = Array.isArray(pts) ? pts : [];
-    const opts = '<option value="">— None —</option>' +
+    const optsHtml = placeholder => `<option value="">${placeholder}</option>` +
       list.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
-    ['je-paymenttype', 'sv-dep-paymenttype'].forEach(id => {
+    const je = document.getElementById('je-paymenttype');
+    if (je) je.innerHTML = optsHtml('— None —');
+    ['sv-dep-paymenttype', 'rp-paymenttype'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.innerHTML = opts;
+      if (el) el.innerHTML = optsHtml('— Default —');
     });
   }).catch(() => {});
 
@@ -98,30 +102,6 @@ document.addEventListener('fc:modals-loaded', async () => {
         list.map(a => `<option value="${a.id}">${escapeHtml((a.glCode ? a.glCode + ' — ' : '') + a.name)}</option>`).join('');
     }
   }).catch(() => {});
-
-  // Reschedule modal — load reschedule reason codes from Fineract code 61 (LoanRescheduleReason)
-  api.codes.values(61).then(vals => {
-    const list = Array.isArray(vals) ? vals : [];
-    const sel = document.getElementById('rs-reason-sel');
-    if (sel && list.length) {
-      sel.innerHTML = '<option value="">Select reason…</option>' +
-        list.map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`).join('');
-    }
-  }).catch(() => {
-    // Fallback: look up by name if code ID 61 doesn't resolve
-    api.codes.list().then(codes => {
-      const code = (Array.isArray(codes) ? codes : []).find(c => /reschedule/i.test(c.name));
-      if (!code) return;
-      return api.codes.values(code.id).then(vals => {
-        const list = Array.isArray(vals) ? vals : [];
-        const sel = document.getElementById('rs-reason-sel');
-        if (sel && list.length) {
-          sel.innerHTML = '<option value="">Select reason…</option>' +
-            list.map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`).join('');
-        }
-      });
-    }).catch(() => {});
-  });
 
   // writeOffModal — forward loanId from data-modal trigger context
   document.addEventListener('click', e => {
@@ -215,41 +195,35 @@ document.addEventListener('fc:modals-loaded', async () => {
     } catch (e) { console.warn('[charges/template]', e); }
   }
 
-  // Savings deposit/withdrawal modal + Repayment modal — real payment types
-  const svPayType = document.getElementById('sv-dep-paymenttype');
-  const rpPayType = document.getElementById('rp-paymenttype');
-  if (svPayType || rpPayType) {
-    try {
-      const types = await api.paymentTypes.list();
-      const optHtml = '<option value="">— Default —</option>' +
-        (Array.isArray(types) ? types : []).map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
-      if (svPayType) svPayType.innerHTML = optHtml;
-      if (rpPayType) rpPayType.innerHTML = optHtml;
-    } catch (e) { console.warn('[paymenttypes]', e); }
-  }
-
-  // Reschedule reasons — /rescheduleloans/template provides the reason codes
+  // Reschedule reasons — try /rescheduleloans/template first, then Fineract code ID 61
+  // (LoanRescheduleReason), then a name-match lookup on the codes list, in that order, once.
+  // Previously this same dropdown was populated by two independent blocks (see
+  // FIXLOG-duplicate-api-calls.md bug #1) — merged into a single call with all three
+  // fallback layers preserved.
   const rsReasonSel = document.getElementById('rs-reason-sel');
   if (rsReasonSel) {
     try {
       const tpl = await api.loans.rescheduleTemplate().catch(() => null)
         || await api.loans.template({ command: 'reschedule' }).catch(() => null);
-      const reasons = tpl?.rescheduleReasons || tpl?.rescheduleReasonOptions || [];
-      if (reasons.length) {
-        rsReasonSel.innerHTML = '<option value="">Select reason…</option>' +
-          reasons.map(r => `<option value="${r.id}">${escapeHtml(r.value || r.name || String(r.id))}</option>`).join('');
-      } else {
-        // Fineract uses code values for reschedule reasons — fallback to the code named LoanRescheduleReason
-        const codeValues = await api.codes.list().then(async codes => {
+      let reasons = tpl?.rescheduleReasons || tpl?.rescheduleReasonOptions || [];
+
+      if (!Array.isArray(reasons) || !reasons.length) {
+        // Fineract uses code values for reschedule reasons — try the well-known code ID first
+        reasons = await api.codes.values(61).catch(() => []);
+      }
+      if (!Array.isArray(reasons) || !reasons.length) {
+        // Last resort: look up the code by name if ID 61 doesn't resolve on this tenant
+        reasons = await api.codes.list().then(async codes => {
           const match = (Array.isArray(codes) ? codes : []).find(c => c.name === 'LoanRescheduleReason');
           return match ? api.codes.values(match.id) : [];
         }).catch(() => []);
-        if (Array.isArray(codeValues) && codeValues.length) {
-          rsReasonSel.innerHTML = '<option value="">Select reason…</option>' +
-            codeValues.map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`).join('');
-        } else {
-          rsReasonSel.innerHTML = '<option value="">No reasons configured</option>';
-        }
+      }
+
+      if (Array.isArray(reasons) && reasons.length) {
+        rsReasonSel.innerHTML = '<option value="">Select reason…</option>' +
+          reasons.map(r => `<option value="${r.id}">${escapeHtml(r.value || r.name || String(r.id))}</option>`).join('');
+      } else {
+        rsReasonSel.innerHTML = '<option value="">No reasons configured</option>';
       }
     } catch (e) {
       rsReasonSel.innerHTML = '<option value="">Could not load reasons</option>';

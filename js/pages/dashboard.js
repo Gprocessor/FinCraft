@@ -382,10 +382,25 @@ export async function render(c) {
       } else setKpi('savings', '—', 'Unavailable');
     } else setKpi('savings', '—', 'No permission');
 
+    /* ---- Shared active-loan sample for the Gross Portfolio KPI and the Outstanding KPI's
+     *      fallback path — fetched at most once per dashboard load instead of twice (see
+     *      FIXLOG-duplicate-api-calls.md bug #2). Only actually hits the network if `hasLoans`
+     *      and (later) if the PAR report doesn't already supply `totalOutstanding`. */
+    let loanSampleRaw = null;
+    let loanSampleFetched = false;
+    const getLoanSample = async () => {
+      if (!loanSampleFetched) {
+        loanSampleFetched = true;
+        loanSampleRaw = await sampleList(l => api.loans.list({ limit: l, status: 'active', ...officeParam }));
+      }
+      return loanSampleRaw;
+    };
+
     /* ---- KPI: Loan Portfolio (gross principal disbursed, active loans) ---- */
     let grossPortfolio = null;
     if (hasLoans) {
-      const sample = await sampleBalance(l => api.loans.list({ limit: l, status: 'active', ...officeParam }), x => x.summary?.principalDisbursed);
+      const raw = await getLoanSample();
+      const sample = sumFromSample(raw, x => x.summary?.principalDisbursed);
       if (sample) {
         grossPortfolio = sample.capped ? (sample.sum / sample.sampleSize) * sample.total : sample.sum;
         setKpi('gross', fmt(grossPortfolio) + (sample.capped ? approxBadge() : ''),
@@ -400,7 +415,8 @@ export async function render(c) {
         outstanding = parInfo.totalOutstanding;
         setKpi('outstanding', fmt(outstanding), deltaHtml(outstanding, 'outstanding', baseline, fmt));
       } else {
-        const sample = await sampleBalance(l => api.loans.list({ limit: l, status: 'active', ...officeParam }), x => x.summary?.totalOutstanding);
+        const raw = await getLoanSample();
+        const sample = sumFromSample(raw, x => x.summary?.totalOutstanding);
         if (sample) {
           outstanding = sample.capped ? (sample.sum / sample.sampleSize) * sample.total : sample.sum;
           setKpi('outstanding', fmt(outstanding) + (sample.capped ? approxBadge() : ''), deltaHtml(outstanding, 'outstanding', baseline, fmt));
@@ -787,6 +803,26 @@ async function sampleBalance(listFn, balancePath, cap = 100) {
     const total = r?.totalFilteredRecords ?? list.length;
     return { sum, sampleSize: list.length, total, capped: total > list.length };
   } catch { return null; }
+}
+
+/** Fetches a bounded sample's raw record list without summing any particular field yet — lets
+ *  a caller derive more than one KPI (e.g. principalDisbursed AND totalOutstanding) from a
+ *  single network round trip via `sumFromSample()` below, instead of re-fetching per field. */
+async function sampleList(listFn, cap = 100) {
+  try {
+    const r = await listFn(cap);
+    const list = Array.isArray(r) ? r : (r?.pageItems || []);
+    const total = r?.totalFilteredRecords ?? list.length;
+    return { list, total, capped: total > list.length };
+  } catch { return null; }
+}
+
+/** Sums one field out of an already-fetched `sampleList()` result — the multi-KPI counterpart
+ *  to `sampleBalance()`'s single-field fetch+sum. */
+function sumFromSample(sample, balancePath) {
+  if (!sample) return null;
+  const sum = sample.list.reduce((s, x) => s + (balancePath(x) || 0), 0);
+  return { sum, sampleSize: sample.list.length, total: sample.total, capped: sample.capped };
 }
 
 /** Loads all Financial-Activity accounts tagged as cash (name containing "Cash", covering

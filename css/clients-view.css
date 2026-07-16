@@ -1,0 +1,198 @@
+/* FinCraft · css/clients-view.css — dedicated visual language for the Clients module (list + detail).
+   Scoped entirely under .cv-page / .cv-detail so it never leaks into the rest of the app.
+   Palette is deliberately warm, quiet and paper-white regardless of the active app theme — this
+   module reads like a focused client-records workspace, distinct from the operational navy/teal shell. */
+
+.cv-page, .cv-detail {
+  --cv-bg:       #fbfaf7;
+  --cv-card:     #ffffff;
+  --cv-border:   #eae6dc;
+  --cv-border-2: #e2ddd0;
+  --cv-text:     #1c2230;
+  --cv-text-2:   #6b6558;
+  --cv-text-3:   #a29b8c;
+  --cv-accent:   #14213a;
+  --cv-teal:     #0f7a6e;
+  --cv-radius:   16px;
+  --cv-radius-sm:10px;
+  --cv-shadow:   0 1px 2px rgba(28,22,10,.04), 0 8px 24px rgba(28,22,10,.05);
+  font-family: var(--font-ui);
+  color: var(--cv-text);
+
+  /* Re-anchor the shared theme tokens so plain .card/.table/.badge markup used inside
+     sub-tabs (Accounts, Charges, Standing Instructions, etc.) renders in this module's
+     warm palette regardless of whether the app shell is in light or dark theme. */
+  --bg-app: var(--cv-bg); --bg-card: var(--cv-card); --bg-card-alt: var(--cv-bg); --bg-elev: #fff;
+  --bg-hover: #f8f6f1; --border-1: var(--cv-border); --border-2: var(--cv-border-2);
+  --text-1: var(--cv-text); --text-2: var(--cv-text-2); --text-3: var(--cv-text-3);
+  --input-bg: #fff; --tbl-row-hover: #f8f6f1;
+}
+
+/* ============ shared bits ============ */
+.cv-card { background: var(--cv-card); border: 1px solid var(--cv-border); border-radius: var(--cv-radius); box-shadow: var(--cv-shadow); }
+.cv-muted { color: var(--cv-text-2); }
+.cv-dim { color: var(--cv-text-3); }
+
+/* Avatar with stable hashed colour per person */
+.cv-avatar {
+  border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #fff; flex-shrink: 0; font-family: var(--font-ui); letter-spacing: 0.2px;
+}
+.cv-avatar[data-hue="0"] { background: linear-gradient(135deg, #14213a, #263a5e); }
+.cv-avatar[data-hue="1"] { background: linear-gradient(135deg, #0f7a6e, #14a091); }
+.cv-avatar[data-hue="2"] { background: linear-gradient(135deg, #8a5a3c, #b5814f); }
+.cv-avatar[data-hue="3"] { background: linear-gradient(135deg, #6d4e8f, #9270b8); }
+.cv-avatar[data-hue="4"] { background: linear-gradient(135deg, #a13d52, #c96679); }
+.cv-avatar-sm { width: 32px; height: 32px; font-size: 12px; }
+.cv-avatar-md { width: 44px; height: 44px; font-size: 15px; }
+.cv-avatar-lg { width: 56px; height: 56px; font-size: 19px; }
+
+/* Pill badges — status / type / verification, all derived from real record data */
+.cv-pill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+  border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; line-height: 1.5;
+}
+.cv-pill i, .cv-pill .dot { font-size: 6px; }
+.cv-pill .dot { width: 6px; height: 6px; border-radius: 999px; display: inline-block; }
+.cv-pill.cv-green  { background: #e7f5ee; color: #1c7d4f; }
+.cv-pill.cv-green  .dot { background: #2fa66d; }
+.cv-pill.cv-amber  { background: #fbf1de; color: #96650f; }
+.cv-pill.cv-amber  .dot { background: #dc9a2b; }
+.cv-pill.cv-red    { background: #fbe9e7; color: #a6392b; }
+.cv-pill.cv-red    .dot { background: #d6543f; }
+.cv-pill.cv-blue   { background: #e9eef8; color: #35507e; }
+.cv-pill.cv-blue   .dot { background: #4f70ab; }
+.cv-pill.cv-slate  { background: #eef0f2; color: #4a5361; }
+.cv-pill.cv-slate  .dot { background: #7b8695; }
+
+/* ============ LIST PAGE ============ */
+.cv-page { background: transparent; }
+.cv-toolbar {
+  background: var(--cv-card); border: 1px solid var(--cv-border); border-radius: var(--cv-radius);
+  padding: 12px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;
+  box-shadow: var(--cv-shadow);
+}
+.cv-search { position: relative; flex: 1 1 260px; min-width: 200px; }
+.cv-search i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--cv-text-3); font-size: 13px; }
+.cv-search input {
+  width: 100%; padding: 9px 14px 9px 36px; border-radius: 999px; border: 1px solid var(--cv-border-2);
+  background: var(--cv-bg); font-size: 13px; color: var(--cv-text); outline: none; transition: border-color 150ms, box-shadow 150ms;
+}
+.cv-search input:focus { border-color: var(--cv-accent); box-shadow: 0 0 0 3px rgba(20,33,58,.08); background: #fff; }
+.cv-select {
+  padding: 9px 30px 9px 14px; border-radius: 999px; border: 1px solid var(--cv-border-2);
+  background: var(--cv-bg) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M0 0l5 6 5-6z" fill="%23a29b8c"/></svg>') no-repeat right 12px center;
+  font-size: 13px; color: var(--cv-text); outline: none; appearance: none; cursor: pointer; min-width: 130px;
+}
+.cv-select:focus { border-color: var(--cv-accent); }
+.cv-btn-ghost {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: 999px;
+  border: 1px solid var(--cv-border-2); background: #fff; color: var(--cv-text); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background 150ms, border-color 150ms;
+}
+.cv-btn-ghost:hover { background: var(--cv-bg); border-color: var(--cv-text-3); }
+.cv-btn-solid {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 999px;
+  border: 1px solid var(--cv-accent); background: var(--cv-accent); color: #fff; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background 150ms, transform 150ms;
+}
+.cv-btn-solid:hover { background: #1c2c4d; }
+.cv-btn-solid:active { transform: scale(.98); }
+
+.cv-table-wrap { background: var(--cv-card); border: 1px solid var(--cv-border); border-radius: var(--cv-radius); box-shadow: var(--cv-shadow); overflow: hidden; }
+.cv-table { width: 100%; border-collapse: collapse; }
+.cv-table thead th {
+  text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px;
+  color: var(--cv-text-3); padding: 12px 18px; border-bottom: 1px solid var(--cv-border); white-space: nowrap;
+}
+.cv-table tbody td { padding: 13px 18px; font-size: 13px; color: var(--cv-text); border-bottom: 1px solid var(--cv-border); vertical-align: middle; }
+.cv-table tbody tr:last-child td { border-bottom: none; }
+.cv-table tbody tr.cv-row { cursor: pointer; transition: background 120ms ease; }
+.cv-table tbody tr.cv-row:hover { background: #f8f6f1; }
+.cv-table tbody tr.cv-row:hover .cv-chevron { opacity: 1; transform: translateX(2px); }
+.cv-name-cell { display: flex; align-items: center; gap: 11px; }
+.cv-name-cell .cv-name-txt b { font-weight: 700; color: var(--cv-text); font-size: 13.5px; }
+.cv-name-cell .cv-name-txt div.cv-email { font-size: 11.5px; color: var(--cv-text-3); margin-top: 1px; }
+.cv-mono { font-family: var(--font-mono); font-size: 12px; color: var(--cv-text-2); }
+.cv-chevron { opacity: 0; transition: opacity 120ms, transform 120ms; color: var(--cv-text-3); font-size: 12px; }
+
+.cv-page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.cv-page-head h1 { font-size: 24px; font-weight: 700; color: var(--cv-text); letter-spacing: -.4px; }
+.cv-page-head .cv-sub { font-size: 13px; color: var(--cv-text-2); margin-top: 2px; }
+
+.cv-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 18px; border-top: 1px solid var(--cv-border); font-size: 12.5px; color: var(--cv-text-2); }
+.cv-foot select { border-radius: 999px; border: 1px solid var(--cv-border-2); padding: 4px 10px; font-size: 12px; background: #fff; }
+.cv-foot .cv-page-btns { display: flex; gap: 4px; }
+.cv-foot .cv-page-btns button {
+  min-width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--cv-border-2); background: #fff;
+  font-size: 12.5px; color: var(--cv-text-2); cursor: pointer;
+}
+.cv-foot .cv-page-btns button.active { background: var(--cv-accent); border-color: var(--cv-accent); color: #fff; }
+.cv-foot .cv-page-btns button:disabled { opacity: .4; cursor: default; }
+
+/* ============ DETAIL PAGE ============ */
+.cv-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+.cv-detail-head h1 { font-size: 23px; font-weight: 700; color: var(--cv-text); letter-spacing: -.4px; }
+.cv-detail-head .cv-sub { font-size: 13px; color: var(--cv-text-2); margin-top: 2px; }
+.cv-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.cv-profile-bar { padding: 20px 22px; margin-bottom: 18px; }
+.cv-profile-top { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+.cv-profile-field { display: flex; flex-direction: column; gap: 3px; min-width: 130px; }
+.cv-profile-field .cv-flabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--cv-text-3); display: flex; align-items: center; gap: 6px; }
+.cv-profile-field .cv-fval { font-size: 13.5px; color: var(--cv-text); font-weight: 500; }
+.cv-profile-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--cv-border); }
+.cv-profile-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.cv-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--cv-border); margin-bottom: 18px; overflow-x: auto; scrollbar-width: thin; }
+.cv-tabs .cv-tab {
+  padding: 10px 14px; background: none; border: none; font-family: var(--font-ui); font-size: 13px;
+  font-weight: 500; color: var(--cv-text-2); cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 120ms, border-color 120ms;
+}
+.cv-tabs .cv-tab:hover { color: var(--cv-text); }
+.cv-tabs .cv-tab.active { color: var(--cv-accent); border-bottom-color: var(--cv-accent); font-weight: 700; }
+
+.cv-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+.cv-grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .cv-grid-3, .cv-grid-2 { grid-template-columns: 1fr; } }
+
+.cv-panel { padding: 18px 20px; }
+.cv-panel h3 { font-size: 13.5px; font-weight: 700; color: var(--cv-text); margin-bottom: 14px; }
+.cv-info-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--cv-border); font-size: 13px; }
+.cv-info-row:last-child { border-bottom: none; }
+.cv-info-row .cv-i-label { color: var(--cv-text-3); font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; flex-shrink: 0; }
+.cv-info-row .cv-i-val { color: var(--cv-text); font-weight: 500; text-align: right; }
+
+.cv-stat-tile { background: var(--cv-bg); border-radius: 12px; padding: 12px 14px; }
+.cv-stat-tile .cv-i-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--cv-text-3); }
+.cv-stat-tile .cv-stat-val { font-size: 19px; font-weight: 700; color: var(--cv-text); margin-top: 4px; letter-spacing: -.3px; }
+.cv-stat-tile .cv-stat-val.small { font-size: 16px; }
+.cv-stat-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cv-officer-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--cv-border); }
+
+.cv-doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.cv-doc-card { background: var(--cv-card); border: 1px solid var(--cv-border); border-radius: var(--cv-radius-sm); padding: 14px; }
+.cv-doc-icon { width: 34px; height: 34px; border-radius: 8px; background: var(--cv-bg); display: flex; align-items: center; justify-content: center; color: var(--cv-text-2); font-size: 14px; margin-bottom: 10px; }
+.cv-doc-name { font-size: 13px; font-weight: 700; color: var(--cv-text); word-break: break-word; }
+.cv-doc-meta { font-size: 11px; color: var(--cv-text-3); margin-top: 2px; }
+.cv-doc-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+.cv-doc-link { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--cv-accent); cursor: pointer; background: none; border: none; }
+.cv-doc-link:hover { text-decoration: underline; }
+
+.cv-section { margin-bottom: 26px; }
+.cv-section:last-child { margin-bottom: 0; }
+.cv-section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.cv-section-head h4 { font-size: 12.5px; font-weight: 700; color: var(--cv-text); text-transform: uppercase; letter-spacing: .4px; }
+
+.cv-detail table.table thead th { background: var(--cv-bg); color: var(--cv-text-3); }
+.cv-detail table.table td, .cv-detail table.table th { border-bottom: 1px solid var(--cv-border); }
+
+/* Every tab panel gets a card container by default so raw tables/sections read as a
+   contained module rather than floating loose on the page background. The Overview
+   panel opts out (its own cv-grid-3 cards already provide the boundary) to avoid a
+   redundant card-in-card look. */
+.cv-detail .tab-panel { background: var(--cv-card); border: 1px solid var(--cv-border); border-radius: var(--cv-radius); box-shadow: var(--cv-shadow); padding: 20px 22px; }
+.cv-detail .tab-panel[data-clpanel="overview"] { background: none; border: none; box-shadow: none; padding: 0; }
+
+.cv-kebab-menu { min-width: 190px; }

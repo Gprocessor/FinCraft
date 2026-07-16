@@ -1,13 +1,13 @@
 # Fix Log — Duplicate/Redundant API Calls
 
-**Status: open — found by `scan_double_calls.mjs`, not yet fixed.**
+**Status: both bugs fixed (Checkpoint 15 below).**
 
 Method: ran the repo's own `scan_double_calls.mjs` against the full `js/` tree,
 then manually reviewed every hit to separate real bugs from same-text false
 positives (mutually-exclusive `if/else` branches, or same call signature with
 genuinely different params).
 
-## Bugs found (open)
+## Fixed (Checkpoint 15)
 
 ### 1. `js/modal-init.js` — payment-type & reschedule-reason dropdowns populated twice, race condition on final content
 
@@ -34,6 +34,19 @@ second `rs-reason-sel` population block; merge the reschedule-reason logic
 into the single existing call (try `rescheduleTemplate()` → code-ID 61 →
 name-match fallback, in that order, once).
 
+**Fix applied:** merged both duplicate pairs into one call each, run once:
+- Payment types: the single remaining `api.paymentTypes.list()` call now populates
+  all three dropdowns (`je-paymenttype`, `sv-dep-paymenttype`, `rp-paymenttype`)
+  from one fetched list, using `— None —` for the journal-entry field and
+  `— Default —` for the savings/repayment fields (preserving each field's original
+  placeholder text). The second, independent fetch that only covered
+  `sv-dep-paymenttype`/`rp-paymenttype` was removed.
+- Reschedule reasons: the single remaining block now runs all three fallback layers
+  in the suggested order — `rescheduleTemplate()` → `codes.values(61)` → name-match
+  on `codes.list()` — where previously the first two layers lived in one block and
+  the template-first layer lived in a separate, independent block that also raced
+  the first one for the same `#rs-reason-sel` element.
+
 ### 2. `js/pages/dashboard.js` — Gross Portfolio and Outstanding KPIs each independently sample the same active-loan list
 
 - Line ~388: `sampleBalance(l => api.loans.list({ limit: l, status: 'active', ...officeParam }), x => x.summary?.principalDisbursed)` for the Gross Portfolio KPI.
@@ -46,6 +59,23 @@ field off the same records.
 **Suggested fix:** hoist the sampled loan fetch above both KPI blocks, run
 it once, and derive both `principalDisbursed` and `totalOutstanding` from
 the single cached sample.
+
+**Fix applied:** added `sampleList()`/`sumFromSample()` helpers alongside the
+existing `sampleBalance()` — `sampleList()` fetches the raw record list once,
+`sumFromSample()` sums whichever field a caller needs off an already-fetched
+sample. A `getLoanSample()` closure (memoized, only fetches on first call)
+now sits above both KPI blocks; Gross Portfolio and the Outstanding fallback
+both call it and derive their respective field from the one shared list.
+The Outstanding path still only fetches at all when the PAR report doesn't
+already supply `totalOutstanding` — unchanged short-circuit behavior, just
+no longer duplicating the fetch when it *does* need to fall back.
+
+## Verification
+
+- `node --check` across every `.js` file in the repo: 0 failures.
+- `npm test`: 4/4 suites pass, no regressions.
+- Re-ran `scan_double_calls.mjs` after the fix: no more hits in
+  `js/modal-init.js` or `js/pages/dashboard.js`.
 
 ## Checked and ruled out (false positives from the scanner)
 

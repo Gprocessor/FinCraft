@@ -13,11 +13,20 @@ export function makeClientsAPI(self) {
     activate: (id, date)      => self._p(`/clients/${id}?command=activate`, { activationDate: date, dateFormat: DATE_FORMAT, locale: LOCALE }),
     close:    (id, body)      => self._p(`/clients/${id}?command=close`, body),
     reject:   (id, body)      => self._p(`/clients/${id}?command=reject`, body),
-    withdrawnByApplicant: (id, body) => self._p(`/clients/${id}?command=withdrawnByApplicant`, body),
-    undoTransfer:     (id)            => self._p(`/clients/${id}?command=undoTransfer`, {}),
+    // NOTE: Fineract's real command for this transition is "withdraw" (WITHDRAW_CLIENT
+    // permission / withdrawClient builder call) — ClientsApiResource has no
+    // "withdrawnByApplicant" command at all (that name belongs to loan/savings
+    // application withdrawal). Was previously sending an unsupported command and
+    // would have 400'd every time the button was used.
+    withdraw:         (id, body)      => self._p(`/clients/${id}?command=withdraw`, body),
+    // NOTE: "undoTransfer" is not a real ClientsApiResource command either. Cancelling
+    // a pending office transfer is done via the "withdrawTransfer" command
+    // (WITHDRAWTRANSFER_CLIENT permission / withdrawClientTransferRequest builder call),
+    // which is also what the UI already gates this button on — only the command string
+    // being sent was wrong.
+    undoTransfer:     (id)            => self._p(`/clients/${id}?command=withdrawTransfer`, {}),
     assignStaff:      (id, body)      => self._p(`/clients/${id}?command=assignStaff`, body),
     unassignStaff:    (id, body)      => self._p(`/clients/${id}?command=unassignStaff`, body || {}),
-    markAsFraud:      (id, body)      => self._p(`/clients/${id}?command=markAsFraud`, body || { fraud: true }),
     collateral:       (id)            => self._g(`/clients/${id}/collaterals`),
     getCollateral:    (id, ccId)      => self._g(`/clients/${id}/collaterals/${ccId}`),
     collateralTemplate: (id)          => self._g(`/clients/${id}/collaterals/template`),
@@ -40,8 +49,6 @@ export function makeClientsAPI(self) {
     accounts: (id)            => self._g(`/clients/${id}/accounts`),
     charges:  (id)            => self._g(`/clients/${id}/charges`),
     addCharge:(id, body)      => self._p(`/clients/${id}/charges`, body),
-    images:   (id)            => self._g(`/clients/${id}/images`),
-    documents:(id)            => self._g(`/clients/${id}/documents`),
     identifiers:        (id)       => self._g(`/clients/${id}/identifiers`),
     identifierTemplate: (id)       => self._g(`/clients/${id}/identifiers/template`),
     getIdentifier:      (id, iid)  => self._g(`/clients/${id}/identifiers/${iid}`),
@@ -50,6 +57,10 @@ export function makeClientsAPI(self) {
     deleteIdentifier:   (id, iid)  => self._d(`/clients/${id}/identifiers/${iid}`),
     addresses:          (id)       => self._g(`/client/${id}/addresses`),
     createAddress:      (id, body) => self._p(`/client/${id}/addresses`, body),
+    // ClientAddressApiResource's PUT shares the same path as POST — no {addressId} in the
+    // URL — so the address being updated is identified by addressTypeId in the body, same
+    // as create. Fineract only stores one address per type per client.
+    updateAddress:      (id, body) => self._u(`/client/${id}/addresses`, body),
     addressTemplate:    ()         => self._g('/client/addresses/template'),
     familyMembers:      (id)       => self._g(`/clients/${id}/familymembers`),
     familyMemberTemplate:(id)      => self._g(`/clients/${id}/familymembers/template`),

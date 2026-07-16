@@ -23,7 +23,7 @@ import { makeSharesAPI } from './shares.js';
 import { makeCalendarsAPI, makeCentersAPI, makeGroupLevelsAPI, makeGroupsAPI, makeMeetingsAPI } from './groups-centers.js';
 import { makeCodesAPI, makeCurrenciesAPI, makeFundsAPI, makeHolidaysAPI, makeOfficesAPI, makePaymentTypesAPI, makeStaffAPI, makeTellerJournalAPI, makeTellersAPI, makeWorkingDaysAPI } from './organization.js';
 import { makeFdProductsAPI, makeFloatingRatesAPI, makeLoanProductsAPI, makeProductMixAPI, makeRatesAPI, makeRdProductsAPI, makeSavingsProductsAPI, makeShareProductsAPI } from './products.js';
-import { makeAccountingRulesAPI, makeFinancialActivityAccountsAPI, makeGlAccountsAPI, makeGlClosuresAPI, makeJournalEntriesAPI, makeOpeningBalancesAPI, makeProvisioningAPI, makeRunAccrualsAPI, makeTaxComponentsAPI, makeTaxGroupsAPI } from './accounting.js';
+import { makeAccountingRulesAPI, makeFinancialActivityAccountsAPI, makeGlAccountsAPI, makeGlClosuresAPI, makeJournalEntriesAPI, makeOpeningBalancesAPI, makeProvisioningAPI, makeProvisioningCategoryAPI, makeRunAccrualsAPI, makeTaxComponentsAPI, makeTaxGroupsAPI } from './accounting.js';
 import { makeAdhocQueriesAPI, makeCollectionSheetAPI, makeDataTablesAPI, makeEntityDatatableChecksAPI, makeReportsAPI, makeRunReportsAPI } from './reports.js';
 import { makeAccountNumberPreferencesAPI, makeAuditsAPI, makeConfigurationsAPI, makeEntityToEntityMappingsAPI, makeJobsAPI, makeMakercheckerAPI, makePermissionsAPI, makeRolesAPI, makeSurveysAdminAPI, makeUsersAPI } from './admin.js';
 import { makeEmailAPI, makeEmailCampaignsAPI, makeEmailConfigurationAPI, makeExternalEventsAPI, makeExternalServicesAPI, makeHooksAPI, makeNotificationsAPI, makeSmsAPI, makeSmsCampaignsAPI } from './integrations.js';
@@ -75,6 +75,7 @@ export class FineractAPIFull extends FineractAPI {
     this.glClosures = makeGlClosuresAPI(this);
     this.accountingRules = makeAccountingRulesAPI(this);
     this.provisioning = makeProvisioningAPI(this);
+    this.provisioningCategory = makeProvisioningCategoryAPI(this);
     this.runAccruals = makeRunAccrualsAPI(this);
     this.openingBalances = makeOpeningBalancesAPI(this);
     this.financialActivityAccounts = makeFinancialActivityAccountsAPI(this);

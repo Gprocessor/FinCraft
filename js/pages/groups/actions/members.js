@@ -78,6 +78,62 @@ export async function openGlimDetailModal(glimId) {
   openGlimAccountData();
 }
 
+export async function openAssignRoleModal(groupId, group, onSuccess) {
+  const isUpdate = !!group?.roleId;
+  let roleValues = [];
+  try { roleValues = await api.codes.valuesByName('GROUPROLE'); } catch {}
+  const mid = `grp-role-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>${isUpdate ? 'Change Role' : 'Assign Role'}</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          ${!isUpdate ? `
+          <label>Member *
+            <select id="ar-client" class="form-control" required>
+              <option value="">Select member…</option>
+              ${(group.clientMembers || []).map(m => `<option value="${m.id}">${escapeHtml(m.displayName)}</option>`).join('')}
+            </select>
+          </label>` : ''}
+          <label class="mt-2">Role *
+            <select id="ar-role" class="form-control" required>
+              <option value="">Select role…</option>
+              ${roleValues.map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`).join('')}
+            </select>
+          </label>
+          ${!roleValues.length ? `<div class="text-muted small mt-2">
+            <i class="fa-solid fa-circle-info"></i>
+            No values found under the <b>GROUPROLE</b> system code — add some from
+            Admin &rsaquo; System &rsaquo; Manage Codes first.
+          </div>` : ''}
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="ar-save">${isUpdate ? 'Save' : 'Assign'}</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#ar-save').addEventListener('click', async () => {
+    const role = el.querySelector('#ar-role').value;
+    if (!role) { toast('warn', 'Select a role', ''); return; }
+    try {
+      if (isUpdate) {
+        await api.groups.updateRole(groupId, group.roleId, { role: parseInt(role) });
+        toast('success', 'Role updated', '');
+      } else {
+        const clientId = el.querySelector('#ar-client').value;
+        if (!clientId) { toast('warn', 'Select a member', ''); return; }
+        await api.groups.assignRole(groupId, { clientId: parseInt(clientId), role: parseInt(role) });
+        toast('success', 'Role assigned', '');
+      }
+      el.remove();
+      onSuccess?.();
+    } catch (e) { toast('error', isUpdate ? 'Update failed' : 'Assign failed', e.detail?.defaultUserMessage || e.message); }
+  });
+}
+
 export async function openAddMembersModal(groupId, group, onSuccess) {
   const mid = `grp-addmem-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
