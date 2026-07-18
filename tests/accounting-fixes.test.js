@@ -8,7 +8,7 @@
      2. GL Account payload field name regression — command-palette "New GL Account" (ui/handlers/gl-account.js)
         must send manualEntriesAllowed (the real Fineract field), not the old manualEntries typo.
      3. GL Account usage-code fallback regression — pages/accounting/actions/coa.js's template-failure
-        fallback must map id 1 -> DETAIL, id 2 -> HEADER (matches views/modals.html and Fineract's actual
+        fallback must map id 1 -> DETAIL, id 2 -> HEADER (matches views/modals/accounting.html and Fineract's actual
         GLAccountUsage convention), not the reversed mapping that shipped before this pass.
      4. Accounting Rule payload-shape regression — openAccountingRuleModal must send singular
         debitAccountId/creditAccountId (Fineract's real simple-rule schema), not the
@@ -86,7 +86,7 @@ export async function runTests({ assert: a = assert } = {}) {
   /* ---------------------------------------------------------------- */
   const coaActionsSrc = read('js/pages/accounting/actions/coa.js');
   a.ok(/\{\s*id:\s*1,\s*value:\s*'DETAIL'\s*\},\s*\{\s*id:\s*2,\s*value:\s*'HEADER'\s*\}/.test(coaActionsSrc),
-    'GL account usage fallback must map id 1 -> DETAIL, id 2 -> HEADER (matches views/modals.html and real Fineract convention)');
+    'GL account usage fallback must map id 1 -> DETAIL, id 2 -> HEADER (matches views/modals/accounting.html and real Fineract convention)');
 
   /* ---------------------------------------------------------------- */
   /* 4. Accounting Rule payload-shape regression                       */

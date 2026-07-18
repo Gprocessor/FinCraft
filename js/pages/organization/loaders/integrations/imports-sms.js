@@ -7,40 +7,15 @@ import { confirm as modalConfirm, toast } from '../../../../ui.js';
 import { escapeHtml, fmtDate, num, sb } from '../../../../utils.js';
 import { openEmailCampaignModal, openSmsCampaignModal } from '../../actions.js';
 import { can } from '../../shared.js';
+import { BULK_IMPORT_ENTITIES } from '../../../../bulk-import-entities.js';
 
 export async function loadBulkImports(c) {
   const el = c.querySelector('#og-13');
   try {
-    // BulkImportApiResource has exactly 3 real methods (list, getOutputTemplateLocation, downloadOutputTemplate)
-    // — there is no "getEntityTypes" endpoint, so don't attempt a doomed request; use the documented entity list
-    // that Fineract's own downloadtemplate/uploadtemplate resources actually support.
-    // NOTE: api.bulkImports.template()/.upload() build the URL as `/${entity}/downloadtemplate` /
-    // `/${entity}/uploadtemplate`, so any entity whose template lives under a *nested* resource path
-    // (e.g. loan repayments, savings transactions) must include that nested segment in its `entity` value —
-    // a bare 'loanrepayments' or 'savingstransactions' does not exist as a top-level resource and 404s.
-    const entityTypes = [
-        { entity: 'clients',                        label: 'Clients' },
-        { entity: 'centers',                        label: 'Centers' },
-        { entity: 'groups',                         label: 'Groups' },
-        { entity: 'staff',                          label: 'Staff' },
-        { entity: 'offices',                        label: 'Offices' },
-        { entity: 'users',                          label: 'Users' },
-        { entity: 'loans',                          label: 'Loans' },
-        { entity: 'loans/repayments',               label: 'Loan Repayments' },
-        { entity: 'savingsaccounts',                label: 'Savings Accounts' },
-        { entity: 'savingsaccounts/transactions',   label: 'Savings Transactions' },
-        { entity: 'fixeddepositaccounts',           label: 'Fixed Deposit Accounts' },
-        { entity: 'fixeddepositaccounts/transaction', label: 'Fixed Deposit Transactions' },
-        { entity: 'recurringdepositaccounts',       label: 'Recurring Deposit Accounts' },
-        { entity: 'recurringdepositaccounts/transactions', label: 'Recurring Deposit Transactions' },
-        // GLAccountsApiResource's class_path is /v1/glaccounts — "chartofaccounts" is not a real resource
-        // and 404s; keep the human label but use the real path segment as the value.
-        { entity: 'glaccounts',                     label: 'Chart of Accounts' },
-        { entity: 'journalentries',                 label: 'Journal Entries' }
-        // 'shareaccounts' intentionally omitted: there is no ShareAccounts template/upload endpoint in
-        // Fineract (only ShareDividendApiResource exists under /v1/shareproduct/{productId}/dividend),
-        // so this option previously 404'd on every attempt.
-      ];
+    // See js/bulk-import-entities.js for why these specific entity/path values are used
+    // (nested resource paths, glaccounts vs "chartofaccounts", shareaccounts omission, etc.)
+    // — this used to be a second, independently-drifting copy of that same list.
+    const entityTypes = BULK_IMPORT_ENTITIES;
 
     // Fetch import history (may not exist on all Fineract versions)
     let history = [];
@@ -92,7 +67,14 @@ export async function loadBulkImports(c) {
             <th class="text-right">Failed</th>
             <th></th>
           </tr></thead>
-          <tbody>${history.map(h => `
+          <tbody>${history.map(h => {
+            // FINERACT-2121 (see js/api/misc.js for the full citation) confirms downloadOutputTemplate
+            // DOES take a per-import id (`importDocumentId`), used to fetch that job's processed/annotated
+            // workbook — this is the actual "export" half of bulk import/export. `id` is the standard
+            // Fineract primary-key field name; importDocumentId/documentId are kept as defensive fallbacks
+            // in case this particular resource's JSON serializes it under a different key.
+            const importId = h.id ?? h.importDocumentId ?? h.documentId;
+            return `
             <tr>
               <td>${fmtDate(h.createdDate || h.importTime) || '—'}</td>
               <td>${escapeHtml(h.entity || h.entityType || '—')}</td>
@@ -101,11 +83,12 @@ export async function loadBulkImports(c) {
               <td class="text-right text-success">${num(h.successfulRecords || h.successCount || 0)}</td>
               <td class="text-right text-error">${num(h.failedRecords || h.failureCount || 0)}</td>
               <td class="text-right">
-                <!-- No per-row download/delete: BulkImportApiResource has no per-id GET, no DELETE, and its one
-                     real download method (downloadOutputTemplate) takes no id — there is no way to retrieve or
-                     remove a single historical import via this API. Buttons removed rather than left doomed. -->
+                ${importId != null && can('READ_DOCUMENT')
+                  ? `<button class="btn-mini" data-dl-import-report="${importId}" title="Download the processed workbook (row-by-row status/errors) for this import"><i class="fa-solid fa-file-arrow-down"></i> Report</button>`
+                  : ''}
               </td>
-            </tr>`).join('')}</tbody>
+            </tr>`;
+          }).join('')}</tbody>
         </table>` : '<div class="empty-state-row">No imports in history yet. Upload a template above to start.</div>'}`;
 
     // Populate office filter
@@ -121,11 +104,13 @@ export async function loadBulkImports(c) {
     // Download template
     el.querySelector('#btn-imp-download')?.addEventListener('click', async () => {
       const entity = el.querySelector('#imp-entity').value;
+      const officeId = el.querySelector('#imp-office').value;
       if (!entity) { toast('warn', 'Select an entity first', ''); return; }
       try {
         // api.bulkImports.template() now returns the raw fetch Response (see js/api/misc.js) —
         // this endpoint streams a binary .xlsx, so it must go through res.blob(), never res.json()/text().
-        const res = await api.bulkImports.template(entity);
+        // officeId was previously collected in the UI (#imp-office) but never actually forwarded here.
+        const res = await api.bulkImports.template(entity, officeId ? { officeId } : undefined);
         const blob = await res.blob();
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -137,6 +122,24 @@ export async function loadBulkImports(c) {
         toast('success', 'Template downloaded', entity);
       } catch (e) { toast('error', 'Template download failed', e.detail?.defaultUserMessage || e.message); }
     });
+
+    // Download per-import output/error report (see the FINERACT-2121 note above the table markup)
+    el.querySelectorAll('[data-dl-import-report]').forEach(btn => btn.addEventListener('click', async () => {
+      const importId = btn.dataset.dlImportReport;
+      btn.disabled = true;
+      try {
+        const res = await api.bulkImports.outputTemplate(importId);
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `import-${importId}-report.xlsx`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast('success', 'Report downloaded', `Import #${importId}`);
+      } catch (e) {
+        toast('error', 'Report download failed', e.detail?.defaultUserMessage || e.message);
+      } finally { btn.disabled = false; }
+    }));
 
     // Upload filled template
     el.querySelector('#btn-imp-upload')?.addEventListener('click', () => {

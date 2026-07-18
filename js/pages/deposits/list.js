@@ -136,11 +136,20 @@ export async function renderList(c) {
         import('../../router.js').then(r => r.navigate('deposits', { id: b.dataset.viewFd, type: 'fd' }));
       }));
       c.querySelectorAll('[data-fd-approve]').forEach(b => b.addEventListener('click', async () => {
+        const id = b.dataset.fdApprove;
+        const approvedOnDate = today();
         try {
-          await api.fixedDeposits.approve(b.dataset.fdApprove, {
-            approvedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
+          await api.fixedDeposits.approve(id, {
+            approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE
           });
-          toast('success', 'FD approved', '#' + b.dataset.fdApprove);
+          let activated = false;
+          try {
+            await api.fixedDeposits.activate(id, { activatedOnDate: approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+            activated = true;
+          } catch (actErr) {
+            toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+          }
+          toast('success', activated ? 'FD approved & activated' : 'FD approved', '#' + id);
           loadFD(fdOffset);
         } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
       }));
@@ -198,11 +207,20 @@ export async function renderList(c) {
         import('../../router.js').then(r => r.navigate('deposits', { id: b.dataset.viewRd, type: 'rd' }));
       }));
       c.querySelectorAll('[data-rd-approve]').forEach(b => b.addEventListener('click', async () => {
+        const id = b.dataset.rdApprove;
+        const approvedOnDate = today();
         try {
-          await api.recurringDeposits.approve(b.dataset.rdApprove, {
-            approvedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
+          await api.recurringDeposits.approve(id, {
+            approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE
           });
-          toast('success', 'RD approved', '#' + b.dataset.rdApprove);
+          let activated = false;
+          try {
+            await api.recurringDeposits.activate(id, { activatedOnDate: approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+            activated = true;
+          } catch (actErr) {
+            toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+          }
+          toast('success', activated ? 'RD approved & activated' : 'RD approved', '#' + id);
           loadRD(rdOffset);
         } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
       }));

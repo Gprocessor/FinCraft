@@ -167,6 +167,7 @@ export function openApproveSavingsModal(id) {
         <div class="modal-body">
           <label>Approved on * <input type="date" id="ap-date" class="form-control" value="${today()}" required/></label>
           <label class="mt-2">Note <textarea id="ap-note" class="form-control" rows="2"></textarea></label>
+          <label class="form-check mt-2"><input type="checkbox" id="ap-auto-activate" checked/> Also activate immediately</label>
         </div>
         <div class="modal-footer">
           <button class="btn-secondary" data-close-modal>Cancel</button>
@@ -177,16 +178,29 @@ export function openApproveSavingsModal(id) {
   const el = document.getElementById(mid);
   el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
   el.querySelector('#ap-save').addEventListener('click', async () => {
+    const approvedOnDate = el.querySelector('#ap-date').value;
     const payload = {
-      approvedOnDate: el.querySelector('#ap-date').value,
+      approvedOnDate,
       dateFormat: DATE_FORMAT, locale: LOCALE
     };
     const note = el.querySelector('#ap-note').value.trim();
     if (note) payload.note = note;
+    const autoActivate = el.querySelector('#ap-auto-activate').checked;
     try {
       await api.savings.approve(id, payload);
+      let activated = false;
+      if (autoActivate) {
+        try {
+          await api.savings.activate(id, { activatedOnDate: approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+          activated = true;
+        } catch (actErr) {
+          // Approval already succeeded — surface the activation failure separately so the
+          // account isn't silently left in "Approved" state without explanation.
+          toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+        }
+      }
       el.remove();
-      toast('success', 'Account approved', `#${id}`);
+      toast('success', activated ? 'Account approved & activated' : 'Account approved', `#${id}`);
       document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
   });

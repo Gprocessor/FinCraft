@@ -43,7 +43,7 @@ js/
     accounting.js, reports.js, tasks.js, products.js, organization.js,
     system.js, analytics.js, search.js, misc.js
 views/
-  modals.html     — all modal forms (lazy-loaded at mount)
+  modals/         — modal forms, split by domain (see "Modals" section below)
 css/
   app.css         — design tokens, components, dark mode
 ```
@@ -148,6 +148,59 @@ Admin/dashboard pages (organization, system, products, accounting):
 `system`, and `products` are still 500–1,100 lines — much smaller than the 2,000+ line
 originals, but large enough that a second pass (e.g. splitting `loans/actions.js` by
 loan lifecycle stage: disbursement, repayment, write-off/close, transfers) would help
+
+## Dashboard (js/pages/dashboard/) — single-view shape
+
+`dashboard.js` (1,188 lines, the app's single largest file) is a one-view page rather
+than a list/detail or tabbed-admin page, so it uses a third shape instead of the two
+above:
+
+```
+dashboard/shared.js   constants (KPI/quick-action defs, chart palette, snapshot table
+                        name) + toJsDate()/isoDay() date helpers used by the other three
+dashboard/data.js      the daily KPI-snapshot mechanism (a registered datatable used for
+                        "vs last period" deltas) + report-parsing/aggregation helpers
+dashboard/charts.js    loadChartJs() + every renderXChart() function for the chart bank
+dashboard/index.js     render() — filter bar, KPI cards, wiring loaders/charts together,
+                        Quick Actions, Recent Activity
+```
+
+`js/pages/dashboard.js` is now a barrel (`export * from './dashboard/index.js'`), so
+`router.js`'s `import('./pages/dashboard.js')` is untouched. No behavior changes — this
+was a pure split, verified by diffing every top-level function/const name between the
+original file and the four new ones.
+
+## Modals (views/modals/) — split by domain, fetched in parallel
+
+`views/modals.html` (1,345 lines, all 36 modal forms in one file) is markup, not JS, so
+it can't use the barrel-file trick above — there's no HTML equivalent of `export *`.
+Instead it's split into `views/modals/<domain>.html` partials, one per `js/api/<domain>.js`
+domain:
+
+```
+views/modals/
+  clients.html            newClientModal
+  loans.html               newLoanModal, repaymentModal, writeOffModal, rescheduleModal
+  savings-deposits.html    newSavingsModal, savingsDepositModal, newFDModal, newRDModal
+  shares.html               newShareModal
+  groups-centers.html      newGroupModal, entityDetailModal, newCenterModal
+  accounting.html          journalEntryModal, glAccountModal, newAccRuleModal,
+                             newProvCriteriaModal, newFAAccountModal
+  organization.html        newPaymentTypeModal, newOfficeModal, newStaffModal,
+                             newHolidayModal, newTellerModal
+  admin.html                newUserModal, selfServiceUserModal, configWizardModal
+  products.html             newChargeModal, newLoanProductModal, newSavingsProductModal
+  integrations.html        newTransferModal, newSIModal, remittanceModal
+  system.html                quickModal, bulkImportModal, runReportModal, adhocQueryModal
+```
+
+`js/ui/shell.js` used to do a single `fetch('./views/modals.html')` on app mount; it now
+fetches all 11 partials in parallel with `Promise.all` and joins them in the fixed order
+above before setting `#modalRoot.innerHTML`, so every modal ends up in the same relative
+position as before and `fc:modals-loaded` still fires exactly once. `service-worker.js`'s
+precache list was updated from the one old path to the 11 new ones. Pure split, verified
+by diffing every `id="...Modal"` and reconstructing the original file byte-for-byte from
+the new partials before deleting it.
 if you keep growing those pages. Happy to do that pass too if useful.
 
 **Second pass (2nd split):** the 5 files singled out above as still-large were split again,

@@ -150,13 +150,34 @@ export function makeBulkImportsAPI(self) {
       // the resulting Blob is an unreadable/broken "template" file (this was the download bug).
       // Every other binary-download call in the app (reports, document attachments, images)
       // uses this same `raw: true` + `res.blob()` pattern — see js/ui/handlers/run-report.js.
-      template: (entity)        => self._req('GET', `/${entity}/downloadtemplate`, { raw: true }),
+      // `params` is optional and forwarded as-is (e.g. officeId) — many Fineract `*/template`
+      // endpoints across this API accept officeId to scope the dropdown data embedded in the
+      // sheet (see clients/template, groups/template, centers/template, etc. in the API docs);
+      // an unrecognized query param is simply ignored server-side, so passing it is always safe.
+      template: (entity, params)   => self._req('GET', `/${entity}/downloadtemplate`, { params, raw: true }),
       upload:   (entity, formData) => self._req('POST', `/${entity}/uploadtemplate`, { body: formData, headers: {} }),
       // ---- Generic /imports endpoint ----
-      // BulkImportApiResource has exactly 3 real methods: bare GET /v1/imports (list, filterable via params),
-      // GET getOutputTemplateLocation, and GET downloadOutputTemplate — none take a per-import id, there is no
-      // DELETE, and there is no "getEntityTypes" endpoint. get()/delete()/download()/types() were removed rather
-      // than left calling routes that don't exist in Fineract.
-      list:     (params)        => self._g('/imports', params)
+      // BulkImportApiResource has exactly 3 real methods: bare GET /v1/imports (list, filterable
+      // via params), GET getOutputTemplateLocation, and GET downloadOutputTemplate.
+      //
+      // CORRECTION (see fixlogs/FIXLOG-bulk-import.md): a previous pass here assumed neither
+      // output-template method takes a per-import id and removed the per-row download button.
+      // That assumption was wrong. Apache Fineract JIRA FINERACT-2121 ("Importer error - Postgres
+      // syntax") shows the real query behind this exact code path:
+      //   select d.location, d.file_name from m_import_document i
+      //   inner join m_document d on i.document_id = d.id where i.id = ?
+      // — i.e. both endpoints DO take the import row's id (as `importDocumentId`), used to look
+      // up the output/error report generated for that specific import job. That's the "export"
+      // half of bulk import/export: upload a sheet in, download the processed/annotated sheet
+      // (with per-row success/failure + error messages) back out. See outputTemplate() below.
+      list:     (params)             => self._g('/imports', params),
+      // getOutputTemplateLocation returns a server-side filesystem path string, not a fetchable
+      // resource — not useful to a browser client, so it isn't wired to any UI action, but the
+      // pass-through is kept here for API completeness/parity with the documented resource.
+      outputTemplateLocation: (importDocumentId) => self._g('/imports/getOutputTemplateLocation', { importDocumentId }),
+      // The actual downloadable artifact: streams the processed workbook (annotated with
+      // per-row status/errors) for a given import job. Binary — same raw:true + blob() pattern
+      // as template() above.
+      outputTemplate: (importDocumentId) => self._req('GET', '/imports/downloadOutputTemplate', { params: { importDocumentId }, raw: true })
     };
 }

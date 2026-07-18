@@ -27,8 +27,18 @@ const ASSETS = [
   // Assets
   './manifest.json',
   './favicon.svg',
-  // Modal HTML
-  './views/modals.html'
+  // Modal HTML — split into domain partials (see js/ui/shell.js)
+  './views/modals/clients.html',
+  './views/modals/loans.html',
+  './views/modals/savings-deposits.html',
+  './views/modals/shares.html',
+  './views/modals/groups-centers.html',
+  './views/modals/accounting.html',
+  './views/modals/organization.html',
+  './views/modals/admin.html',
+  './views/modals/products.html',
+  './views/modals/integrations.html',
+  './views/modals/system.html'
 ];
 
 self.addEventListener('install', e =>

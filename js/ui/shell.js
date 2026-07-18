@@ -197,9 +197,21 @@ export function mountAppShell() {
   // Mobile scrim closes the drawer
   document.getElementById('navScrim')?.addEventListener('click', () => sidebar.close());
 
-  // Load modal HTML once
-  fetch('./views/modals.html')
-    .then(r => r.ok ? r.text() : '')
+  // Load modal HTML once. views/modals.html used to be a single 1,345-line file; it's
+  // now split into views/modals/<domain>.html partials (one per js/api/<domain>.js
+  // domain, same idea as api/index.js assembling FineractAPIFull from domain modules).
+  // All partials are fetched in parallel and concatenated in a fixed order so modal
+  // markup always ends up in the same relative position in #modalRoot as before.
+  const MODAL_PARTIALS = [
+    'clients', 'loans', 'savings-deposits', 'shares', 'groups-centers',
+    'accounting', 'organization', 'admin', 'products', 'integrations', 'system'
+  ];
+  Promise.all(
+    MODAL_PARTIALS.map(name =>
+      fetch(`./views/modals/${name}.html`).then(r => r.ok ? r.text() : '').catch(() => '')
+    )
+  )
+    .then(htmlParts => htmlParts.join('\n'))
     .then(html => {
       const root = document.getElementById('modalRoot');
       if (root && !root.dataset.loaded) {

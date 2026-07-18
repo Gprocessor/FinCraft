@@ -140,11 +140,20 @@ export async function renderList(c) {
       import('../../router.js').then(r => r.navigate('shares', { id: b.dataset.viewShare }));
     }));
     c.querySelectorAll('[data-sh-approve]').forEach(b => b.addEventListener('click', async () => {
+      const id = b.dataset.shApprove;
+      const approvedDate = today();
       try {
-        await api.shares.approve(b.dataset.shApprove, {
-          approvedDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
+        await api.shares.approve(id, {
+          approvedDate, dateFormat: DATE_FORMAT, locale: LOCALE
         });
-        toast('success', 'Share account approved', '#' + b.dataset.shApprove);
+        let activated = false;
+        try {
+          await api.shares.activate(id, { activatedDate: approvedDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+          activated = true;
+        } catch (actErr) {
+          toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+        }
+        toast('success', activated ? 'Share account approved & activated' : 'Share account approved', '#' + id);
         load(currentOffset);
       } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
     }));

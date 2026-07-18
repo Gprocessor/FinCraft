@@ -181,6 +181,7 @@ export function openCloseShareModal(id) {
 
 export function openShareSimpleCmd({ id, command, label, dateField }) {
   const mid = 'sh-cmd-' + Date.now();
+  const isApprove = command === 'approve';
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
     <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
       <div class="modal modal-sm">
@@ -188,6 +189,7 @@ export function openShareSimpleCmd({ id, command, label, dateField }) {
         <div class="modal-body">
           <label>Date * <input type="date" id="shc-date" class="form-control" value="${today()}" required/></label>
           <label class="mt-2">Note <textarea id="shc-note" class="form-control" rows="2"></textarea></label>
+          ${isApprove ? `<label class="form-check mt-2"><input type="checkbox" id="shc-auto-activate" checked/> Also activate immediately</label>` : ''}
         </div>
         <div class="modal-footer">
           <button class="btn-secondary" data-close-modal>Cancel</button>
@@ -207,6 +209,7 @@ export function openShareSimpleCmd({ id, command, label, dateField }) {
     payload.locale = LOCALE;
     const note = el.querySelector('#shc-note').value.trim();
     if (note) payload.note = note;
+    const autoActivate = isApprove && el.querySelector('#shc-auto-activate')?.checked;
     try {
       const methodMap = {
         approve: 'approve',
@@ -221,8 +224,17 @@ export function openShareSimpleCmd({ id, command, label, dateField }) {
       } else {
       await api.shares.command(id, command, payload);
       }
+      let activated = false;
+      if (autoActivate) {
+        try {
+          await api.shares.activate(id, { activatedDate: date, dateFormat: DATE_FORMAT, locale: LOCALE });
+          activated = true;
+        } catch (actErr) {
+          toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+        }
+      }
       el.remove();
-      toast('success', label + ' successful', '#' + id);
+      toast('success', (activated ? 'Approved & activated' : label + ' successful'), '#' + id);
       document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) { toast('error', label + ' failed', e.detail?.defaultUserMessage || e.message); }
   });

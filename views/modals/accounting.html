@@ -1,0 +1,188 @@
+<!-- FinCraft modal partials — accounting domain. Fetched and concatenated at
+     runtime by js/ui/shell.js alongside the other views/modals/*.html files (mirrors
+     the js/api/accounting.js domain split). All forms have name= attrs and
+     data-populate= hooks. -->
+
+<!-- Journal Entry -->
+<div id="journalEntryModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Journal Entry</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="journalEntryForm">
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Currency *</span>
+          <select name="currencyCode" class="form-control" id="je-currency-sel" required><option value="">Loading…</option></select></label>
+        <label><span class="form-label">Transaction date *</span>
+          <input name="transactionDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Reference</span>
+          <input name="reference" class="form-control"/></label>
+        <label><span class="form-label">Payment type</span>
+          <select name="paymentTypeId" id="je-paymenttype" class="form-control"><option value="">— None —</option></select></label>
+        <label class="full"><span class="form-label">Comments</span>
+          <textarea name="comments" class="form-control" rows="2"></textarea></label>
+        <!-- Debits -->
+        <div class="full">
+          <div class="flex justify-between mb-2">
+            <h4>Debits</h4>
+            <button type="button" class="btn-ghost btn-sm" id="add-debit-row"><i class="fa-solid fa-plus"></i> Add row</button>
+          </div>
+          <table class="tbl"><thead><tr><th>GL Account</th><th>Amount</th><th></th></tr></thead>
+            <tbody id="je-debits-body">
+              <tr>
+                <td><select class="form-control" data-je-account id="je-gl-accounts-d1"></select></td>
+                <td><input type="number" min="0" step="0.01" class="form-control" data-je-amount/></td>
+                <td><button type="button" class="btn-ghost btn-sm" data-remove-row><i class="fa-solid fa-trash"></i></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Credits -->
+        <div class="full">
+          <div class="flex justify-between mb-2">
+            <h4>Credits</h4>
+            <button type="button" class="btn-ghost btn-sm" id="add-credit-row"><i class="fa-solid fa-plus"></i> Add row</button>
+          </div>
+          <table class="tbl"><thead><tr><th>GL Account</th><th>Amount</th><th></th></tr></thead>
+            <tbody id="je-credits-body">
+              <tr>
+                <td><select class="form-control" data-je-account id="je-gl-accounts-c1"></select></td>
+                <td><input type="number" min="0" step="0.01" class="form-control" data-je-amount/></td>
+                <td><button type="button" class="btn-ghost btn-sm" data-remove-row><i class="fa-solid fa-trash"></i></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-journal"><i class="fa-solid fa-check"></i> Post Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- GL Account -->
+<div id="glAccountModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New GL Account</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="glAccountForm">
+        <label><span class="form-label">Account name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">GL Code *</span>
+          <input name="glCode" required class="form-control" placeholder="e.g. 10100"/></label>
+        <label><span class="form-label">Type *</span>
+          <select name="type" class="form-control" required>
+            <option value="1">Asset</option>
+            <option value="2">Liability</option>
+            <option value="3">Equity</option>
+            <option value="4">Income</option>
+            <option value="5">Expense</option>
+          </select></label>
+        <label><span class="form-label">Usage *</span>
+          <select name="usage" class="form-control" id="gl-usage" required>
+            <option value="1">Detail (postable)</option>
+            <option value="2">Header (group only)</option>
+          </select></label>
+        <label class="full" id="gl-parent-wrap"><span class="form-label">Parent account</span>
+          <select name="parentId" id="gl-parent-sel" class="form-control"><option value="">— None (root) —</option></select></label>
+        <label class="full flex items-center gap-2" style="align-items:center">
+          <input type="checkbox" name="manualEntries" id="gl-manual" checked/> <span>Allow manual entries</span></label>
+        <label class="full"><span class="form-label">Description</span>
+          <textarea name="description" class="form-control" rows="2"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-gl"><i class="fa-solid fa-check"></i> Create GL Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Accounting Rule -->
+<div id="newAccRuleModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Accounting Rule</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newAccRuleForm">
+        <label class="full"><span class="form-label">Rule name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Office</span>
+          <select name="officeId" class="form-control" data-populate="offices"><option value="">All offices</option></select></label>
+        <label><span class="form-label">Debit account *</span>
+          <select name="debitAccountId" id="acc-rule-debit" class="form-control" required><option value="">Loading…</option></select></label>
+        <label><span class="form-label">Credit account *</span>
+          <select name="creditAccountId" id="acc-rule-credit" class="form-control" required><option value="">Loading…</option></select></label>
+        <label class="full"><span class="form-label">Description</span>
+          <textarea name="description" class="form-control" rows="2"></textarea></label>
+        <label class="full"><span class="form-label">Tags (comma-separated)</span>
+          <input name="tags" class="form-control" placeholder="e.g. loan,interest"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-acc-rule"><i class="fa-solid fa-check"></i> Create Rule</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Provisioning Criteria -->
+<div id="newProvCriteriaModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Provisioning Criteria</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newProvCriteriaForm">
+        <label class="full"><span class="form-label">Criteria name *</span>
+          <input name="criteriaName" required class="form-control"/></label>
+        <label class="full" style="margin-bottom:8px"><span class="form-label">Categories</span>
+          <div class="text-muted" style="font-size:12px">Define age buckets and provisioning percentages for each NPL category.</div></label>
+        <div class="full" id="prov-cats-wrap">
+          <table class="tbl">
+            <thead><tr><th>Category name</th><th>Min age (days)</th><th>Max age (days)</th><th>Min amount</th><th>Liability %</th><th></th></tr></thead>
+            <tbody id="prov-cats-body">
+              <tr>
+                <td><input class="form-control" name="pc_name[]" placeholder="e.g. Standard" required/></td>
+                <td><input class="form-control" name="pc_min[]" type="number" min="0" value="0" required/></td>
+                <td><input class="form-control" name="pc_max[]" type="number" min="0" value="30" required/></td>
+                <td><input class="form-control" name="pc_minamount[]" type="number" min="0" value="0"/></td>
+                <td><input class="form-control" name="pc_pct[]" type="number" min="0" max="100" step="0.01" value="1" required/></td>
+                <td><button type="button" class="btn-ghost btn-sm" data-remove-row><i class="fa-solid fa-trash"></i></button></td>
+              </tr>
+            </tbody>
+          </table>
+          <button type="button" class="btn-ghost btn-sm mt-2" id="add-prov-cat"><i class="fa-solid fa-plus"></i> Add category</button>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-prov-criteria"><i class="fa-solid fa-check"></i> Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Financial Activity Account -->
+<div id="newFAAccountModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">Map Financial Activity</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newFAAccountForm">
+        <label class="full"><span class="form-label">Financial activity *</span>
+          <select name="financialActivityId" id="fa-activity-sel" class="form-control" required><option value="">Loading…</option></select></label>
+        <label class="full"><span class="form-label">GL Account *</span>
+          <select name="glAccountId" id="fa-glaccount-sel" class="form-control" required><option value="">Loading…</option></select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-fa-account"><i class="fa-solid fa-check"></i> Save Mapping</button>
+    </div>
+  </div>
+</div>
+

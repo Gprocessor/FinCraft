@@ -144,6 +144,51 @@ document.addEventListener('fc:modals-loaded', async () => {
     toggleClientFields(); // run once on load
   }
 
+  // Group modal — group creation must be attached to a center, so selecting a
+  // center auto-fills (but doesn't lock) the Office field to match, since a
+  // group's office has to sit within the chosen center's office hierarchy.
+  const grpCenterSel = document.getElementById('grp-center-sel');
+  if (grpCenterSel) {
+    grpCenterSel.addEventListener('change', () => {
+      const opt = grpCenterSel.selectedOptions[0];
+      const officeId = opt?.dataset.officeId;
+      const officeSel = document.querySelector('#newGroupForm [name="officeId"]');
+      if (officeId && officeSel) officeSel.value = officeId;
+    });
+  }
+
+  // Client modal — optional Center → Group cascade. Center is UI-only (not
+  // sent to the API); picking one loads that center's associated groups so the
+  // client can optionally be added straight into one of them. If no center is
+  // picked, Group stays hidden and optional (not required).
+  const clCenterSel = document.getElementById('cl-center-sel');
+  const clGroupWrap = document.getElementById('cl-group-wrap');
+  const clGroupSel  = document.getElementById('cl-group-sel');
+  if (clCenterSel && clGroupWrap && clGroupSel) {
+    clCenterSel.addEventListener('change', async () => {
+      const centerId = clCenterSel.value;
+      if (!centerId) {
+        clGroupWrap.style.display = 'none';
+        clGroupSel.innerHTML = '<option value="">— Select a group —</option>';
+        clGroupSel.value = '';
+        clGroupSel.removeAttribute('required');
+        return;
+      }
+      clGroupWrap.style.display = '';
+      clGroupSel.setAttribute('required', 'required');
+      clGroupSel.innerHTML = '<option value="">Loading…</option>';
+      try {
+        const ctr = await api.centers.get(centerId, { associations: 'groupMembers' });
+        const groups = ctr?.groupMembers || [];
+        clGroupSel.innerHTML = groups.length
+          ? '<option value="">Select group…</option>' + groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('')
+          : '<option value="">No groups in this center</option>';
+      } catch {
+        clGroupSel.innerHTML = '<option value="">Failed to load groups</option>';
+      }
+    });
+  }
+
   // Loan product selection → pull the product's real config from /loans/template
   // so we submit the terms Fineract actually expects for that product
   const loanProductSel = document.querySelector('#newLoanModal [name="productId"]');

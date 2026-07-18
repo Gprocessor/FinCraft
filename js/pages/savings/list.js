@@ -159,11 +159,20 @@ export async function renderList(c) {
       if (modal) modal.dataset.accountId = b.dataset.svDeposit;
     }));
     c.querySelectorAll('[data-sv-approve]').forEach(b => b.addEventListener('click', async () => {
+      const id = b.dataset.svApprove;
+      const approvedOnDate = today();
       try {
-        await api.savings.approve(b.dataset.svApprove, {
-          approvedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
+        await api.savings.approve(id, {
+          approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE
         });
-        toast('success', 'Account approved', `#${b.dataset.svApprove}`);
+        let activated = false;
+        try {
+          await api.savings.activate(id, { activatedOnDate: approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+          activated = true;
+        } catch (actErr) {
+          toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+        }
+        toast('success', activated ? 'Account approved & activated' : 'Account approved', `#${id}`);
         load(currentOffset); loadKpis();
       } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
     }));

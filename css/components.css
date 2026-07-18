@@ -184,15 +184,25 @@
 .b-success  { background: rgba(74,222,128,.12);  color: #4ade80; }
 .b-teal     { background: rgba(0,201,177,.12);   color: var(--brand-teal); }
 
-/* ---- BUTTONS ---- */
-.btn {
+/* ---- BUTTONS ----
+   FIX (button styling regression): every modal/page in the app writes markup like
+   class="btn-primary" / "btn-secondary" / "btn-danger" / "btn-ghost" / "btn-amber" on
+   its own — NOT combined with the base "btn" class (only .btn-success and .btn-warning
+   happened to duplicate the full box-model themselves, which is why those two variants
+   were the only ones that still looked "modern"). Every other button variant was only
+   getting background/color from its own rule and fell back to bare browser button
+   chrome (default padding, grey 3D border, no radius) — that's the "old button" look.
+   Folding all variant selectors into the base rule fixes every one of them in one
+   place instead of duplicating the box model per-variant like .btn-success does. */
+.btn, .btn-primary, .btn-secondary, .btn-danger, .btn-ghost, .btn-amber {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 8px 16px; border-radius: 10px; border: none;
   cursor: pointer; font-family: var(--font-ui); font-size: 13px; font-weight: 600;
   transition: all 200ms cubic-bezier(.4,0,.2,1);
   white-space: nowrap; text-decoration: none;
 }
-.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn:disabled, .btn-primary:disabled, .btn-secondary:disabled, .btn-danger:disabled,
+.btn-ghost:disabled, .btn-amber:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary   { background: var(--brand-teal); color: var(--brand-navy); }
 .btn-primary:hover:not(:disabled)   { background: #00e5cc; box-shadow: 0 0 16px rgba(0,201,177,.3); transform: translateY(-1px); }
 .btn-secondary { background: var(--bg-card-alt); color: var(--text-2); border: 1px solid var(--border-1); }

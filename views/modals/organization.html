@@ -1,0 +1,144 @@
+<!-- FinCraft modal partials — organization domain. Fetched and concatenated at
+     runtime by js/ui/shell.js alongside the other views/modals/*.html files (mirrors
+     the js/api/organization.js domain split). All forms have name= attrs and
+     data-populate= hooks. -->
+
+<!-- New Payment Type -->
+<div id="newPaymentTypeModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Payment Type</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newPaymentTypeForm">
+        <label class="full"><span class="form-label">Name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label class="full"><span class="form-label">Description</span>
+          <input name="description" class="form-control"/></label>
+        <label><span class="form-label">Is Cash Payment?</span>
+          <select name="isCashPayment" class="form-control"><option value="true">Yes</option><option value="false">No</option></select></label>
+        <label><span class="form-label">Position</span>
+          <input name="position" type="number" min="0" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-paymenttype"><i class="fa-solid fa-check"></i> Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Office -->
+<div id="newOfficeModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Office</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newOfficeForm">
+        <label class="full"><span class="form-label">Office name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Parent office *</span>
+          <select name="parentId" class="form-control" id="office-parent-sel" required><option value="">Loading…</option></select></label>
+        <label><span class="form-label">Opened on *</span>
+          <input name="openingDate" type="date" class="form-control" required/></label>
+        <label class="full"><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-office"><i class="fa-solid fa-check"></i> Create Office</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Staff -->
+<div id="newStaffModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Staff Member</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newStaffForm">
+        <label><span class="form-label">First name *</span>
+          <input name="firstname" required class="form-control"/></label>
+        <label><span class="form-label">Last name *</span>
+          <input name="lastname" required class="form-control"/></label>
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Mobile</span>
+          <input name="mobileNo" class="form-control"/></label>
+        <label><span class="form-label">Is Loan Officer?</span>
+          <select name="isLoanOfficer" class="form-control">
+            <option value="true">Yes</option><option value="false">No</option></select></label>
+        <label><span class="form-label">Active?</span>
+          <select name="isActive" class="form-control">
+            <option value="true">Yes</option><option value="false">No</option></select></label>
+        <label class="full"><span class="form-label">Joining date</span>
+          <input name="joiningDate" type="date" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-staff"><i class="fa-solid fa-check"></i> Create Staff</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Holiday -->
+<div id="newHolidayModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Holiday</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newHolidayForm">
+        <label class="full"><span class="form-label">Holiday name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">From date *</span>
+          <input name="fromDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">To date *</span>
+          <input name="toDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Repayment rescheduled to</span>
+          <input name="repaymentsRescheduledTo" type="date" class="form-control"/></label>
+        <label class="full"><span class="form-label">Office(s) *</span>
+          <select name="offices" id="holiday-offices-sel" class="form-control" multiple size="4" required><option value="">Loading…</option></select></label>
+        <label class="full"><span class="form-label">Description</span>
+          <input name="description" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-holiday"><i class="fa-solid fa-check"></i> Create Holiday</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Teller -->
+<div id="newTellerModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New Teller</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newTellerForm">
+        <label class="full"><span class="form-label">Teller name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Start date *</span>
+          <input name="startDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">End date</span>
+          <input name="endDate" type="date" class="form-control"/></label>
+        <label class="full"><span class="form-label">Description</span>
+          <input name="description" class="form-control"/></label>
+        <label><span class="form-label">Status</span>
+          <select name="status" class="form-control">
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-teller"><i class="fa-solid fa-check"></i> Create Teller</button>
+    </div>
+  </div>
+</div>
+

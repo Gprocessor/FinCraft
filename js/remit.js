@@ -1,7 +1,7 @@
 /* FinCraft · remit.js — Remittance stepper (4 steps)
    Wires up to Fineract /accounttransfers endpoint with full client search,
    destination resolution, and remittance-specific metadata.
-   The remittanceModal stepper UI lives in views/modals.html. */
+   The remittanceModal stepper UI lives in views/modals/integrations.html. */
 
 import { toast, closeModal, openModal } from './ui.js';
 import { api } from './api.js';
@@ -328,6 +328,6 @@ export const Remit = {
 
 // Auto-wire when modals are loaded
 document.addEventListener('fc:modals-loaded', () => {
-  // The modal HTML in modals.html uses [data-remit-pane] and the buttons fire
+  // The modal HTML in views/modals/integrations.html uses [data-remit-pane] and the buttons fire
   // remit-next / remit-back via data-action — already handled in ui.js handleAction.
 });

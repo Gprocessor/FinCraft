@@ -26,10 +26,30 @@ export const FixedDepositHandlers = {
       if (f.maturityInstructionId) payload.maturityInstructionId = parseInt(f.maturityInstructionId);
       if (f.externalId) payload.externalId = f.externalId;
 
+      const autoApproveActivate = f.autoApproveActivate === 'on' || f.autoApproveActivate === 'true';
+
       setSubmitting(btn, true);
       try {
         const r = await api.fixedDeposits.create(payload);
-        toast('success', 'FD application submitted', `#${r.savingsId || r.resourceId}`);
+        const id = r.savingsId || r.resourceId;
+        let statusMsg = 'FD application submitted';
+        if (autoApproveActivate && id) {
+          try {
+            await api.fixedDeposits.approve(id, { approvedOnDate: f.submittedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+            try {
+              await api.fixedDeposits.activate(id, { activatedOnDate: f.submittedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+              statusMsg = 'FD created, approved & activated';
+            } catch (actErr) {
+              statusMsg = 'Created & approved, but activation failed';
+              toast('warn', statusMsg, actErr.detail?.defaultUserMessage || actErr.message);
+              statusMsg = null;
+            }
+          } catch (appErr) {
+            toast('warn', 'Created, but approval failed', appErr.detail?.defaultUserMessage || appErr.message);
+            statusMsg = null;
+          }
+        }
+        if (statusMsg) toast('success', statusMsg, `#${id}`);
         closeModal('newFDModal');
         document.dispatchEvent(new CustomEvent('fc:reload'));
       } catch (e) {

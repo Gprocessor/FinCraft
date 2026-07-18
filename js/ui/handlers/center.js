@@ -20,11 +20,23 @@ export const CenterHandlers = {
       };
       if (f.staffId) payload.staffId = parseInt(f.staffId);
       if (f.externalId) payload.externalId = f.externalId;
+      const autoActivate = f.autoActivate === 'on' || f.autoActivate === 'true';
 
       setSubmitting(btn, true);
       try {
-        await api.centers.create(payload);
-        toast('success', 'Center created', f.name);
+        const r = await api.centers.create(payload);
+        const id = r.centerId || r.resourceId;
+        let statusMsg = 'Center created';
+        if (autoActivate && id) {
+          try {
+            await api.centers.activate(id, { activationDate: f.submittedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+            statusMsg = 'Center created & activated';
+          } catch (actErr) {
+            toast('warn', 'Center created, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+            statusMsg = null;
+          }
+        }
+        if (statusMsg) toast('success', statusMsg, f.name);
         closeModal('newCenterModal');
         document.dispatchEvent(new CustomEvent('fc:reload'));
       } catch (e) {
