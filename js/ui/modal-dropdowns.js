@@ -114,8 +114,10 @@ async function populateModalDropdowns() {
   // doesn't need a second network round-trip.
   window.__fcCenters = centerList;
   document.querySelectorAll('[data-populate="centers"]').forEach(sel => {
-    sel.innerHTML = '<option value="">Select center…</option>' +
-      centerList.map(c => `<option value="${c.id}" data-office-id="${c.officeId ?? ''}">${escapeHtml(c.name)}</option>`).join('');
+    sel.innerHTML = centerList.length
+      ? '<option value="">Select center…</option>' +
+        centerList.map(c => `<option value="${c.id}" data-office-id="${c.officeId ?? ''}">${escapeHtml(c.name)}</option>`).join('')
+      : '<option value="">No centers found — create one first</option>';
   });
 }
 document.addEventListener('fc:modals-loaded', populateModalDropdowns);

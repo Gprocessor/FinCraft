@@ -1,4 +1,6 @@
-const CACHE = 'fincraft-v10'; // bumped: network-first fetch strategy (audit item 10 — cache-first was serving stale/broken JS+CSS after redeploys until the SW file itself changed)
+const CACHE = 'fincraft-v11'; // bumped: this session touched several core files (chart loader,
+// create->approve->activate handlers, group/center/client modals+wiring) — bumping forces the
+// activate-phase cache cleanup below to run and guarantees no stale mix of old/new assets.
 const ASSETS = [
   './',
   './index.html',

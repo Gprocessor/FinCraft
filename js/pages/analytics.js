@@ -1,4 +1,10 @@
-/* FinCraft · analytics.js — Live API KPI Dashboard */
+/* FinCraft · analytics.js — risk & drill-down intelligence, deliberately NOT a re-hash of the
+   Dashboard's headline KPIs/charts (Total Customers, Total Savings, Loan Portfolio, Portfolio
+   Distribution, Branch Performance, Loans by Officer already live there — see
+   fixlogs/FIXLOG-analytics-rebuild.md for the full before/after and why each old section here
+   was cut). This page now answers "why", not "what": aging/delinquency breakdown, which loan
+   officers are actually carrying the arrears, and which products carry real volume vs. are
+   just sitting in the catalog. */
 import { api } from '../api.js';
 import { fmt, num, escapeHtml } from '../utils.js';
 
@@ -6,58 +12,44 @@ export async function render(c) {
   c.innerHTML = `
   <div class="page active">
     <div class="page-header">
-      <div><h1 class="page-title">Analytics</h1><div class="page-subtitle">Key performance indicators — live from Fineract</div></div>
+      <div><h1 class="page-title">Analytics</h1><div class="page-subtitle">Risk & drill-down — deeper cuts of the numbers already on your Dashboard, not a repeat of them</div></div>
       <button class="btn-ghost" id="an-refresh"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
     </div>
 
     <div class="stat-grid" id="an-kpis">
-      ${['an-clients','an-loans','an-savings','an-tasks','an-par30','an-npl'].map((id,i) => `
-        <div class="stat-card ${i===4?'c-warn':i===5?'c-danger':''}">
-          <div class="label">${['Active Clients','Active Loans','Active Savings','Pending Tasks','PAR 30','NPL Ratio'][i]}</div>
+      ${['an-npl','an-par30','an-closure','an-avgloans'].map((id,i) => `
+        <div class="stat-card ${i===0?'c-danger':i===1?'c-warn':''}">
+          <div class="label">${['NPL Ratio','PAR 30','Loan Closure Rate','Avg Loans / Active Client'][i]}</div>
           <div class="value" id="${id}"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:18px"></i></div>
         </div>`).join('')}
     </div>
 
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><h3 class="card-title">Disbursements (90 days)</h3></div>
-        <div id="an-chart-wrap" style="min-height:200px;position:relative">
-          <canvas id="an-disbursement-chart" height="200"></canvas>
-          <div id="an-chart-fallback" class="text-muted" style="font-size:13px;display:none"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><h3 class="card-title">Portfolio Composition</h3></div>
-        <div id="an-composition-wrap" style="min-height:200px;position:relative">
-          <canvas id="an-composition-chart" height="200"></canvas>
-          <div id="an-composition-fallback" class="text-muted" style="font-size:13px;display:none"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><h3 class="card-title">Office-level Summary</h3></div>
-        <div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Office</th><th>Active Loans</th><th>Outstanding</th><th>Overdue</th></tr></thead>
-          <tbody id="an-office-tbl"><tr><td colspan="4"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading…</td></tr></tbody>
-        </table></div>
-      </div>
-      <div class="card">
-        <div class="card-header"><h3 class="card-title">Loan Officers</h3></div>
-        <div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Officer</th><th>Office</th><th>Active?</th></tr></thead>
-          <tbody id="an-officers"><tr><td colspan="3"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading…</td></tr></tbody>
-        </table></div>
-      </div>
-    </div>
-
     <div class="card">
-      <div class="card-header"><h3 class="card-title">Loan Products</h3></div>
-      <div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>Product</th><th>Short Name</th><th>Rate</th><th>Principal</th></tr></thead>
-        <tbody id="an-products"><tr><td colspan="4"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading…</td></tr></tbody>
-      </table></div>
+      <div class="card-header"><h3 class="card-title">Delinquency Aging Breakdown</h3>
+        <span class="text-muted" style="font-size:12px">Outstanding by days overdue — from the PortfolioAtRisk report</span></div>
+      <div id="an-aging-wrap" style="min-height:220px;position:relative">
+        <canvas id="an-aging-chart" height="220"></canvas>
+        <div id="an-aging-fallback" class="text-muted" style="font-size:13px;display:none"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Arrears by Loan Officer</h3>
+          <span class="text-muted" style="font-size:12px">Ranked by exposure, not volume</span></div>
+        <div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>#</th><th>Loan Officer</th><th>Loans in Arrears</th><th>Overdue Amount</th></tr></thead>
+          <tbody id="an-officer-risk"><tr><td colspan="4"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading…</td></tr></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">Loan Product Mix — Rate &amp; Exposure</h3>
+          <span class="text-muted" style="font-size:12px">Which products actually carry volume</span></div>
+        <div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Product</th><th>Rate</th><th>Principal</th><th>Active Loans</th></tr></thead>
+          <tbody id="an-products"><tr><td colspan="4"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading…</td></tr></tbody>
+        </table></div>
+      </div>
     </div>
   </div>`;
 
@@ -67,30 +59,19 @@ export async function render(c) {
 
 async function loadAll(c) {
   // Reset spinners on refresh
-  ['an-clients','an-loans','an-savings','an-tasks','an-par30','an-npl'].forEach(id => {
+  ['an-npl','an-par30','an-closure','an-avgloans'].forEach(id => {
     const el = c.querySelector(`#${id}`);
     if (el) el.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:18px"></i>';
   });
 
-  // Build 90-day range for disbursements
-  const endDate   = new Date();
-  const startDate = new Date(); startDate.setDate(startDate.getDate() - 90);
-  const fmt8 = d => d.toISOString().split('T')[0];
-
   const results = await Promise.allSettled([
-    api.clients.list({ limit: 1, status: 'active' }),                                 // 0
-    api.loans.list({ limit: 1, status: 'active' }),                                    // 1
-    api.savings.list({ limit: 1, status: 'active' }),                                  // 2
-    api.makerchecker.list({ limit: 1 }),                                               // 3
-    api.runReports.run('PortfolioAtRisk',    { genericResultSet: true }).catch(()=>null), // 4
-    api.runReports.run('ActiveLoansInArrears',{ genericResultSet: true }).catch(()=>null), // 5
-    api.runReports.run('TranDatewiseSummary',
-      { startDate: fmt8(startDate), endDate: fmt8(endDate),
-        dateFormat: 'yyyy-MM-dd', locale: 'en', genericResultSet: true }).catch(()=>null), // 6
-    api.runReports.run('OfficeWiseSummary', { genericResultSet: true }).catch(()=>null),   // 7
-    api.staff.list({ isLoanOfficer: true }),                                           // 8
-    api.loanProducts.list(),                                                           // 9
-    api.loans.list({ limit: 1, status: 'closed' }).catch(() => null)                    // 10
+    api.clients.list({ limit: 1, status: 'active' }),                                     // 0
+    api.loans.list({ limit: 1, status: 'active' }),                                        // 1
+    api.loans.list({ limit: 1, status: 'closed' }),                                        // 2
+    api.runReports.run('PortfolioAtRisk',     { genericResultSet: true }).catch(() => null),// 3
+    api.runReports.run('ActiveLoansInArrears',{ genericResultSet: true }).catch(() => null),// 4
+    api.staff.list({ isLoanOfficer: true }),                                                // 5
+    api.loanProducts.list()                                                                 // 6
   ]);
 
   const val = (i) => results[i].status === 'fulfilled' ? results[i].value : null;
@@ -99,115 +80,112 @@ async function loadAll(c) {
     if (el) el.innerHTML = '<span class="badge b-warn" title="Failed to load">—</span>';
   };
 
-  // Simple counts
-  [['an-clients',0],['an-loans',1],['an-savings',2],['an-tasks',3]].forEach(([id,i]) => {
-    const v = val(i);
-    const el = c.querySelector(`#${id}`);
-    if (!el) return;
-    if (v !== null) el.textContent = num(v?.totalFilteredRecords ?? '—');
-    else warn(id);
-  });
+  const activeClients = val(0)?.totalFilteredRecords ?? null;
+  const activeLoans   = val(1)?.totalFilteredRecords ?? null;
+  const closedLoans   = val(2)?.totalFilteredRecords ?? null;
+  const parData       = val(3);
+  const nplData       = val(4);
 
-  // PAR 30 — from PortfolioAtRisk report (look for PAR 30 row)
-  const parData = val(4);
-  const parEl   = c.querySelector('#an-par30');
+  // ---- KPI: NPL Ratio (principal-weighted, falls back to a count-based estimate) ----
+  const nplEl = c.querySelector('#an-npl');
+  const nplFromPrincipal = computeNplFromPar(parData);
+  if (nplFromPrincipal != null) {
+    if (nplEl) nplEl.textContent = `${nplFromPrincipal.toFixed(2)}%`;
+  } else if (nplData?.data?.length && activeLoans) {
+    // Labelled with a leading ~ since it's count-based, not principal-based — only used when
+    // the PAR report didn't expose amount columns we could parse.
+    if (nplEl) nplEl.textContent = `~${((nplData.data.length / activeLoans) * 100).toFixed(2)}%`;
+  } else if (nplEl) warn('an-npl');
+
+  // ---- KPI: PAR 30 — from PortfolioAtRisk report (look for the "30" row) ----
+  const parEl = c.querySelector('#an-par30');
   if (parData?.data?.length) {
     const parRow = parData.data.find(r => String(r.row?.[0] || '').includes('30')) || parData.data[0];
     const parPct = parRow?.row?.[1] ?? parRow?.row?.[0];
     if (parEl) parEl.textContent = parPct != null ? `${parseFloat(parPct).toFixed(2)}%` : '—';
   } else if (parEl) warn('an-par30');
 
-  // NPL ratio — regulatory formula: outstanding-at-risk PRINCIPAL / total outstanding PRINCIPAL.
-  // Previously this divided arrears LOAN COUNT by active LOAN COUNT, which is wrong by orders
-  // of magnitude. We now parse principal amounts out of the PortfolioAtRisk report using
-  // column-name matching (Fineract's PAR report layout varies slightly by deployment/version),
-  // and only fall back to the old count-based approximation if that fails.
-  const nplEl = c.querySelector('#an-npl');
-  const nplFromPrincipal = computeNplFromPar(parData);
-  if (nplFromPrincipal != null) {
-    if (nplEl) nplEl.textContent = `${nplFromPrincipal.toFixed(2)}%`;
-  } else {
-    const nplData = val(5);
-    if (nplData?.data?.length) {
-      const total   = val(1)?.totalFilteredRecords || 1;
-      const arrears = nplData.data.length;
-      // Labelled as an estimate since it's count-based, not principal-based, and only used
-      // when the PAR report didn't expose amount columns we could parse.
-      if (nplEl) nplEl.textContent = `~${((arrears / total) * 100).toFixed(2)}%`;
-    } else if (nplEl) warn('an-npl');
-  }
+  // ---- KPI: Loan Closure Rate — closed / (closed + active). A cheap attrition proxy: a rising
+  // trend here alongside flat "New This Month" on the Dashboard is an early portfolio-shrinkage
+  // signal that neither of the Dashboard's own cards surfaces on its own. ----
+  const closureEl = c.querySelector('#an-closure');
+  if (activeLoans != null && closedLoans != null && (activeLoans + closedLoans) > 0) {
+    if (closureEl) closureEl.textContent = `${((closedLoans / (activeLoans + closedLoans)) * 100).toFixed(1)}%`;
+  } else if (closureEl) warn('an-closure');
 
-  // Disbursements chart — Chart.js line chart (was a CSS-only bar chart)
-  const tranData = val(6);
-  const chartCanvas = c.querySelector('#an-disbursement-chart');
-  const chartFallback = c.querySelector('#an-chart-fallback');
+  // ---- KPI: Avg Loans per Active Client — portfolio depth (cross-selling / repeat-borrowing
+  // signal), distinct from the Dashboard's separate raw client and loan counts. ----
+  const avgEl = c.querySelector('#an-avgloans');
+  if (activeLoans != null && activeClients) {
+    if (avgEl) avgEl.textContent = (activeLoans / activeClients).toFixed(2);
+  } else if (avgEl) warn('an-avgloans');
+
+  // ---- Delinquency Aging Breakdown chart — reuses the PortfolioAtRisk report already
+  // fetched above (no extra API call), but plots every aging bucket instead of collapsing
+  // it into a single ratio. ----
+  const agingCanvas   = c.querySelector('#an-aging-chart');
+  const agingFallback = c.querySelector('#an-aging-fallback');
   const chartJsOk = await loadChartJs().catch(() => false);
-  if (tranData?.data?.length && chartCanvas && chartJsOk) {
-    renderDisbursementChart(chartCanvas, tranData);
-  } else if (chartCanvas) {
-    chartCanvas.style.display = 'none';
-    if (chartFallback) {
-      chartFallback.style.display = 'block';
-      chartFallback.textContent = chartJsOk
-        ? 'No disbursement data available for the last 90 days'
-        : 'Chart library failed to load — check your connection';
+  const aging = computeAgingBuckets(parData);
+  if (aging && agingCanvas && chartJsOk) {
+    renderAgingChart(agingCanvas, aging);
+  } else if (agingCanvas) {
+    agingCanvas.style.display = 'none';
+    if (agingFallback) {
+      agingFallback.style.display = 'block';
+      agingFallback.textContent = !chartJsOk
+        ? 'Chart library failed to load — check your connection'
+        : 'PortfolioAtRisk report unavailable or its column layout wasn\u2019t recognised on this server';
     }
   }
 
-  // Portfolio composition — Performing / Overdue / Closed, using counts already fetched above.
-  const compCanvas = c.querySelector('#an-composition-chart');
-  const compFallback = c.querySelector('#an-composition-fallback');
-  const activeCount  = val(1)?.totalFilteredRecords;
-  const arrearsCount = val(5)?.data?.length;
-  const closedCount  = val(10)?.totalFilteredRecords;
-  const performingCount = (activeCount != null && arrearsCount != null) ? Math.max(0, activeCount - arrearsCount) : null;
-  if (compCanvas && chartJsOk && performingCount != null) {
-    renderCompositionChart(compCanvas, {
-      performing: performingCount,
-      overdue: arrearsCount || 0,
-      closed: closedCount || 0
-    });
-  } else if (compCanvas) {
-    compCanvas.style.display = 'none';
-    if (compFallback) {
-      compFallback.style.display = 'block';
-      compFallback.textContent = chartJsOk
-        ? 'Not enough data to render portfolio composition'
-        : 'Chart library failed to load — check your connection';
-    }
-  }
-
-  // Office summary table
-  const officeData = val(7);
-  const officeTbl  = c.querySelector('#an-office-tbl');
-  if (officeTbl) {
-    if (officeData?.data?.length) {
-      const cols = officeData.columnHeaders || [];
-      officeTbl.innerHTML = officeData.data.map(r =>
-        `<tr>${(r.row || []).slice(0, 4).map(v => `<td>${escapeHtml(String(v ?? ''))}</td>`).join('')}</tr>`
-      ).join('');
+  // ---- Arrears by Loan Officer — turns the ActiveLoansInArrears report (already used
+  // elsewhere just for a count) into an actual per-officer breakdown, ranked by exposure. ----
+  const officerRiskEl = c.querySelector('#an-officer-risk');
+  const arrearsByOfficer = computeArrearsByOfficer(nplData);
+  if (officerRiskEl) {
+    if (arrearsByOfficer?.rows.length) {
+      officerRiskEl.innerHTML = arrearsByOfficer.rows.slice(0, 15).map((r, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(r.officer)}</td>
+          <td>${num(r.count)}</td>
+          <td>${arrearsByOfficer.hasAmount ? fmt(r.amount) : '<span class="text-muted">—</span>'}</td>
+        </tr>`).join('');
+    } else if (nplData?.data?.length) {
+      // Report loaded fine, just doesn't have a recognisable officer column on this deployment
+      officerRiskEl.innerHTML = '<tr><td colspan="4" class="text-muted">This server\u2019s ActiveLoansInArrears report doesn\u2019t expose a loan-officer column <span class="badge b-warn" title="Report layout not recognised">!</span></td></tr>';
+    } else if (nplData?.data?.length === 0) {
+      officerRiskEl.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-face-smile"></i><div>No loans currently in arrears</div></div></td></tr>';
     } else {
-      officeTbl.innerHTML = '<tr><td colspan="4" class="text-muted">No data available <span class="badge b-warn" title="Report may not exist on this server">!</span></td></tr>';
+      officerRiskEl.innerHTML = '<tr><td colspan="4" class="text-muted">No data available <span class="badge b-warn" title="Report may not exist on this server">!</span></td></tr>';
     }
   }
 
-  // Loan officers
-  const staffResult = val(8);
-  const staffList   = Array.isArray(staffResult) ? staffResult : (staffResult?.pageItems || []);
-  const offEl = c.querySelector('#an-officers');
-  if (offEl) {
-    offEl.innerHTML = staffList.length
-      ? staffList.map(s => `<tr><td>${escapeHtml(s.displayName)}</td><td>${escapeHtml(s.officeName || '—')}</td><td>${s.isActive ? '<span class="badge b-success">Active</span>' : '<span class="badge">Inactive</span>'}</td></tr>`).join('')
-      : '<tr><td colspan="3"><div class="empty-state"><i class="fa-solid fa-user-tie"></i><div>No loan officers found</div></div></td></tr>';
-  }
-
-  // Loan products
-  const prodList = Array.isArray(val(9)) ? val(9) : [];
+  // ---- Loan Product Mix — the existing rate/principal reference list, enriched with a real
+  // active-loan count per product so it tells you which products carry volume, not just what's
+  // configured. Capped to the first 12 products to bound the extra network calls. ----
+  const prodList = Array.isArray(val(6)) ? val(6) : [];
   const prodEl   = c.querySelector('#an-products');
   if (prodEl) {
-    prodEl.innerHTML = prodList.length
-      ? prodList.map(p => `<tr><td>${escapeHtml(p.name)}</td><td class="mono">${escapeHtml(p.shortName || '—')}</td><td class="mono">${p.interestRatePerPeriod || 0}%</td><td class="mono">${fmt(p.principal || 0)}</td></tr>`).join('')
-      : '<tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-cube"></i><div>No loan products found</div></div></td></tr>';
+    if (prodList.length) {
+      const topProducts = prodList.slice(0, 12);
+      const counts = await Promise.all(topProducts.map(p =>
+        api.loans.list({ limit: 1, status: 'active', loanProductId: p.id })
+          .then(r => r?.totalFilteredRecords ?? null)
+          .catch(() => null)
+      ));
+      prodEl.innerHTML = topProducts.map((p, i) => `
+        <tr>
+          <td>${escapeHtml(p.name)}<div class="text-muted mono" style="font-size:11px">${escapeHtml(p.shortName || '—')}</div></td>
+          <td class="mono">${p.interestRatePerPeriod || 0}%</td>
+          <td class="mono">${fmt(p.principal || 0)}</td>
+          <td class="mono">${counts[i] != null ? num(counts[i]) : '<span class="badge b-warn" title="Failed to load">—</span>'}</td>
+        </tr>`).join('') +
+        (prodList.length > 12 ? `<tr><td colspan="4" class="text-muted" style="font-size:12px">+ ${prodList.length - 12} more product(s) not shown</td></tr>` : '');
+    } else {
+      prodEl.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-cube"></i><div>No loan products found</div></div></td></tr>';
+    }
   }
 }
 
@@ -253,6 +231,68 @@ export function computeNplFromPar(parData) {
   return (atRiskOutstanding / totalOutstanding) * 100;
 }
 
+/**
+ * Parse the PortfolioAtRisk genericResultSet into one bucket per aging column (Current,
+ * "1 - 30 Days", "31 - 60 Days", "> 90 Days", etc.) instead of collapsing it into a single
+ * ratio — same column-name-matching approach as computeNplFromPar, since Fineract's PAR report
+ * layout varies by deployment/version. Returns null if fewer than 2 recognisable bucket columns
+ * are found (not enough to draw a meaningful breakdown).
+ */
+export function computeAgingBuckets(parData) {
+  if (!parData?.data?.length || !parData?.columnHeaders?.length) return null;
+  const cols = parData.columnHeaders.map(h => h.columnName || '');
+
+  const bucketIdxs = cols
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => /\d+\s*-\s*\d+|>\s*\d+|current|overdue|arrears|not\s*overdue/i.test(c) && !/total/i.test(c))
+    .map(({ i }) => i);
+
+  if (bucketIdxs.length < 2) return null;
+
+  const sums = bucketIdxs.map(() => 0);
+  for (const row of parData.data) {
+    const cells = row.row || [];
+    bucketIdxs.forEach((idx, bi) => {
+      const v = parseFloat(cells[idx]);
+      if (!isNaN(v)) sums[bi] += v;
+    });
+  }
+
+  return { labels: bucketIdxs.map(idx => cols[idx]), values: sums };
+}
+
+/**
+ * Group the ActiveLoansInArrears genericResultSet by loan officer, summing an overdue-amount
+ * column when one is identifiable and always counting rows (loans) per officer. Column names
+ * are matched the same way as the other two report parsers above. Returns null if no
+ * loan-officer column can be found (report layout not recognised on this deployment) — the
+ * caller then falls back to a plain "not available" message rather than guessing.
+ */
+export function computeArrearsByOfficer(nplData) {
+  if (!nplData?.data?.length || !nplData?.columnHeaders?.length) return null;
+  const cols = nplData.columnHeaders.map(h => h.columnName || '');
+
+  const officerIdx = cols.findIndex(c => /loan\s*officer|officer\s*name/i.test(c));
+  if (officerIdx < 0) return null;
+  const amountIdx = cols.findIndex(c => /overdue|arrears|principal.*od|amount.*od|total.*od/i.test(c));
+
+  const groups = new Map();
+  for (const row of nplData.data) {
+    const cells = row.row || [];
+    const officer = String(cells[officerIdx] ?? '').trim() || 'Unassigned';
+    const amt = amountIdx >= 0 ? parseFloat(cells[amountIdx]) : NaN;
+    const g = groups.get(officer) || { count: 0, amount: 0 };
+    g.count += 1;
+    if (!isNaN(amt)) g.amount += amt;
+    groups.set(officer, g);
+  }
+
+  const rows = [...groups.entries()].map(([officer, g]) => ({ officer, count: g.count, amount: g.amount }));
+  const hasAmount = amountIdx >= 0;
+  rows.sort((a, b) => (hasAmount ? b.amount - a.amount : b.count - a.count));
+  return { rows, hasAmount };
+}
+
 let chartJsPromise = null;
 /** Lazily load Chart.js from cdnjs (already permitted by the CSP script-src) the first time
  *  the analytics page needs it, rather than loading it on every page of the app. */
@@ -276,79 +316,23 @@ function destroyChart(canvas) {
   if (existing) { existing.destroy(); chartInstances.delete(canvas); }
 }
 
-function renderDisbursementChart(canvas, tranData) {
+function renderAgingChart(canvas, { labels, values }) {
   destroyChart(canvas);
   canvas.style.display = 'block';
-  const fallback = canvas.parentElement.querySelector('#an-chart-fallback');
+  const fallback = canvas.parentElement.querySelector('#an-aging-fallback');
   if (fallback) fallback.style.display = 'none';
 
-  const cols = (tranData.columnHeaders || []).map(h => h.columnName);
-  const rows = tranData.data || [];
-  const dateIdx   = cols.findIndex(c => /date/i.test(c));
-  const amountIdx = cols.findIndex(c => /amount|disburse|total/i.test(c));
-  if (amountIdx < 0) {
-    canvas.style.display = 'none';
-    if (fallback) { fallback.style.display = 'block'; fallback.textContent = 'Data shape not recognised'; }
-    return;
-  }
-
-  const points = rows.map(r => ({
-    label: String(r.row?.[dateIdx >= 0 ? dateIdx : 0] || ''),
-    value: parseFloat(r.row?.[amountIdx] || 0)
-  })).filter(p => !isNaN(p.value));
-
-  if (!points.length) {
-    canvas.style.display = 'none';
-    if (fallback) { fallback.style.display = 'block'; fallback.textContent = 'No data points'; }
-    return;
-  }
+  // Colour the "Current"/"not overdue" bucket differently from the actual arrears buckets so
+  // the chart reads as a risk gradient, not a uniform bar set.
+  const colors = labels.map(l => /current|not\s*overdue/i.test(l) ? '#00c9b1' : '#f87171');
 
   const chart = new window.Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: points.map(p => p.label),
-      datasets: [{
-        label: 'Disbursed',
-        data: points.map(p => p.value),
-        borderColor: '#00c9b1',
-        backgroundColor: 'rgba(0,201,177,0.12)',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 0,
-        borderWidth: 2
-      }]
-    },
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Outstanding', data: values, backgroundColor: colors, borderWidth: 0 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: {
-        x: { display: points.length <= 20, ticks: { maxRotation: 0 } },
-        y: { beginAtZero: true }
-      }
-    }
-  });
-  chartInstances.set(canvas, chart);
-}
-
-function renderCompositionChart(canvas, { performing, overdue, closed }) {
-  destroyChart(canvas);
-  canvas.style.display = 'block';
-  const fallback = canvas.parentElement.querySelector('#an-composition-fallback');
-  if (fallback) fallback.style.display = 'none';
-
-  const chart = new window.Chart(canvas, {
-    type: 'doughnut',
-    data: {
-      labels: ['Performing', 'Overdue', 'Closed'],
-      datasets: [{
-        data: [performing, overdue, closed],
-        backgroundColor: ['#00c9b1', '#f87171', '#64748b'],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
+      scales: { y: { beginAtZero: true } }
     }
   });
   chartInstances.set(canvas, chart);
