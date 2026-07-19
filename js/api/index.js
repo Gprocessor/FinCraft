@@ -28,6 +28,7 @@ import { makeAdhocQueriesAPI, makeCollectionSheetAPI, makeDataTablesAPI, makeEnt
 import { makeAccountNumberPreferencesAPI, makeAuditsAPI, makeConfigurationsAPI, makeEntityToEntityMappingsAPI, makeJobsAPI, makeMakercheckerAPI, makePermissionsAPI, makeRolesAPI, makeSurveysAdminAPI, makeUsersAPI } from './admin.js';
 import { makeEmailAPI, makeEmailCampaignsAPI, makeEmailConfigurationAPI, makeExternalEventsAPI, makeExternalServicesAPI, makeHooksAPI, makeNotificationsAPI, makeSmsAPI, makeSmsCampaignsAPI } from './integrations.js';
 import { makeBatchAPI, makeBulkImportsAPI, makeChargesAPI, makeCobAPI, makeDocumentsAPI, makeImagesAPI, makeNotesAPI, makeSearchAPI, makeSelfServiceAPI, makeStandingInstructionsAPI, makeTemplatesAPI, makeTransfersAPI } from './misc.js';
+import { makeTreasuryAPI } from './treasury.js';
 
 export class FineractAPIFull extends FineractAPI {
   constructor() {
@@ -107,6 +108,10 @@ export class FineractAPIFull extends FineractAPI {
     this.currencies = makeCurrenciesAPI(this);
     this.templates = makeTemplatesAPI(this);
     this.dataTables = makeDataTablesAPI(this);
+    // Treasury control layer (FinCraft-owned records, persisted as Fineract datatables — see
+    // FINCRAFT_Fineract_Treasury_Integration_Log.md). Depends on this.dataTables, so must be
+    // constructed after it.
+    this.treasury = makeTreasuryAPI(this);
     this.selfService = makeSelfServiceAPI(this);
     this.search = makeSearchAPI(this);
     this.batch = makeBatchAPI(this);
