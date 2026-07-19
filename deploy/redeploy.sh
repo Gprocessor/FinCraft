@@ -39,4 +39,5 @@ if [ "${ENABLE_BIRT_REPORTING:-false}" = "true" ]; then
 fi
 sudo docker compose $COMPOSE_FILES up -d --build
 sudo docker exec fincraft-ui nginx -s reload || true
+docker restart fincraft-ui
 ./check-deployment.sh --wait
