@@ -4,6 +4,7 @@
 import { api } from '../../api.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../utils.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function remittances(c) {
   c.innerHTML = `
     <div class="page-header">
@@ -89,7 +90,7 @@ export async function remittances(c) {
       <div class="empty-state">
         <i class="fa-solid fa-triangle-exclamation empty-state-icon"></i>
         <h3>Failed to load transfers</h3>
-        <p>${escapeHtml(e.detail?.defaultUserMessage || e.message || '')}</p>
+        <p>${escapeHtml(extractFineractError(e) || '')}</p>
       </div>
     `;
   }

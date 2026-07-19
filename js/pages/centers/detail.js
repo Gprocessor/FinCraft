@@ -9,6 +9,7 @@ import { disassociateSelectedGroups, openAddGroupsModal, openCloseCenterModal, o
 import { can } from './shared.js';
 import { enhanceScrollableTabs } from '../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading center…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No center selected</div>'; return; }
@@ -168,7 +169,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.centers.activate(id, { activationDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Center activated', ctr.name);
         document.dispatchEvent(new CustomEvent('fc:reload'));
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     });
     c.querySelector('#ctr-close')?.addEventListener('click', () => openCloseCenterModal(id));
     c.querySelector('#ctr-collection')?.addEventListener('click', () => switchTab('collection'));
@@ -182,7 +183,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.centers.delete(id);
         toast('success', 'Center deleted', '');
         import('../../router.js').then(r => r.navigate('centers'));
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     });
 
     c.querySelector('#ctr-add-groups')?.addEventListener('click', () => openAddGroupsModal(id, ctr, () => document.dispatchEvent(new CustomEvent('fc:reload'))));
@@ -198,7 +199,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         inp.value = '';
         loadNotes(c, id);
         toast('success', 'Note added', '');
-      } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
 
     // -------- Documents --------
@@ -221,7 +222,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load center</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }
@@ -287,7 +288,7 @@ async function loadMeetings(c, id) {
         await api.calendars.delete('centers', id, e.target.dataset.delCal);
         toast('success', 'Schedule deleted', '');
         loadMeetings(c, id);
-      } catch (er) { toast('error', 'Delete failed', er.detail?.defaultUserMessage || er.message); }
+      } catch (er) { toast('error', 'Delete failed', extractFineractError(er)); }
     });
     calWrap.querySelector('[data-edit-cal]')?.addEventListener('click', () =>
       openScheduleMeetingModal(id, () => loadMeetings(c, id), activeCal));
@@ -312,7 +313,7 @@ async function loadMeetings(c, id) {
       listWrap.querySelectorAll('[data-del-meet]').forEach(b => b.addEventListener('click', async () => {
         if (!await confirm({ title: 'Delete meeting?', danger: true, confirmText: 'Delete' })) return;
         try { await api.meetings.delete('centers', id, b.dataset.delMeet); toast('success', 'Deleted', ''); loadMeetings(c, id); }
-        catch (er) { toast('error', 'Delete failed', er.detail?.defaultUserMessage || er.message); }
+        catch (er) { toast('error', 'Delete failed', extractFineractError(er)); }
       }));
     } else {
       listWrap.innerHTML = '<div class="empty-state-row">Schedule meetings to see instances</div>';
@@ -340,7 +341,7 @@ function initCollectionSheet(c, id) {
       });
       renderCollectionSheet(wrap, latestSheet);
     } catch (e) {
-      wrap.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      wrap.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
     } finally { genBtn.disabled = false; }
   });
 
@@ -366,7 +367,7 @@ function initCollectionSheet(c, id) {
         bulkRepaymentTransactions: transactions
       });
       toast('success', 'Collection sheet saved', `${transactions.length} repayments posted`);
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
     finally { saveBtn.disabled = false; }
   });
 }
@@ -450,7 +451,7 @@ async function loadDocuments(c, id) {
     listEl.querySelectorAll('[data-doc-del]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete document?', danger: true, confirmText: 'Delete' })) return;
       try { await api.documents.delete('centers', id, b.dataset.docDel); toast('success', 'Deleted', ''); loadDocuments(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

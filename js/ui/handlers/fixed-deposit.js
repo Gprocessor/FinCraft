@@ -41,11 +41,11 @@ export const FixedDepositHandlers = {
               statusMsg = 'FD created, approved & activated';
             } catch (actErr) {
               statusMsg = 'Created & approved, but activation failed';
-              toast('warn', statusMsg, actErr.detail?.defaultUserMessage || actErr.message);
+              toast('warn', statusMsg, extractFineractError(actErr));
               statusMsg = null;
             }
           } catch (appErr) {
-            toast('warn', 'Created, but approval failed', appErr.detail?.defaultUserMessage || appErr.message);
+            toast('warn', 'Created, but approval failed', extractFineractError(appErr));
             statusMsg = null;
           }
         }

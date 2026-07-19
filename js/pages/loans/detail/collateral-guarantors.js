@@ -7,6 +7,7 @@ import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { openAddGuarantorModal, openAddLoanCollateralModal, openAttachOriginatorModal, openEAOTransferModal, openEditGuarantorModal, openEditLoanCollateralModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadLoanCollateral(c, loanId) {
   const wrap = c.querySelector('#ln-coll-wrap');
   wrap.innerHTML = `
@@ -65,7 +66,7 @@ export async function loadLoanCollateral(c, loanId) {
         await api.loans.deleteCollateral(loanId, b.dataset.delCol);
         toast('success', 'Collateral removed', '');
         loadLoanCollateral(c, loanId);
-      } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -119,7 +120,7 @@ export async function loadLoanGuarantors(c, loanId) {
         await api.loans.deleteGuarantor(loanId, b.dataset.delGuar);
         toast('success', 'Guarantor removed', '');
         loadLoanGuarantors(c, loanId);
-      } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -168,7 +169,7 @@ export async function loadLoanOriginators(c, loanId) {
         await api.loans.detachOriginator(loanId, b.dataset.detachOrig);
         toast('success', 'Originator detached', '');
         loadLoanOriginators(c, loanId);
-      } catch (e) { toast('error', 'Detach failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Detach failed', extractFineractError(e)); }
     }));
   } catch {
     listEl.innerHTML = '<div class="empty-state-row text-muted">Originators feature not available on this tenant</div>';

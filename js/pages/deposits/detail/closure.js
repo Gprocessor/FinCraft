@@ -7,6 +7,7 @@ import { escapeHtml, fmt, num } from '../../../utils.js';
 import { openPrematureCloseModal } from '../actions.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadClosureCalculator(c, apiGroup, id, d) {
   const wrap = c.querySelector('#dep-calc-wrap');
   wrap.innerHTML = `
@@ -61,7 +62,7 @@ export async function loadClosureCalculator(c, apiGroup, id, d) {
         openPrematureCloseModal(apiObj, id, apiGroup === 'fixedDeposits' ? 'Fixed Deposit' : 'Recurring Deposit', calcDate));
 
     } catch (e) {
-      result.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      result.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>
         <div class="text-muted small mt-2">If the calculator endpoint isn't enabled on your tenant, you can still close the account via the toolbar.</div>`;
     }
   });

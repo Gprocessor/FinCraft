@@ -9,6 +9,7 @@ import { openEmailCampaignModal, openSmsCampaignModal } from '../../actions.js';
 import { can } from '../../shared.js';
 import { BULK_IMPORT_ENTITIES } from '../../../../bulk-import-entities.js';
 
+import { extractFineractError } from '../../../../ui/dom-helpers.js';
 export async function loadBulkImports(c) {
   const el = c.querySelector('#og-13');
   try {
@@ -120,7 +121,7 @@ export async function loadBulkImports(c) {
         a.click();
         URL.revokeObjectURL(a.href);
         toast('success', 'Template downloaded', entity);
-      } catch (e) { toast('error', 'Template download failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Template download failed', extractFineractError(e)); }
     });
 
     // Download per-import output/error report (see the FINERACT-2121 note above the table markup)
@@ -137,7 +138,7 @@ export async function loadBulkImports(c) {
         URL.revokeObjectURL(a.href);
         toast('success', 'Report downloaded', `Import #${importId}`);
       } catch (e) {
-        toast('error', 'Report download failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Report download failed', extractFineractError(e));
       } finally { btn.disabled = false; }
     }));
 
@@ -166,11 +167,11 @@ export async function loadBulkImports(c) {
         toast('success', 'Import queued', `${entity} · ${file.name}`);
         // Refresh history after a short delay so the server has time to register the import
         setTimeout(() => loadBulkImports(c), 2000);
-      } catch (e) { toast('error', 'Upload failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Upload failed', extractFineractError(e)); }
       finally { ev.target.value = ''; }
     });
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -242,7 +243,7 @@ export async function loadEmailCampaigns(c) {
       try {
         const existing = await api.emailCampaigns.get(b.dataset.editEmail);
         openEmailCampaignModal(existing, () => loadEmailCampaigns(c));
-      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Could not load', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-act-email]').forEach(b => b.addEventListener('click', async () => {
@@ -251,7 +252,7 @@ export async function loadEmailCampaigns(c) {
         await api.emailCampaigns.activate(b.dataset.actEmail);
         toast('success', 'Campaign activated', '');
         loadEmailCampaigns(c);
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-close-email]').forEach(b => b.addEventListener('click', async () => {
@@ -260,7 +261,7 @@ export async function loadEmailCampaigns(c) {
         await api.emailCampaigns.close(b.dataset.closeEmail);
         toast('success', 'Campaign closed', '');
         loadEmailCampaigns(c);
-      } catch (e) { toast('error', 'Close failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Close failed', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-del-email]').forEach(b => b.addEventListener('click', async () => {
@@ -269,10 +270,10 @@ export async function loadEmailCampaigns(c) {
         await api.emailCampaigns.delete(b.dataset.delEmail);
         toast('success', 'Campaign deleted', '');
         loadEmailCampaigns(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Email campaigns not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Email campaigns not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -329,7 +330,7 @@ export async function loadSmsCampaigns(c) {
       try {
         const existing = await api.smsCampaigns.get(b.dataset.editSms);
         openSmsCampaignModal(existing, () => loadSmsCampaigns(c));
-      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Could not load', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-act-sms]').forEach(b => b.addEventListener('click', async () => {
@@ -338,7 +339,7 @@ export async function loadSmsCampaigns(c) {
         await api.smsCampaigns.activate(b.dataset.actSms);
         toast('success', 'Campaign activated', '');
         loadSmsCampaigns(c);
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-close-sms]').forEach(b => b.addEventListener('click', async () => {
@@ -347,7 +348,7 @@ export async function loadSmsCampaigns(c) {
         await api.smsCampaigns.close(b.dataset.closeSms);
         toast('success', 'Campaign closed', '');
         loadSmsCampaigns(c);
-      } catch (e) { toast('error', 'Close failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Close failed', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-del-sms]').forEach(b => b.addEventListener('click', async () => {
@@ -356,9 +357,9 @@ export async function loadSmsCampaigns(c) {
         await api.smsCampaigns.delete(b.dataset.delSms);
         toast('success', 'Campaign deleted', '');
         loadSmsCampaigns(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">SMS campaigns not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">SMS campaigns not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

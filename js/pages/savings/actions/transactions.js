@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmt } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openSavingsTransactionDetailModal(savingsId, transactionId) {
   const mid = `sv-txview-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -35,7 +36,7 @@ export async function openSavingsTransactionDetailModal(savingsId, transactionId
         <dt>Submitted By</dt><dd>${escapeHtml(t.submittedByUsername || '—')}</dd>
       </dl>`;
   } catch (e) {
-    body.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -91,7 +92,7 @@ export function openSavingsTransactionModal({ id, type, label }) {
       el.remove();
       toast('success', `${label} successful`, fmt(transactionAmount));
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', `${label} failed`, e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', `${label} failed`, extractFineractError(e)); }
   });
 }
 
@@ -127,7 +128,7 @@ export function openHoldModal(id) {
       el.remove();
       toast('success', 'Amount held', fmt(amount));
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Hold failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Hold failed', extractFineractError(e)); }
   });
 }
 
@@ -163,6 +164,6 @@ export function openAdjustSavingsTxModal(id, txId, onSuccess) {
       el.remove();
       toast('success', 'Transaction adjusted', '');
       onSuccess();
-    } catch (e) { toast('error', 'Adjust failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Adjust failed', extractFineractError(e)); }
   });
 }

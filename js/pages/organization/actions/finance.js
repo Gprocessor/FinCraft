@@ -5,6 +5,7 @@ import { api } from '../../../api.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openCurrencyEditModal(onSuccess) {
   let allCurrencies = [], selectedCodes = new Set();
   try {
@@ -54,7 +55,7 @@ export async function openCurrencyEditModal(onSuccess) {
       modalEl.remove();
       toast('success', 'Currencies updated', `${currencies.length} selected`);
       onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -97,7 +98,7 @@ export function openPaymentTypeModal(existing, onSuccess) {
       modalEl.remove();
       toast('success', isEdit ? 'Payment type updated' : 'Payment type created', name);
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }
 
@@ -138,6 +139,6 @@ export function openFundModal(existing, onSuccess) {
       modalEl.remove();
       toast('success', isEdit ? 'Fund updated' : 'Fund created', name);
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }

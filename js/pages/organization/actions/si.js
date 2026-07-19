@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openStandingInstructionModal(onSuccess) {
   let tpl = {};
   try { tpl = await api.standingInstructions.template(); } catch {}
@@ -80,6 +81,6 @@ export async function openStandingInstructionModal(onSuccess) {
       modalEl.remove();
       toast('success', 'Standing instruction created', name);
       onSuccess();
-    } catch (e) { toast('error', 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Create failed', extractFineractError(e)); }
   });
 }

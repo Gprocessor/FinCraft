@@ -6,6 +6,7 @@ import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, ini, sb } from '../../../utils.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadMembers(c, id, group) {
   const wrap = c.querySelector('#grp-members-list');
   wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
@@ -50,7 +51,7 @@ export async function loadMembers(c, id, group) {
         await api.groups.disassociateClients(id, { clientMembers: [parseInt(b.dataset.removeMember)] });
         toast('success', 'Member removed', '');
         loadMembers(c, id, group);
-      } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
     }));
   } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -96,9 +97,9 @@ export async function loadRoles(c, id) {
         await api.groups.unassignRole(id, b.dataset.unassignRole);
         toast('success', 'Role removed', '');
         loadRoles(c, id);
-      } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
     }));
-  } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+  } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`; }
 }
 
 export async function loadAccounts(c, id) {

@@ -417,6 +417,59 @@ regressions for all three bugs above and for the Provisioning Category wiring. `
 
 ---
 
+## Round 6: generic "Validation errors exist." toasts everywhere — app-wide error-extraction fix
+
+Reported symptom: nearly every failed create/update across the app (accounting rules,
+journal entries, financial-activity mappings, charges, surveys, GL accounts, loan actions,
+document uploads, etc.) surfaced only Fineract's generic wrapper text — `"Validation errors
+exist."` or `"Errors contain reason for domain rule violation."` — with no indication of
+*which* field or rule actually failed.
+
+**Root cause.** Fineract's error payload puts the generic wrapper text in the top-level
+`defaultUserMessage`; the actionable, field-specific messages live one level down, in the
+`errors[]` array (one entry per failed parameter, e.g. `{parameterName: "name",
+defaultUserMessage: "The parameter name cannot be blank."}`). Two different code paths had
+grown up around this shape and both mishandled it:
+
+1. `extractFineractError()` (`js/ui/dom-helpers.js`), used by the ~40 command-palette
+   create/edit handlers, read `errors[0]` only — dropping every message but the first when a
+   request failed multiple field checks at once.
+2. A separate, inline pattern — `e.detail?.defaultUserMessage || e.message` — was
+   copy-pasted **407 times across 301 files** (page-level create/update/action/delete flows:
+   loan actions, deposit actions, collateral, notes/docs, datatables, templates, checker
+   inbox, accounting actions, etc.). This path never looked at `errors[]` at all, so it
+   *always* surfaced the generic wrapper regardless of what Fineract actually reported.
+
+**Fix.** Rewrote `extractFineractError()` to join *all* entries in `errors[]` (deduped, each
+prefixed with its `parameterName` when that adds information), falling back to the top-level
+`defaultUserMessage` only when `errors[]` is empty or absent — which is itself the correct
+behavior for business-rule violations (`GeneralPlatformDomainRuleException` and friends),
+where Fineract's top-level message *is* the specific one (e.g. "Debit and credit account
+cannot be the same GL account.") and there's no populated `errors[]` to prefer instead.
+
+Then swept every one of the 407 inline occurrences with a one-off script
+(`fix_errors.py`, deleted after use) that replaced the inline pattern with
+`extractFineractError(e)` and added the corresponding import (computing the correct relative
+path to `js/ui/dom-helpers.js` per file, and merging into an existing dom-helpers import
+where one was already present rather than duplicating it) — 118 files touched. Two
+remaining hand-written variants in `js/remit.js` and `js/pages/reports/run-reports.js` (same
+bug, slightly different inline shape) were fixed by hand, along with two spots in
+`js/remit.js` that dropped `.detail` entirely (`e.message || ''`).
+
+**Toast rendering.** `extractFineractError` now returns multi-line text (one line per failed
+field) when there's more than one. The toast component was escaping the text correctly but
+`.toast-msg` had no `white-space: pre-line`, so newlines were collapsing to a single run-on
+line — added the CSS. Also scaled the error-toast display duration by message length
+(`js/ui/core.js`) so multi-field validation failures stay on screen long enough to read
+instead of using the same fixed 4.5s as a one-line success toast.
+
+Verified with a manual smoke test of the four representative shapes (multi-field validation,
+business-rule violation with empty `errors[]`, no-detail network error, duplicate-message
+collapsing) and a full `node --check` pass across every `js/` file. `npm test`: 4/4 passing,
+`module-integrity` confirms 954 exports across 301 files still resolve correctly post-sweep.
+
+---
+
 
 Per the July 2026 technical audit (item 11): Working Capital Loans, Credit Bureau Integration,
 Email Campaigns, and MIX/PPI reporting are **not implemented** in FinCraft. This is a

@@ -7,6 +7,7 @@ import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { openAttendanceModal, openScheduleMeetingModal } from '../actions.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadMeetings(c, id) {
   const calWrap = c.querySelector('#grp-meeting-cal');
   const listWrap = c.querySelector('#grp-meeting-list');
@@ -35,7 +36,7 @@ export async function loadMeetings(c, id) {
         await api.calendars.delete('groups', id, e.target.dataset.delCal);
         toast('success', 'Schedule deleted', '');
         loadMeetings(c, id);
-      } catch (er) { toast('error', 'Delete failed', er.detail?.defaultUserMessage || er.message); }
+      } catch (er) { toast('error', 'Delete failed', extractFineractError(er)); }
     });
     calWrap.querySelector('[data-edit-cal]')?.addEventListener('click', () =>
       openScheduleMeetingModal(id, () => loadMeetings(c, id), activeCal));
@@ -65,7 +66,7 @@ export async function loadMeetings(c, id) {
       listWrap.querySelectorAll('[data-del-meet]').forEach(b => b.addEventListener('click', async () => {
         if (!await confirm({ title: 'Delete meeting?', danger: true, confirmText: 'Delete' })) return;
         try { await api.meetings.delete('groups', id, b.dataset.delMeet); toast('success', 'Deleted', ''); loadMeetings(c, id); }
-        catch (er) { toast('error', 'Delete failed', er.detail?.defaultUserMessage || er.message); }
+        catch (er) { toast('error', 'Delete failed', extractFineractError(er)); }
       }));
     } else {
       listWrap.innerHTML = '<div class="empty-state-row">Schedule meetings to see instances</div>';

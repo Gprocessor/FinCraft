@@ -12,6 +12,7 @@ import { loadSavingsSI } from './si.js';
 import { loadOnHoldFunds, loadSavingsCharges, loadSavingsTransactions } from './transactions.js';
 import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No account selected</div>'; return; }
@@ -188,7 +189,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-sv-undo-approval')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo approval?', confirmText: 'Undo Approval' })) return;
       try { await api.savings.undoApproval(id); toast('success', 'Approval undone', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-sv-reject')?.addEventListener('click', () =>
       openSavingsSimpleCmd({ id, command: 'reject', label: 'Reject Application', dateField: 'rejectedOnDate' }));
@@ -200,7 +201,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.savings.activate(id, { activatedOnDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Account activated', `#${id}`);
         document.dispatchEvent(new CustomEvent('fc:reload'));
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     });
 
     // -------- Toolbar (transactions) --------
@@ -225,19 +226,19 @@ export async function renderDetail(c, id, initialTab = 'overview') {
       c.querySelector(sel)?.addEventListener('click', async () => {
         if (!await confirm({ title: 'Confirm action?', confirmText: 'Confirm' })) return;
         try { await api.savings[method](id); toast('success', successMsg, ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-        catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+        catch (e) { toast('error', 'Failed', extractFineractError(e)); }
       });
     });
 
     // -------- Toolbar (interest / fees / staff) --------
     c.querySelector('#btn-sv-calc-int')?.addEventListener('click', async () => {
       try { await api.savings.calculateInterest(id); toast('success', 'Interest calculated', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-sv-post-int')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Post interest today?', confirmText: 'Post' })) return;
       try { await api.savings.postInterest(id); toast('success', 'Interest posted', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-sv-post-int-asof')?.addEventListener('click', () =>
       (typeof openPostInterestAsOnModal === 'function') && openPostInterestAsOnModal(id));
@@ -258,7 +259,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.savings.delete(id);
         toast('success', 'Account deleted', `#${id}`);
         import('../../../router.js').then(r => r.navigate('savings'));
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-sv-export')?.addEventListener('click', () => exportStatement(s, id));
 
@@ -266,7 +267,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load account</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }

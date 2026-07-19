@@ -364,7 +364,7 @@ kbd { background: var(--bg-hover); border: 1px solid var(--border-1); border-rad
 .toast.info    .toast-icon { color: var(--brand-teal); }
 .toast.warning .toast-icon { color: #fbbf24; }
 .toast-title { font-weight: 700; font-size: 13px; }
-.toast-msg   { font-size: 12px; color: var(--text-2); margin-top: 1px; }
+.toast-msg   { font-size: 12px; color: var(--text-2); margin-top: 1px; white-space: pre-line; }
 .toast-close { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 14px; padding: 2px 4px; margin-left: auto; flex-shrink: 0; }
 .toast-close:hover { color: var(--text-1); }
 

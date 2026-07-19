@@ -7,6 +7,7 @@ import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function openNewCodeModal(onSuccess) {
   const mid = 'code-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -35,7 +36,7 @@ export function openNewCodeModal(onSuccess) {
       toast('success', 'Code created', name);
       onSuccess();
     } catch (e) {
-      toast('error', 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Create failed', extractFineractError(e));
     }
   });
 }
@@ -96,7 +97,7 @@ export async function openCodeValuesModal(codeId, codeName) {
           toast('success', 'Value deleted', '');
           reloadValues();
         } catch (e) {
-          toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message);
+          toast('error', 'Delete failed', extractFineractError(e));
         }
       }));
     } catch (e) {
@@ -126,7 +127,7 @@ export async function openCodeValuesModal(codeId, codeName) {
       toast('success', 'Value added', name);
       reloadValues();
     } catch (e) {
-      toast('error', 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Create failed', extractFineractError(e));
     }
   });
 }
@@ -178,7 +179,7 @@ export function openSetBusinessDateModal() {
       m.remove();
       toast('success', 'Business date updated', date);
     } catch (e) {
-      toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Update failed', extractFineractError(e));
     }
   });
 }

@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openLoanOriginatorModal(existing, onSuccess) {
   const isEdit = !!existing?.id;
 
@@ -103,7 +104,7 @@ export async function openLoanOriginatorModal(existing, onSuccess) {
       toast('success', isEdit ? 'Originator updated' : 'Originator created', name);
       onSuccess();
     } catch (e) {
-      toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Save failed', extractFineractError(e));
     }
   });
 }
@@ -190,7 +191,7 @@ export async function openExternalAssetOwnerModal(existing, onSuccess) {
       toast('success', 'Owner created', name);
       onSuccess();
     } catch (e) {
-      toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Save failed', extractFineractError(e));
     }
   });
 }
@@ -282,7 +283,7 @@ export async function openSmsCampaignModal(existing, onSuccess) {
       const previewText = res?.message || res?.smsMessage || (typeof res === 'string' ? res : JSON.stringify(res));
       out.innerHTML = `<div class="msg-banner b-info small">${escapeHtml(previewText)}</div>`;
     } catch (e) {
-      out.innerHTML = `<div class="text-error small">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      out.innerHTML = `<div class="text-error small">${escapeHtml(extractFineractError(e))}</div>`;
     }
   });
   modalEl.querySelector('#sms-save').addEventListener('click', async () => {
@@ -314,7 +315,7 @@ export async function openSmsCampaignModal(existing, onSuccess) {
       modalEl.remove();
       toast('success', isEdit ? 'Campaign updated' : 'Campaign created', campaignName);
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }
 
@@ -389,7 +390,7 @@ export async function openEmailCampaignModal(existing, onSuccess) {
       const previewText = res?.message || res?.emailMessage || (typeof res === 'string' ? res : JSON.stringify(res));
       out.innerHTML = `<div class="msg-banner b-info small">${escapeHtml(previewText)}</div>`;
     } catch (e) {
-      out.innerHTML = `<div class="text-error small">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      out.innerHTML = `<div class="text-error small">${escapeHtml(extractFineractError(e))}</div>`;
     }
   });
   modalEl.querySelector('#ec-save').addEventListener('click', async () => {
@@ -419,6 +420,6 @@ export async function openEmailCampaignModal(existing, onSuccess) {
       modalEl.remove();
       toast('success', isEdit ? 'Campaign updated' : 'Campaign created', campaignName);
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }

@@ -11,6 +11,7 @@ import { loadDepositDocuments, loadDepositNotes } from './notes-docs.js';
 import { loadDepositCharges, loadDepositTransactions } from './transactions.js';
 import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function renderDetail(c, apiGroup, id, initialTab) {
   const isFD = apiGroup === 'fixedDeposits';
   const label = isFD ? 'Fixed Deposit' : 'Recurring Deposit';
@@ -179,7 +180,7 @@ export async function renderDetail(c, apiGroup, id, initialTab) {
     c.querySelector('#btn-dep-undo-approval')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo approval?', confirmText: 'Undo' })) return;
       try { await apiObj.undoApproval(id); toast('success', 'Approval undone', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-dep-reject')?.addEventListener('click', () => openDepositSimpleCmd({
       apiObj, id, command: 'reject', label: 'Reject ' + label, dateField: 'rejectedOnDate'
@@ -198,12 +199,12 @@ export async function renderDetail(c, apiGroup, id, initialTab) {
     // Interest
     c.querySelector('#btn-dep-calc')?.addEventListener('click', async () => {
       try { await apiObj.calculateInterest(id); toast('success', 'Interest calculated', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-dep-post')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Post interest?', confirmText: 'Post' })) return;
       try { await apiObj.postInterest(id); toast('success', 'Interest posted', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
 
     // Closures
@@ -227,7 +228,7 @@ export async function renderDetail(c, apiGroup, id, initialTab) {
         await apiObj.delete(id);
         toast('success', 'Account deleted', '');
         import('../../../router.js').then(r => r.navigate('deposits'));
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     });
 
     // Export statement
@@ -237,7 +238,7 @@ export async function renderDetail(c, apiGroup, id, initialTab) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load ${label.toLowerCase()}</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }

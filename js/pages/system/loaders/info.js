@@ -8,6 +8,7 @@ import { toast } from '../../../ui.js';
 import { extractMCEntityGroup } from '../actions.js';
 import { store } from '../../../store.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadSystemInfo(c) {
   const el = c.querySelector('#sy-14');
   el.innerHTML = '<div class="empty-state-row">Loading system information…</div>';
@@ -159,6 +160,6 @@ export async function loadSystemInfo(c) {
       await api.configurations.switchCache({ cacheType });
       toast('success', 'Cache switched', cacheType);
       loadSystemInfo(c);
-    } catch (e) { toast('error', 'Switch failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Switch failed', extractFineractError(e)); }
   });
 }

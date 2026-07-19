@@ -7,6 +7,7 @@ import { escapeHtml, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openAdhocQueryModal, openEntityDatatableCheckModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadAdhocQueries(c) {
   const el = c.querySelector('#og-9');
   try {
@@ -56,13 +57,13 @@ export async function loadAdhocQueries(c) {
       try {
         await api.adhocQueries.runAll();
         toast('success', 'All adhoc queries queued', 'Check job history for status');
-      } catch (e) { toast('error', 'Run failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Run failed', extractFineractError(e)); }
     });
     el.querySelectorAll('[data-edit-adhoc]').forEach(b => b.addEventListener('click', async () => {
       try {
         const existing = await api.adhocQueries.get(b.dataset.editAdhoc);
         openAdhocQueryModal(existing, () => loadAdhocQueries(c));
-      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Could not load', extractFineractError(e)); }
     }));
     el.querySelectorAll('[data-del-adhoc]').forEach(b => b.addEventListener('click', async () => {
       if (!await modalConfirm({ title: 'Delete adhoc query?', danger: true, confirmText: 'Delete' })) return;
@@ -70,7 +71,7 @@ export async function loadAdhocQueries(c) {
         await api.adhocQueries.delete(b.dataset.delAdhoc);
         toast('success', 'Deleted', '');
         loadAdhocQueries(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -129,9 +130,9 @@ export async function loadEntityDatatableChecks(c) {
         await api.entityDatatableChecks.delete(b.dataset.delEdc);
         toast('success', 'Check deleted', '');
         loadEntityDatatableChecks(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Entity datatable checks not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Entity datatable checks not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

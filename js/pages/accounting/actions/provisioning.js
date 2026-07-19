@@ -7,6 +7,7 @@ import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 import { dynModal, glList, v, vi } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openProvisioningModal(onSuccess, existingId) {
   const glAccounts = await glList();
   const glOptsHtml = glAccounts.map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${g.glCode})</option>`).join('');
@@ -14,7 +15,7 @@ export async function openProvisioningModal(onSuccess, existingId) {
   let existing = null;
   if (existingId) {
     try { existing = await api.provisioning.getCriteria(existingId); }
-    catch (e) { toast('error', 'Failed to load criteria', e.detail?.defaultUserMessage || e.message); return; }
+    catch (e) { toast('error', 'Failed to load criteria', extractFineractError(e)); return; }
   }
   const defs = existing?.provisioningCriteriaDefinition || existing?.definitions || [];
 
@@ -67,7 +68,7 @@ export async function openProvisioningModal(onSuccess, existingId) {
       el.remove();
       toast('success', existing ? 'Provisioning criteria updated' : 'Provisioning criteria created', criteriaName);
       onSuccess();
-    } catch (e) { toast('error', existing ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', existing ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }
 
@@ -113,7 +114,7 @@ export async function openProvisioningCategoryModal(onSuccess, existing) {
       el.remove();
       toast('success', isEdit ? 'Category updated' : 'Category created', categoryName);
       onSuccess?.();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }
 
@@ -147,6 +148,6 @@ export async function openFAModal(actOpts, onSuccess) {
       el.remove();
       toast('success', 'Mapping created', '');
       onSuccess();
-    } catch (e) { toast('error', 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Create failed', extractFineractError(e)); }
   });
 }

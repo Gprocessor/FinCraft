@@ -6,6 +6,7 @@ import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 /* Surfaces the first family member on file as "Next of Kin" for the Overview tab.
    Fineract doesn't have a dedicated next-of-kin concept — family members are the closest
    real, storable analogue, so we show the first entry rather than inventing a new field. */
@@ -46,7 +47,7 @@ export async function loadClientIdentifiers(c, id) {
     listEl.querySelectorAll('[data-del-id]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete identifier?', danger: true, confirmText: 'Delete' })) return;
       try { await api.clients.deleteIdentifier(id, b.dataset.delId); toast('success', 'Identifier deleted', ''); loadClientIdentifiers(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -74,7 +75,7 @@ export async function loadClientFamilyMembers(c, id) {
     listEl.querySelectorAll('[data-del-fam]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Remove family member?', danger: true, confirmText: 'Remove' })) return;
       try { await api.clients.deleteFamilyMember(id, b.dataset.delFam); toast('success', 'Removed', ''); loadClientFamilyMembers(c, id); }
-      catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -110,7 +111,7 @@ export async function loadClientCollateral(c, id) {
     listEl.querySelectorAll('[data-del-coll]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Remove collateral?', danger: true, confirmText: 'Remove' })) return;
       try { await api.clients.deleteCollateral(id, b.dataset.delColl); toast('success', 'Collateral removed', ''); loadClientCollateral(c, id); }
-      catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

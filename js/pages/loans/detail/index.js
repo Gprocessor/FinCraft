@@ -13,6 +13,7 @@ import { loadOriginalSchedule, loadSchedule } from './schedule.js';
 import { loadLoanCharges, loadLoanDisbursements, loadLoanTransactions } from './transactions.js';
 import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading loan…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No loan selected</div>'; return; }
@@ -226,7 +227,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-undo-approval')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo approval?', message: 'Return this loan to pending state.', confirmText: 'Undo Approval' })) return;
       try { await api.loans.undoApproval(id); toast('success', 'Approval undone', `#${id}`); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-reject')?.addEventListener('click', () => openSimpleLoanCmdModal({
       id, command: 'reject', label: 'Reject Loan', dateField: 'rejectedOnDate'
@@ -239,7 +240,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-undo-disburse')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo disbursal?', message: 'Loan returns to Approved status.', danger: true, confirmText: 'Undo' })) return;
       try { await api.loans.undoDisbursal(id); toast('success', 'Disbursal undone', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-repay')?.addEventListener('click', () => {
       const modal = openModal('repaymentModal');
@@ -250,7 +251,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-recover-guar')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Recover guarantees?', confirmText: 'Recover' })) return;
       try { await api.loans.recoverGuarantees(id); toast('success', 'Guarantees recovered', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-reage')?.addEventListener('click', () => openReageModal(id));
     c.querySelector('#btn-reamortize')?.addEventListener('click', () => openReamortizeModal(id));
@@ -278,14 +279,14 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-mark-fraud')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Toggle fraud flag?', message: 'This flags or unflags the loan as fraudulent.', danger: true, confirmText: 'Toggle' })) return;
       try { await api.loans.markAsFraud(id, { fraud: !l.fraud }); toast('warn', 'Fraud flag toggled', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
 
   } catch (e) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load loan</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }

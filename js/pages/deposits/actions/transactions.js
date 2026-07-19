@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmt } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function exportDepositStatement(d, isFD, id, apiObj) {
   let txs = d.transactions || [];
   if (!txs.length) {
@@ -79,7 +80,7 @@ export function openDepositTxModal(apiObj, id, txType, label) {
       el.remove();
       toast('success', label + ' successful', fmt(transactionAmount));
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', label + ' failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', label + ' failed', extractFineractError(e)); }
   });
 }
 
@@ -117,6 +118,6 @@ export function openAdjustDepositTxModal(apiObj, id, txId, onSuccess) {
       el.remove();
       toast('success', 'Transaction adjusted', '');
       onSuccess();
-    } catch (e) { toast('error', 'Adjust failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Adjust failed', extractFineractError(e)); }
   });
 }

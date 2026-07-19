@@ -8,6 +8,7 @@ import { escapeHtml, fmtDate, num } from '../../../utils.js';
 import { can } from '../shared.js';
 import { questionRow } from './config.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openAccountNumberPrefModal(prefId, onSuccess) {
   const isEdit = !!prefId;
   let existing = {};
@@ -17,7 +18,7 @@ export async function openAccountNumberPrefModal(prefId, onSuccess) {
     if (isEdit) existing = await api.accountNumberPreferences.get(prefId);
     tpl = await api.accountNumberPreferences.template();
   } catch (e) {
-    toast('error', 'Could not load form data', e.detail?.defaultUserMessage || e.message);
+    toast('error', 'Could not load form data', extractFineractError(e));
     return;
   }
 
@@ -99,7 +100,7 @@ export async function openAccountNumberPrefModal(prefId, onSuccess) {
       toast('success', isEdit ? 'Preference updated' : 'Preference created', '');
       onSuccess();
     } catch (e) {
-      toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e));
     }
   });
 }
@@ -155,7 +156,7 @@ export async function openEntityMappingDetail(mapId, mapName) {
       </div>`;
   } catch (e) {
     m.querySelector('#map-body').innerHTML =
-      `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -164,7 +165,7 @@ export async function openSurveyFormModal(surveyId, onSuccess) {
   let existing = {};
   if (isEdit) {
     try { existing = await api.surveysAdmin.get(surveyId); }
-    catch (e) { toast('error', 'Could not load survey', e.detail?.defaultUserMessage || e.message); return; }
+    catch (e) { toast('error', 'Could not load survey', extractFineractError(e)); return; }
   }
 
   // Question builder rows — flexible structure matching Fineract survey schema
@@ -279,7 +280,7 @@ export async function openSurveyFormModal(surveyId, onSuccess) {
       toast('success', isEdit ? 'Survey updated' : 'Survey created', key);
       onSuccess();
     } catch (e) {
-      toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e));
     }
   });
 }

@@ -7,6 +7,7 @@ import { escapeHtml, num, sb } from '../../../../utils.js';
 import { openExternalAssetOwnerModal, openLoanOriginatorModal } from '../../actions.js';
 import { can } from '../../shared.js';
 
+import { extractFineractError } from '../../../../ui/dom-helpers.js';
 export async function loadLoanOriginators(c) {
   const el = c.querySelector('#og-10');
   try {
@@ -55,7 +56,7 @@ export async function loadLoanOriginators(c) {
       try {
         const existing = await api.loanOriginators.get(b.dataset.editOrig);
         openLoanOriginatorModal(existing, () => loadLoanOriginators(c));
-      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Could not load', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-del-orig]').forEach(b => b.addEventListener('click', async () => {
@@ -69,10 +70,10 @@ export async function loadLoanOriginators(c) {
         await api.loanOriginators.delete(b.dataset.delOrig);
         toast('success', 'Originator deleted', '');
         loadLoanOriginators(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Loan originators not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Loan originators not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -125,6 +126,6 @@ export async function loadExternalAssetOwners(c) {
     el.querySelector('#btn-new-eao')?.addEventListener('click', () =>
       openExternalAssetOwnerModal(null, () => loadExternalAssetOwners(c)));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">External Asset Owners not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">External Asset Owners not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

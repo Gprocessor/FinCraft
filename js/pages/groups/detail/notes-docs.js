@@ -6,6 +6,7 @@ import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate } from '../../../utils.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadNotes(c, id) {
   const listEl = c.querySelector('#grp-note-list');
   listEl.innerHTML = '<div class="empty-state-row">Loading…</div>';
@@ -60,7 +61,7 @@ export async function loadDocuments(c, id) {
     listEl.querySelectorAll('[data-doc-del]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete document?', danger: true, confirmText: 'Delete' })) return;
       try { await api.documents.delete('groups', id, b.dataset.docDel); toast('success', 'Deleted', ''); loadDocuments(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

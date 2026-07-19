@@ -8,6 +8,7 @@ import { openModal, toast } from '../../ui.js';
 import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
     <div class="page-header mb-3">
@@ -135,7 +136,7 @@ export async function renderList(c) {
       drawPagination();
     } catch (e) {
       c.querySelector('#loans-rows').innerHTML =
-        `<tr><td colspan="9" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+        `<tr><td colspan="9" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 
@@ -177,7 +178,7 @@ export async function renderList(c) {
         toast('success', 'Loan approved', `#${b.dataset.loanApprove}`);
         load(currentOffset);
         loadKpis();
-      } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Approval failed', extractFineractError(e)); }
     }));
     c.querySelectorAll('[data-loan-repay]').forEach(b => b.addEventListener('click', () => {
       const modal = openModal('repaymentModal');

@@ -8,6 +8,7 @@ import { escapeHtml, fmt, num, sb } from '../../utils.js';
 import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
     <div class="page-header mb-3">
@@ -104,7 +105,7 @@ export async function renderList(c) {
       drawPagination();
     } catch (e) {
       c.querySelector('#sh-rows').innerHTML =
-        `<tr><td colspan="7" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+        `<tr><td colspan="7" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 
@@ -151,11 +152,11 @@ export async function renderList(c) {
           await api.shares.activate(id, { activatedDate: approvedDate, dateFormat: DATE_FORMAT, locale: LOCALE });
           activated = true;
         } catch (actErr) {
-          toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+          toast('warn', 'Approved, but activation failed', extractFineractError(actErr));
         }
         toast('success', activated ? 'Share account approved & activated' : 'Share account approved', '#' + id);
         load(currentOffset);
-      } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Approval failed', extractFineractError(e)); }
     }));
     c.querySelectorAll('[data-sh-activate]').forEach(b => b.addEventListener('click', async () => {
       try {
@@ -164,7 +165,7 @@ export async function renderList(c) {
         });
         toast('success', 'Share account activated', '#' + b.dataset.shActivate);
         load(currentOffset);
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     }));
   }
 

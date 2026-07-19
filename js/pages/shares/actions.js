@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../config.js';
 import { toast } from '../../ui.js';
 import { escapeHtml, fmt, num } from '../../utils.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export function openEditShareModal(s) {
   const mid = 'sh-edit-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -44,7 +45,7 @@ export function openEditShareModal(s) {
       el.remove();
       toast('success', 'Account updated', '');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -87,7 +88,7 @@ export function openApplyAdditionalSharesModal(id, unitPrice) {
       el.remove();
       toast('success', 'Application submitted', shares + ' additional shares');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Application failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Application failed', extractFineractError(e)); }
   });
 }
 
@@ -132,7 +133,7 @@ export function openRedeemSharesModal(id, maxShares, unitPrice) {
       el.remove();
       toast('success', 'Redemption submitted', shares + ' shares');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Redemption failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Redemption failed', extractFineractError(e)); }
   });
 }
 
@@ -171,7 +172,7 @@ export function openCloseShareModal(id) {
       el.remove();
       toast('success', 'Account closed', '');
       import('../../router.js').then(r => r.navigate('shares'));
-    } catch (e) { toast('error', 'Close failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Close failed', extractFineractError(e)); }
   });
 }
 
@@ -230,12 +231,12 @@ export function openShareSimpleCmd({ id, command, label, dateField }) {
           await api.shares.activate(id, { activatedDate: date, dateFormat: DATE_FORMAT, locale: LOCALE });
           activated = true;
         } catch (actErr) {
-          toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+          toast('warn', 'Approved, but activation failed', extractFineractError(actErr));
         }
       }
       el.remove();
       toast('success', (activated ? 'Approved & activated' : label + ' successful'), '#' + id);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', label + ' failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', label + ' failed', extractFineractError(e)); }
   });
 }

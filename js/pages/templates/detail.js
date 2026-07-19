@@ -7,6 +7,7 @@ import { openPreviewModal, openTemplateFormModal } from './actions.js';
 import { render } from './index.js';
 import { ENTITY_OPTIONS, TYPE_OPTIONS, can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderDetail(c, templateId) {
   c.innerHTML = `<div class="empty-state-row">Loading template…</div>`;
   try {
@@ -66,7 +67,7 @@ export async function renderDetail(c, templateId) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load template</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }

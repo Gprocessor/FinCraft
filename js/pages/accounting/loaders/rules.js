@@ -8,6 +8,7 @@ import { escapeHtml } from '../../../utils.js';
 import { openAccountingRuleModal, openingBalanceRow, submitOpeningBalances } from '../actions.js';
 import { can, glList } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadAccountingRules(c) {
   const el = c.querySelector('#acc-3');
   try {
@@ -53,7 +54,7 @@ export async function loadAccountingRules(c) {
         await api.accountingRules.delete(b.dataset.delRule);
         toast('success', 'Rule deleted', '');
         loadAccountingRules(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
     el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`;

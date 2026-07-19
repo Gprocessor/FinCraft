@@ -13,6 +13,7 @@ import { can } from '../shared.js';
 import { escapeHtml } from '../../../utils.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadTenantOidc(c) {
   const el = c.querySelector('#sy-15');
   const auth = store.get('auth') || {};
@@ -76,7 +77,7 @@ export async function loadTenantOidc(c) {
       toast('success', 'OIDC configuration saved');
       loadTenantOidc(c);
     } catch (ex) {
-      toast('error', 'Save failed', ex.detail?.defaultUserMessage || ex.message);
+      toast('error', 'Save failed', extractFineractError(ex));
     }
   });
 
@@ -86,7 +87,7 @@ export async function loadTenantOidc(c) {
       toast('success', 'OIDC configuration removed');
       loadTenantOidc(c);
     } catch (ex) {
-      toast('error', 'Remove failed', ex.detail?.defaultUserMessage || ex.message);
+      toast('error', 'Remove failed', extractFineractError(ex));
     }
   });
 }

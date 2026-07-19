@@ -7,6 +7,7 @@ import { escapeHtml } from '../../../utils.js';
 import { glSelect, modal, populateGl, v, vb, vf, vi } from '../shared.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openSavingsProductModal(productId, onSuccess) {
   const isEdit = !!productId;
   let tpl = {}, existing = {};
@@ -136,7 +137,7 @@ export async function openSavingsProductModal(productId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Savings product updated' : 'Savings product created', name);
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }
 
@@ -262,7 +263,7 @@ export async function openFDProductModal(productId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'FD product updated' : 'FD product created', name);
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }
 
@@ -381,6 +382,6 @@ export async function openRDProductModal(productId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'RD product updated' : 'RD product created', name);
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }

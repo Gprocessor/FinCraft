@@ -7,6 +7,7 @@ import { escapeHtml } from '../../../utils.js';
 import { toast } from '../../../ui.js';
 import { openSimpleLoanCmdModal } from './closure.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openModifyAvailableDisbursementAmountModal(loanId, currentAmount, onSuccess) {
   const mid = `ln-modava-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -32,7 +33,7 @@ export async function openModifyAvailableDisbursementAmountModal(loanId, current
     try {
       await api.loans.updateAvailableDisbursementAmount(loanId, { availableDisbursementAmount, locale: LOCALE });
       el.remove(); toast('success', 'Available disbursement amount updated', ''); onSuccess?.();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -79,7 +80,7 @@ export async function openDisburseModal(id) {
       el.remove();
       toast('success', 'Loan disbursed', `#${id}`);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Disburse failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Disburse failed', extractFineractError(e)); }
   });
 }
 

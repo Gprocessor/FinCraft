@@ -5,10 +5,11 @@ import { api } from '../../../api.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmtDate } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openEditJobModal(jobId, onSuccess) {
   let job = null;
   try { job = await api.jobs.get(jobId); } catch (e) {
-    toast('error', 'Failed to load job', e.detail?.defaultUserMessage || e.message); return;
+    toast('error', 'Failed to load job', extractFineractError(e)); return;
   }
   const mid = 'edit-job-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -37,7 +38,7 @@ export async function openEditJobModal(jobId, onSuccess) {
     try {
       await api.jobs.update(jobId, { cronExpression, active });
       m.remove(); toast('success', 'Job updated', ''); onSuccess?.();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -92,6 +93,6 @@ export async function openAuditDetail(auditId) {
       <pre style="background:var(--surface-1); padding:12px; border-radius:4px; max-height:400px; overflow:auto; font-family:monospace; font-size:12px">${escapeHtml(payload)}</pre>`;
   } catch (e) {
     document.getElementById(mid + '-body').innerHTML =
-      `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

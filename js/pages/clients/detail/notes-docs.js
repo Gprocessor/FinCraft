@@ -8,6 +8,7 @@ import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate } from '../../../utils.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 const DOC_ICONS = { pdf: 'fa-file-pdf', doc: 'fa-file-word', docx: 'fa-file-word', xls: 'fa-file-excel', xlsx: 'fa-file-excel', jpg: 'fa-file-image', jpeg: 'fa-file-image', png: 'fa-file-image' };
 function docIcon(name) {
   const ext = (name || '').split('.').pop()?.toLowerCase();
@@ -48,7 +49,7 @@ export async function loadClientDocuments(c, id) {
     listEl.querySelectorAll('[data-doc-del]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete document?', message: 'This cannot be undone.', danger: true, confirmText: 'Delete' })) return;
       try { await api.documents.delete('clients', id, b.dataset.docDel); toast('success', 'Document deleted', ''); loadClientDocuments(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message || String(e))}</div>`; }
 }

@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmt } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openApplyDepositChargeModal(apiObj, id, onSuccess) {
   let charges = [];
   try {
@@ -59,7 +60,7 @@ export async function openApplyDepositChargeModal(apiObj, id, onSuccess) {
       el.remove();
       toast('success', 'Charge applied', '');
       onSuccess();
-    } catch (e) { toast('error', 'Apply failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Apply failed', extractFineractError(e)); }
   });
 }
 
@@ -104,6 +105,6 @@ export async function openPayDepositChargeModal(apiObj, id, chargeId, onSuccess)
       el.remove();
       toast('success', 'Charge paid', '');
       onSuccess();
-    } catch (e) { toast('error', 'Payment failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Payment failed', extractFineractError(e)); }
   });
 }

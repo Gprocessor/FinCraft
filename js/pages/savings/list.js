@@ -8,6 +8,7 @@ import { openModal, toast } from '../../ui.js';
 import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
     <div class="page-header mb-3">
@@ -118,7 +119,7 @@ export async function renderList(c) {
       drawPagination();
     } catch (e) {
       c.querySelector('#sv-rows').innerHTML =
-        `<tr><td colspan="6" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+        `<tr><td colspan="6" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 
@@ -170,11 +171,11 @@ export async function renderList(c) {
           await api.savings.activate(id, { activatedOnDate: approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
           activated = true;
         } catch (actErr) {
-          toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+          toast('warn', 'Approved, but activation failed', extractFineractError(actErr));
         }
         toast('success', activated ? 'Account approved & activated' : 'Account approved', `#${id}`);
         load(currentOffset); loadKpis();
-      } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Approval failed', extractFineractError(e)); }
     }));
     c.querySelectorAll('[data-sv-activate]').forEach(b => b.addEventListener('click', async () => {
       try {
@@ -183,7 +184,7 @@ export async function renderList(c) {
         });
         toast('success', 'Account activated', `#${b.dataset.svActivate}`);
         load(currentOffset); loadKpis();
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     }));
   }
 

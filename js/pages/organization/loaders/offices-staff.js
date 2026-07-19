@@ -7,6 +7,7 @@ import { escapeHtml, fmtDate, sb } from '../../../utils.js';
 import { confirm as modalConfirm, openModal, toast } from '../../../ui.js';
 import { openAllocateCashierModal, openCashierTransactionsModal, openCashInModal, openEditCashierModal, openEditOfficeModal, openEditStaffModal, openEditTellerModal, openSettleCashierModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function loadOffices(c, officeList) {
   const el = c.querySelector('#og-0');
   el.innerHTML = `
@@ -75,7 +76,7 @@ export async function loadStaff(c) {
         await api.staff.update(b.dataset.deactivateStaff, { isActive: false });
         toast('success', 'Staff deactivated', '');
         loadStaff(c);
-      } catch (e) { toast('error', 'Deactivation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Deactivation failed', extractFineractError(e)); }
     }));
   } catch (e) { el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -129,7 +130,7 @@ export async function loadTellers(c) {
     el.querySelectorAll('[data-del-teller]').forEach(b => b.addEventListener('click', async () => {
       if (!await modalConfirm({ title: 'Delete teller?', danger: true, confirmText: 'Delete' })) return;
       try { await api.tellers.delete(b.dataset.delTeller); toast('success', 'Teller deleted', ''); loadTellers(c); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
     el.querySelectorAll('[data-teller-cashiers]').forEach(b => b.addEventListener('click', async () => {
       const tid = b.dataset.tellerCashiers;
@@ -184,7 +185,7 @@ export async function loadTellers(c) {
           try {
             await api.tellers.deleteCashier(db.dataset.delTellerC, db.dataset.delCashier);
             toast('success', 'Cashier removed', ''); row.style.display = 'none'; loadTellers(c);
-          } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+          } catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
         }));
       } catch (e) { body.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
     }));

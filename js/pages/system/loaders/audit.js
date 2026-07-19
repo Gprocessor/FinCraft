@@ -7,6 +7,7 @@ import { escapeHtml, fmtDate, num, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openAuditDetail, openEditJobModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadAuditTrails(c) {
   const el = c.querySelector('#sy-1');
   el.innerHTML = '<div class="empty-state-row">Loading audit trails…</div>';
@@ -50,7 +51,7 @@ export async function loadAuditTrails(c) {
       openAuditDetail(b.dataset.auditId)
     ));
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -107,7 +108,7 @@ export async function loadJobs(c) {
         await api.jobs.runJob(b.dataset.runJob);
         toast('success', 'Job triggered', 'Job #' + b.dataset.runJob + ' scheduled');
       } catch (e) {
-        toast('error', 'Job failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Job failed', extractFineractError(e));
       }
     }));
 
@@ -137,10 +138,10 @@ export async function loadJobs(c) {
               </tr>`).join('')}</tbody>
           </table>` : '<div class="empty-state-row">No run history</div>';
       } catch (e) {
-        body.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+        body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
       }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

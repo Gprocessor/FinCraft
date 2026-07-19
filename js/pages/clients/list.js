@@ -9,6 +9,7 @@ import { today } from '../../config.js';
 import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can, cvAvatar, cvClientType, cvPill, cvStatusTone } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
   <div class="cv-page">
@@ -155,7 +156,7 @@ export async function renderList(c) {
         toast('success', 'Client activated', `#${b.dataset.activateClient} is now Active`);
         loadClients(currentOffset);
       } catch (e) {
-        toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Activation failed', extractFineractError(e));
       }
     }));
   }

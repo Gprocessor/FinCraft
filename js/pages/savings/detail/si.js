@@ -5,6 +5,7 @@ import { api } from '../../../api.js';
 import { escapeHtml, fmt, sb } from '../../../utils.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadSavingsSI(c, id, savings) {
   const wrap = c.querySelector('#sv-si-wrap');
   wrap.innerHTML = `
@@ -54,6 +55,6 @@ export async function loadSavingsSI(c, id, savings) {
           </tr>`).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No standing instructions for this account</div>';
   } catch (e) {
-    listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    listEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

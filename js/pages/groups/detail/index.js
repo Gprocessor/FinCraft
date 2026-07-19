@@ -12,6 +12,7 @@ import { loadAccounts, loadMembers, loadRoles } from './members.js';
 import { loadDocuments, loadNotes } from './notes-docs.js';
 import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading group…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No group selected</div>'; return; }
@@ -189,7 +190,7 @@ function switchTab(name) {
         await api.groups.activate(id, { activationDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Group activated', g.name);
         document.dispatchEvent(new CustomEvent('fc:reload'));
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     });
     c.querySelector('#grp-close')?.addEventListener('click', () => openCloseGroupModal(id));
     c.querySelector('#grp-assign-staff')?.addEventListener('click', () => openAssignStaffModal(id, g));
@@ -206,7 +207,7 @@ function switchTab(name) {
         await api.groups.delete(id);
         toast('success', 'Group deleted', '');
         import('../../../router.js').then(r => r.navigate('groups'));
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     });
 
     c.querySelector('#grp-add-members')?.addEventListener('click', () => openAddMembersModal(id, g, () => loadMembers(c, id, g)));
@@ -223,7 +224,7 @@ function switchTab(name) {
         inp.value = '';
         loadNotes(c, id);
         toast('success', 'Note added', '');
-      } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
 
     // -------- Documents --------
@@ -246,7 +247,7 @@ function switchTab(name) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load group</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }

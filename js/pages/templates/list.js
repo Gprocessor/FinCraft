@@ -7,6 +7,7 @@ import { escapeHtml, num } from '../../utils.js';
 import { openPreviewModal, openTemplateFormModal } from './actions.js';
 import { ENTITY_OPTIONS, TYPE_OPTIONS, can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
     <div class="page-header mb-3">
@@ -71,7 +72,7 @@ export async function renderList(c) {
       applyFilters();
     } catch (e) {
       c.querySelector('#tpl-rows').innerHTML =
-        `<tr><td colspan="6" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+        `<tr><td colspan="6" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 
@@ -135,7 +136,7 @@ export async function renderList(c) {
         await api.templates.delete(b.dataset.delTpl);
         toast('success', 'Template deleted', '');
         load();
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   }
 

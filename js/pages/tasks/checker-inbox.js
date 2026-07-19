@@ -7,6 +7,7 @@ import { confirm as modalConfirm, toast } from '../../ui.js';
 import { escapeHtml, fmtDate, num } from '../../utils.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadCheckerInbox(c) {
   const el = c.querySelector('#tk-0');
   el.innerHTML = `<div class="empty-state-row">Loading checker inbox…</div>`;
@@ -156,7 +157,7 @@ export async function loadCheckerInbox(c) {
 
     draw(list);
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -176,7 +177,7 @@ function wireRowActions(c, el) {
       if (task) openTaskDetailModal(task);
       else toast('warn', 'Task not found', '');
     } catch (e) {
-      toast('error', 'Failed to load', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Failed to load', extractFineractError(e));
     }
   }));
 
@@ -187,7 +188,7 @@ function wireRowActions(c, el) {
       b.closest('tr')?.remove();
       toast('success', 'Approved', `Task #${b.dataset.approve}`);
     } catch (e) {
-      toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Approval failed', extractFineractError(e));
     }
   }));
 
@@ -204,7 +205,7 @@ function wireRowActions(c, el) {
       b.closest('tr')?.remove();
       toast('warn', 'Rejected', `Task #${b.dataset.reject}`);
     } catch (e) {
-      toast('error', 'Rejection failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Rejection failed', extractFineractError(e));
     }
   }));
 
@@ -221,7 +222,7 @@ function wireRowActions(c, el) {
       b.closest('tr')?.remove();
       toast('info', 'Task cancelled', `Task #${b.dataset.cancel}`);
     } catch (e) {
-      toast('error', 'Cancel failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Cancel failed', extractFineractError(e));
     }
   }));
 }

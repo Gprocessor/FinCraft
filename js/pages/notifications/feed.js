@@ -6,6 +6,7 @@ import { confirm as modalConfirm, toast } from '../../ui.js';
 import { escapeHtml, num } from '../../utils.js';
 import { ENTITY_ROUTES, _lastSeenNotifId, setLastSeenNotifId, timeAgo } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadNotifications(c) {
   const el = c.querySelector('#nt-0');
   el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin empty-state-icon"></i><h3>Loading…</h3></div>';
@@ -192,7 +193,7 @@ export async function loadNotifications(c) {
         if (dot) dot.hidden = true;
         loadNotifications(c);
       } catch (e) {
-        toast('error', 'Failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Failed', extractFineractError(e));
       }
     });
 
@@ -202,7 +203,7 @@ export async function loadNotifications(c) {
       <div class="empty-state">
         <i class="fa-solid fa-triangle-exclamation empty-state-icon"></i>
         <h3>Failed to load notifications</h3>
-        <p>${escapeHtml(e.detail?.defaultUserMessage || e.message || '')}</p>
+        <p>${escapeHtml(extractFineractError(e) || '')}</p>
       </div>`;
   }
 }

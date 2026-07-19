@@ -6,6 +6,7 @@ import { api } from '../../../api.js';
 import { escapeHtml } from '../../../utils.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openApproveModal(id) {
   let tpl = {};
   try { tpl = await api.loans.approvalTemplate(id); } catch {}
@@ -42,7 +43,7 @@ export async function openApproveModal(id) {
       el.remove();
       toast('success', 'Loan approved', `#${id}`);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Approval failed', extractFineractError(e)); }
   });
 }
 
@@ -75,7 +76,7 @@ export async function openModifyApprovedAmountModal(loanId, currentAmount, onSuc
         approvedLoanAmount, approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE
       });
       el.remove(); toast('success', 'Approved amount updated', ''); onSuccess?.();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -102,7 +103,7 @@ export async function openApprovedAmountHistoryModal(loanId) {
           <tr><td>${escapeHtml(h.approvedOnDate ? (Array.isArray(h.approvedOnDate) ? h.approvedOnDate.join('-') : h.approvedOnDate) : '—')}</td>
               <td class="text-right">${escapeHtml(String(h.approvedLoanAmount ?? h.amount ?? '—'))}</td></tr>`).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No modification history</div>';
-  } catch (e) { body.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+  } catch (e) { body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`; }
 }
 
 export async function openAssignOfficerModal(loanId, currentOfficer) {
@@ -153,6 +154,6 @@ export async function openAssignOfficerModal(loanId, currentOfficer) {
       el.remove();
       toast('success', 'Officer updated', '');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }

@@ -7,6 +7,7 @@ import { escapeHtml, num, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openSetBusinessDateModal, openWebhookModal, viewServiceConfig } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadExternalServices(c) {
   const el = c.querySelector('#sy-5');
 
@@ -120,13 +121,13 @@ export async function loadCOB(c) {
         await api.cob.catchUp();
         toast('success', 'COB catch-up triggered', 'Processing asynchronously');
       } catch (e) {
-        toast('error', 'COB catch-up failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'COB catch-up failed', extractFineractError(e));
       }
     });
 
     el.querySelector('#cob-set-date')?.addEventListener('click', () => openSetBusinessDateModal());
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -196,11 +197,11 @@ export async function loadHooks(c) {
         toast('success', 'Webhook deleted', '');
         loadHooks(c);
       } catch (e) {
-        toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Delete failed', extractFineractError(e));
       }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -282,10 +283,10 @@ export async function loadExternalEvents(c) {
         toast('success', 'Event configuration saved', '');
         loadExternalEvents(c);
       } catch (e) {
-        toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Save failed', extractFineractError(e));
       }
     });
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">External events not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">External events not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

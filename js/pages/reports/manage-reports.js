@@ -6,6 +6,7 @@ import { confirm as modalConfirm, toast } from '../../ui.js';
 import { escapeHtml, num, sb } from '../../utils.js';
 import { CATS, can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadManageReports(c) {
   const el = c.querySelector('#rep-1');
   try {
@@ -80,7 +81,7 @@ export async function loadManageReports(c) {
           await api.reports.delete(b.dataset.delRep);
           toast('success', 'Report deleted', '');
           loadManageReports(c);
-        } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
       }));
     }
 
@@ -109,7 +110,7 @@ export async function loadManageReports(c) {
 
     draw(list);
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -204,6 +205,6 @@ async function openReportFormModal(reportId, onSuccess) {
       modalEl.remove();
       toast('success', isEdit ? 'Report updated' : 'Report created', name);
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }

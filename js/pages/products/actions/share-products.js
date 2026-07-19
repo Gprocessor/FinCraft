@@ -7,6 +7,7 @@ import { escapeHtml } from '../../../utils.js';
 import { glSelect, modal, populateGl, v, vb, vf, vi } from '../shared.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openShareProductModal(productId, onSuccess) {
   const isEdit = !!productId;
   let tpl = {}, existing = {};
@@ -108,6 +109,6 @@ export async function openShareProductModal(productId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Share product updated' : 'Share product created', name);
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }

@@ -7,6 +7,7 @@ import { escapeHtml, sb } from '../../utils.js';
 import { openAddColumnModal, openDatatableEntryModal, openRegisterModal } from './actions.js';
 import { APP_TABLES, can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderDetail(c, name) {
   c.innerHTML = `<div class="empty-state-row">Loading data table…</div>`;
   try {
@@ -104,7 +105,7 @@ export async function renderDetail(c, name) {
         await api.dataTables.deregister(name);
         toast('success', 'Deregistered', '');
         renderDetail(c, name);
-      } catch (e) { toast('error', 'Deregister failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Deregister failed', extractFineractError(e)); }
     });
 
     c.querySelector('#btn-drop')?.addEventListener('click', async () => {
@@ -117,7 +118,7 @@ export async function renderDetail(c, name) {
         await api.dataTables.deleteTable(name);
         toast('success', 'Table dropped', '');
         import('../../router.js').then(r => r.navigate('datatables'));
-      } catch (e) { toast('error', 'Drop failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Drop failed', extractFineractError(e)); }
     });
 
     c.querySelectorAll('[data-drop-col]').forEach(b => b.addEventListener('click', async () => {
@@ -133,7 +134,7 @@ export async function renderDetail(c, name) {
         await api.dataTables.updateSchema(name, payload);
         toast('success', 'Column dropped', colName);
         renderDetail(c, name);
-      } catch (e) { toast('error', 'Drop column failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Drop column failed', extractFineractError(e)); }
     }));
 
     // ---- Entries (rows) management ----
@@ -172,7 +173,7 @@ export async function renderDetail(c, name) {
           else await api.dataTables.delete(name, currentEntityId);
           toast('success', 'Entry deleted', '');
           loadEntries();
-        } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
       }));
     }
 
@@ -183,7 +184,7 @@ export async function renderDetail(c, name) {
         const rows = Array.isArray(res) ? res : (res ? [res] : []);
         renderEntryRows(rows);
       } catch (e) {
-        entriesList.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+        entriesList.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
       }
     }
 
@@ -202,7 +203,7 @@ export async function renderDetail(c, name) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load data table</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }

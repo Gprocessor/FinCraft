@@ -15,6 +15,7 @@ import { loadClientAccounts, loadClientCharges, loadClientLoansOnly, loadClientO
 import { loadClientAddresses, loadClientCollateral, loadClientFamilyMembers, loadClientIdentifiers, loadClientNextOfKin, loadClientPhoto } from './identity.js';
 import { loadClientDocuments, loadClientHistory, loadClientNotes } from './notes-docs.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading client…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No client selected</div>'; return; }
@@ -314,7 +315,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.clients.activate(id, today());
         toast('success', 'Client activated', cl.displayName);
         import('../../../router.js').then(r => r.navigate('client-detail', { id }));
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     });
 
     c.querySelector('#btn-close-client')?.addEventListener('click', () => openCloseClientModal(id));
@@ -325,7 +326,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.clients.reactivate(id, { reactivationDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Client reactivated', cl.displayName);
         import('../../../router.js').then(r => r.navigate('client-detail', { id }));
-      } catch (e) { toast('error', 'Reactivation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Reactivation failed', extractFineractError(e)); }
     });
 
     c.querySelector('#btn-reject-client')?.addEventListener('click', () => openRejectClientModal(id));
@@ -338,7 +339,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         });
         toast('success', 'Application withdrawn', '');
         import('../../../router.js').then(r => r.navigate('clients'));
-      } catch (e) { toast('error', 'Withdrawal failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Withdrawal failed', extractFineractError(e)); }
     });
 
     c.querySelector('#btn-transfer-client')?.addEventListener('click', () => openTransferModal(id, cl.displayName));
@@ -349,7 +350,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.clients.undoTransfer(id);
         toast('success', 'Transfer undone', '');
         import('../../../router.js').then(r => r.navigate('client-detail', { id }));
-      } catch (e) { toast('error', 'Undo failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Undo failed', extractFineractError(e)); }
     });
 
     c.querySelector('#btn-assign-staff')?.addEventListener('click', () => openAssignStaffModal(id, cl));
@@ -398,7 +399,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         inp.value = '';
         loadClientNotes(c, id);
         toast('success', 'Note added', '');
-      } catch (e) { toast('error', 'Failed to add note', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Failed to add note', extractFineractError(e)); }
     });
 
   } catch (e) {

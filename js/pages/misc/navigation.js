@@ -5,6 +5,7 @@ import { api } from '../../api.js';
 import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function navigation(c) {
   c.innerHTML = `
     <div class="page-header">
@@ -88,7 +89,7 @@ export async function navigation(c) {
       <div class="empty-state">
         <i class="fa-solid fa-triangle-exclamation empty-state-icon"></i>
         <h3>Failed to load</h3>
-        <p>${escapeHtml(e.detail?.defaultUserMessage || e.message || '')}</p>
+        <p>${escapeHtml(extractFineractError(e) || '')}</p>
       </div>
     `;
   }

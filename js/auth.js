@@ -4,6 +4,7 @@ import { api, configureAPI } from './api.js';
 import { store } from './store.js';
 import { FINERACT_DEMO } from './config.js';
 
+import { extractFineractError } from './ui/dom-helpers.js';
 const LOGIN_ID = 'loginScreen';
 const SHELL_ID = 'appShell';
 
@@ -512,7 +513,7 @@ function renderLogin(container, banner) {
       await forgotPassword({ serverUrl, tenantId, username: u });
       showOk('If the account exists, a reset has been initiated.');
     } catch (ex) {
-      showErr(ex.detail?.defaultUserMessage || ex.message || 'Could not initiate password reset.');
+      showErr(extractFineractError(ex) || 'Could not initiate password reset.');
     }
   });
 }
@@ -566,7 +567,7 @@ async function renderOtpStep(container) {
       await requestOtp(deliveryMethod);
       showInfo('A verification code has been sent. Enter it below.');
     } catch (ex) {
-      showErr(ex.detail?.defaultUserMessage || ex.message || 'Could not send verification code.');
+      showErr(extractFineractError(ex) || 'Could not send verification code.');
     } finally {
       sendBtn.disabled = false;
     }
@@ -581,7 +582,7 @@ async function renderOtpStep(container) {
       const tfaToken = result?.token ?? result?.authenticationToken ?? null;
       await completeTwoFactorLogin(tfaToken);
     } catch (ex) {
-      showErr(ex.detail?.defaultUserMessage || ex.message || 'Invalid or expired code.');
+      showErr(extractFineractError(ex) || 'Invalid or expired code.');
       verifyBtn.disabled = false;
     }
   });
@@ -643,7 +644,7 @@ function renderMustChangePasswordStep(container) {
       await completeMustChangePassword({ password, repeatPassword });
     } catch (ex) {
       if (ex.code === 'OTP_REQUIRED') { setBusy(false); return renderOtpStep(container); }
-      showErr(ex.detail?.defaultUserMessage || ex.message || 'Could not set your new password.');
+      showErr(extractFineractError(ex) || 'Could not set your new password.');
       setBusy(false);
     }
   };

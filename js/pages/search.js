@@ -8,6 +8,7 @@ import { store } from '../store.js';
 import { num, ini, sb, escapeHtml, fmtDate, fmt } from '../utils.js';
 import { toast } from '../ui.js';
 
+import { extractFineractError } from '../ui/dom-helpers.js';
 const can = (code) => store.hasPermission(code);
 
 const RESOURCES = [
@@ -156,7 +157,7 @@ export async function render(c, params = {}) {
 
       drawResults(resultsEl, items, query);
     } catch (e) {
-      resultsEl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation empty-state-icon"></i><h3>Search failed</h3><p>${escapeHtml(e.detail?.defaultUserMessage || e.message || '')}</p></div>`;
+      resultsEl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation empty-state-icon"></i><h3>Search failed</h3><p>${escapeHtml(extractFineractError(e) || '')}</p></div>`;
     }
   }
 }

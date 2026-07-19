@@ -8,6 +8,7 @@ import { toast } from '../../ui.js';
 import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
     <div class="page-header mb-3">
@@ -147,11 +148,11 @@ export async function renderList(c) {
             await api.fixedDeposits.activate(id, { activatedOnDate: approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
             activated = true;
           } catch (actErr) {
-            toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+            toast('warn', 'Approved, but activation failed', extractFineractError(actErr));
           }
           toast('success', activated ? 'FD approved & activated' : 'FD approved', '#' + id);
           loadFD(fdOffset);
-        } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Approval failed', extractFineractError(e)); }
       }));
       c.querySelectorAll('[data-fd-activate]').forEach(b => b.addEventListener('click', async () => {
         try {
@@ -160,10 +161,10 @@ export async function renderList(c) {
           });
           toast('success', 'FD activated', '#' + b.dataset.fdActivate);
           loadFD(fdOffset);
-        } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
       }));
     } catch (e) {
-      c.querySelector('#fd-rows').innerHTML = `<tr><td colspan="8" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+      c.querySelector('#fd-rows').innerHTML = `<tr><td colspan="8" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 
@@ -218,11 +219,11 @@ export async function renderList(c) {
             await api.recurringDeposits.activate(id, { activatedOnDate: approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
             activated = true;
           } catch (actErr) {
-            toast('warn', 'Approved, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+            toast('warn', 'Approved, but activation failed', extractFineractError(actErr));
           }
           toast('success', activated ? 'RD approved & activated' : 'RD approved', '#' + id);
           loadRD(rdOffset);
-        } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Approval failed', extractFineractError(e)); }
       }));
       c.querySelectorAll('[data-rd-activate]').forEach(b => b.addEventListener('click', async () => {
         try {
@@ -231,10 +232,10 @@ export async function renderList(c) {
           });
           toast('success', 'RD activated', '#' + b.dataset.rdActivate);
           loadRD(rdOffset);
-        } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
       }));
     } catch (e) {
-      c.querySelector('#rd-rows').innerHTML = `<tr><td colspan="7" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+      c.querySelector('#rd-rows').innerHTML = `<tr><td colspan="7" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 

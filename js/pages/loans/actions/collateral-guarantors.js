@@ -6,6 +6,7 @@ import { api } from '../../../api.js';
 import { escapeHtml, fmt, ini } from '../../../utils.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openAddLoanCollateralModal(loanId, clientId, onSuccess) {
   // Try to fetch client's pre-registered collateral pool
   let clientCollaterals = [];
@@ -66,14 +67,14 @@ export async function openAddLoanCollateralModal(loanId, clientId, onSuccess) {
       el.remove();
       toast('success', 'Collateral added', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
 export async function openEditLoanCollateralModal(loanId, collateralId, onSuccess) {
   let record = null;
   try { record = await api.loans.getCollateral(loanId, collateralId); } catch (e) {
-    toast('error', 'Failed to load collateral', e.detail?.defaultUserMessage || e.message); return;
+    toast('error', 'Failed to load collateral', extractFineractError(e)); return;
   }
   const isPooled = record?.clientCollateralId != null;
   const mid = `ln-col-edit-${Date.now()}`;
@@ -113,7 +114,7 @@ export async function openEditLoanCollateralModal(loanId, collateralId, onSucces
     try {
       await api.loans.updateCollateral(loanId, collateralId, payload);
       el.remove(); toast('success', 'Collateral updated', ''); onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -232,14 +233,14 @@ export async function openAddGuarantorModal(loanId, onSuccess) {
       el.remove();
       toast('success', 'Guarantor added', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
 export async function openEditGuarantorModal(loanId, guarantorId, onSuccess) {
   let record = null;
   try { record = await api.loans.getGuarantor(loanId, guarantorId); } catch (e) {
-    toast('error', 'Failed to load guarantor', e.detail?.defaultUserMessage || e.message); return;
+    toast('error', 'Failed to load guarantor', extractFineractError(e)); return;
   }
   const name = record?.clientName || record?.entityDisplayName ||
     [record?.firstname, record?.lastname].filter(Boolean).join(' ') || '—';
@@ -278,7 +279,7 @@ export async function openEditGuarantorModal(loanId, guarantorId, onSuccess) {
     try {
       await api.loans.updateGuarantor(loanId, guarantorId, payload);
       el.remove(); toast('success', 'Guarantor updated', ''); onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -330,7 +331,7 @@ export async function openAttachOriginatorModal(loanId, onSuccess) {
       el.remove();
       toast('success', 'Originator attached', '');
       onSuccess();
-    } catch (e) { toast('error', 'Attach failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Attach failed', extractFineractError(e)); }
   });
 }
 
@@ -390,6 +391,6 @@ export async function openEAOTransferModal(loanId, mode, onSuccess) {
       el.remove();
       toast('success', isBuyback ? 'Buy-back recorded' : 'Transfer initiated', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }

@@ -6,6 +6,7 @@ import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 import { dynModal, glList, v, vi } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function deleteGLAccountConfirm(id, name, onSuccess) {
   if (!await modalConfirm({
     title: 'Delete GL account' + (name ? ' "' + name + '"' : '') + '?',
@@ -16,7 +17,7 @@ export async function deleteGLAccountConfirm(id, name, onSuccess) {
     await api.glAccounts.delete(id);
     toast('success', 'GL account deleted', name || '');
     onSuccess?.();
-  } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+  } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
 }
 
 export async function openGLAccountModal(onSuccess, existingId) {
@@ -36,7 +37,7 @@ export async function openGLAccountModal(onSuccess, existingId) {
   let existing = null;
   if (isEdit) {
     try { existing = await api.glAccounts.get(existingId); }
-    catch (e) { toast('error', 'Failed to load account', e.detail?.defaultUserMessage || e.message); return; }
+    catch (e) { toast('error', 'Failed to load account', extractFineractError(e)); return; }
   }
 
   const mid = 'gl-acc-' + Date.now();
@@ -91,7 +92,7 @@ export async function openGLAccountModal(onSuccess, existingId) {
       el.remove();
       toast('success', isEdit ? 'GL account updated' : 'GL account created', name);
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }
 
@@ -171,6 +172,6 @@ export async function openAccountingRuleModal(ruleId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Rule updated' : 'Rule created', name);
       onSuccess?.();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }

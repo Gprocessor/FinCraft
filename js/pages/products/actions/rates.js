@@ -10,6 +10,7 @@ import { escapeHtml } from '../../../utils.js';
 import { modal, v, vb, vf } from '../shared.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openRateModal(rateId, onSuccess) {
   const isEdit = !!rateId;
   let existing = {};
@@ -45,6 +46,6 @@ export async function openRateModal(rateId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Rate updated' : 'Rate created', name);
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }

@@ -11,6 +11,7 @@ import { loadProductMixList } from './loaders.js';
 import { can, resetGlCache } from './shared.js';
 import { renderSectionHub } from '../../ui/section-hub.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function render(c, params = {}) {
   resetGlCache();
 
@@ -189,7 +190,7 @@ export async function render(c, params = {}) {
           await cfg.deleteFn(item.id);
           toast('success', `${cfg.label} deleted`, item.name || '');
           reload(cfg.key);
-        } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
       }));
     } catch (e) {
       pane.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`;

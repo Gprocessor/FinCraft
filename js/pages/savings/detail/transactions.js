@@ -7,6 +7,7 @@ import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { openAdjustSavingsTxModal, openApplySavingsChargeModal, openEditSavingsChargeModal, openPaySavingsChargeModal, openSavingsTransactionDetailModal } from '../actions.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadSavingsTransactions(c, id) {
   const wrap = c.querySelector('#sv-tx-wrap');
   wrap.innerHTML = `
@@ -71,17 +72,17 @@ export async function loadSavingsTransactions(c, id) {
       listEl.querySelectorAll('[data-undo-tx]').forEach(b => b.addEventListener('click', async () => {
         if (!await confirm({ title: 'Undo transaction?', message: 'Reverses the posting; balances restored.', danger: true, confirmText: 'Undo' })) return;
         try { await api.savings.undoTransaction(id, b.dataset.undoTx); toast('success', 'Transaction undone', ''); reload(); }
-        catch (e) { toast('error', 'Undo failed', e.detail?.defaultUserMessage || e.message); }
+        catch (e) { toast('error', 'Undo failed', extractFineractError(e)); }
       }));
       listEl.querySelectorAll('[data-adj-tx]').forEach(b => b.addEventListener('click', () =>
         (typeof openAdjustSavingsTxModal === 'function') && openAdjustSavingsTxModal(id, b.dataset.adjTx, reload)));
       listEl.querySelectorAll('[data-release-tx]').forEach(b => b.addEventListener('click', async () => {
         if (!await confirm({ title: 'Release held amount?', confirmText: 'Release' })) return;
         try { await api.savings.releaseAmount(id, b.dataset.releaseTx); toast('success', 'Amount released', ''); reload(); }
-        catch (e) { toast('error', 'Release failed', e.detail?.defaultUserMessage || e.message); }
+        catch (e) { toast('error', 'Release failed', extractFineractError(e)); }
       }));
     } catch (e) {
-      listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      listEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
     }
   }
 
@@ -149,17 +150,17 @@ export async function loadSavingsCharges(c, id, savings) {
     listEl.querySelectorAll('[data-waive-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Waive charge?', confirmText: 'Waive' })) return;
       try { await api.savings.waiveCharge(id, b.dataset.waiveCharge); toast('success', 'Waived', ''); loadSavingsCharges(c, id, savings); }
-      catch (e) { toast('error', 'Waive failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Waive failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-inactivate-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Inactivate charge?', confirmText: 'Inactivate' })) return;
       try { await api.savings.inactivateCharge(id, b.dataset.inactivateCharge); toast('success', 'Inactivated', ''); loadSavingsCharges(c, id, savings); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-del-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete charge?', danger: true, confirmText: 'Delete' })) return;
       try { await api.savings.deleteCharge(id, b.dataset.delCharge); toast('success', 'Deleted', ''); loadSavingsCharges(c, id, savings); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

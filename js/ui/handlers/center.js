@@ -32,7 +32,7 @@ export const CenterHandlers = {
             await api.centers.activate(id, { activationDate: f.submittedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
             statusMsg = 'Center created & activated';
           } catch (actErr) {
-            toast('warn', 'Center created, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+            toast('warn', 'Center created, but activation failed', extractFineractError(actErr));
             statusMsg = null;
           }
         }

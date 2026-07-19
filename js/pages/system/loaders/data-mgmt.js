@@ -7,6 +7,7 @@ import { escapeHtml, num, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openAccountNumberPrefModal, openEntityMappingDetail, openSurveyFormModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadAccountNumberPrefs(c) {
   const el = c.querySelector('#sy-8');
   el.innerHTML = '<div class="empty-state-row">Loading account number preferences…</div>';
@@ -66,11 +67,11 @@ export async function loadAccountNumberPrefs(c) {
         toast('success', 'Preference deleted', '');
         loadAccountNumberPrefs(c);
       } catch (e) {
-        toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Delete failed', extractFineractError(e));
       }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Account number preferences not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Account number preferences not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -127,7 +128,7 @@ export async function loadEntityMappings(c) {
       openEntityMappingDetail(b.dataset.editMap, b.dataset.mapName)
     ));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Entity mappings not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Entity mappings not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -201,7 +202,7 @@ export async function loadSurveys(c) {
         await api.surveysAdmin.activate(b.dataset.activateSurvey);
         toast('success', 'Survey activated', '');
         loadSurveys(c);
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-deactivate-survey]').forEach(b => b.addEventListener('click', async () => {
@@ -210,10 +211,10 @@ export async function loadSurveys(c) {
         await api.surveysAdmin.deactivate(b.dataset.deactivateSurvey);
         toast('success', 'Survey deactivated', '');
         loadSurveys(c);
-      } catch (e) { toast('error', 'Deactivation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Deactivation failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Surveys not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Surveys not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 

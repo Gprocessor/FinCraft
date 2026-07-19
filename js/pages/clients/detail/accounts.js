@@ -7,6 +7,7 @@ import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { openPayChargeModal } from '../actions.js';
 import { can, cvAvatar } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 /* Powers the Financial Summary panel on the redesigned Overview tab — a light read of the
    same /clients/{id}/accounts payload used by the full Accounts tab, so it costs one extra
    request rather than re-deriving anything server-side doesn't already give us. */
@@ -157,12 +158,12 @@ export async function loadClientCharges(c, id) {
     wrap.querySelectorAll('[data-waive-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Waive charge?', confirmText: 'Waive', danger: true })) return;
       try { await api.clients.waiveCharge(id, b.dataset.waiveCharge); toast('success', 'Charge waived', ''); loadClientCharges(c, id); }
-      catch (e) { toast('error', 'Waive failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Waive failed', extractFineractError(e)); }
     }));
     wrap.querySelectorAll('[data-del-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete charge?', danger: true, confirmText: 'Delete' })) return;
       try { await api.clients.deleteCharge(id, b.dataset.delCharge); toast('success', 'Charge deleted', ''); loadClientCharges(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

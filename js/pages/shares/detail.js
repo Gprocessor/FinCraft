@@ -8,6 +8,7 @@ import { openApplyAdditionalSharesModal, openCloseShareModal, openEditShareModal
 import { can } from './shared.js';
 import { enhanceScrollableTabs } from '../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading share account…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No account selected</div>'; return; }
@@ -168,7 +169,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-sh-undo-approval')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo approval?', confirmText: 'Undo' })) return;
       try { await api.shares.undoApproval(id); toast('success', 'Approval undone', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-sh-reject')?.addEventListener('click', () => openShareSimpleCmd({
       id, command: 'reject', label: 'Reject Share Account', dateField: 'rejectedDate'
@@ -196,14 +197,14 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.shares.delete(id);
         toast('success', 'Account deleted', '');
         import('../../router.js').then(r => r.navigate('shares'));
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     });
 
   } catch (e) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load share account</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }
@@ -260,7 +261,7 @@ async function loadShareRequests(c, id, s) {
         });
         toast('success', 'Request approved', '#' + b.dataset.reqApprove);
         loadShareRequests(c, id, s);
-      } catch (e) { toast('error', 'Approve failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Approve failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-req-reject]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Reject share purchase request?', danger: true, confirmText: 'Reject' })) return;
@@ -270,10 +271,10 @@ async function loadShareRequests(c, id, s) {
         });
         toast('success', 'Request rejected', '#' + b.dataset.reqReject);
         loadShareRequests(c, id, s);
-      } catch (e) { toast('error', 'Reject failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Reject failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    listEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -348,18 +349,18 @@ async function loadShareDividends(c, productId) {
     listEl.querySelectorAll('[data-edit-div]').forEach(b => b.addEventListener('click', async () => {
       let record = null;
       try { record = await api.shares.getDividend(productId, b.dataset.editDiv); }
-      catch (e) { toast('error', 'Failed to load dividend', e.detail?.defaultUserMessage || e.message); return; }
+      catch (e) { toast('error', 'Failed to load dividend', extractFineractError(e)); return; }
       openDeclareDividendModal(productId, record, reload);
     }));
     listEl.querySelectorAll('[data-approve-div]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Approve this dividend?', confirmText: 'Approve' })) return;
       try { await api.shares.approveDividend(productId, b.dataset.approveDiv); toast('success', 'Dividend approved', ''); reload(); }
-      catch (e) { toast('error', 'Approve failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Approve failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-del-div]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete this dividend?', danger: true, confirmText: 'Delete' })) return;
       try { await api.shares.deleteDividend(productId, b.dataset.delDiv); toast('success', 'Dividend deleted', ''); reload(); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
     listEl.innerHTML = `<div class="empty-state-row text-muted">Could not load dividends (${escapeHtml(e.message)})</div>`;
@@ -397,7 +398,7 @@ async function openDeclareDividendModal(productId, existing, onSuccess) {
       if (existing) await api.shares.updateDividend(productId, existing.id, payload);
       else          await api.shares.postDividend(productId, payload);
       el.remove(); toast('success', existing ? 'Dividend updated' : 'Dividend declared', ''); onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }
 
@@ -416,7 +417,7 @@ async function loadShareNotes(c, id) {
     const note = inp.value.trim();
     if (!note) return;
     try { await api.notes.create('share', id, { note }); inp.value = ''; loadShareNotes(c, id); toast('success', 'Note added', ''); }
-    catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 
   const listEl = wrap.querySelector('#sh-note-list');
@@ -497,7 +498,7 @@ async function loadShareDocuments(c, id) {
     listEl.querySelectorAll('[data-doc-del]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete document?', danger: true, confirmText: 'Delete' })) return;
       try { await api.documents.delete('shareaccounts', id, b.dataset.docDel); toast('success', 'Deleted', ''); loadShareDocuments(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

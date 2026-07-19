@@ -8,6 +8,7 @@ import { escapeHtml, num, sb } from '../../utils.js';
 import { renderPagination, DEFAULT_PAGE_SIZE } from '../../ui/pagination.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
     <div class="page-header mb-3">
@@ -79,7 +80,7 @@ export async function renderList(c) {
       drawPagination();
     } catch (e) {
       c.querySelector('#ctr-rows').innerHTML =
-        `<tr><td colspan="7" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+        `<tr><td colspan="7" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 
@@ -116,7 +117,7 @@ export async function renderList(c) {
         });
         toast('success', 'Center activated', `#${b.dataset.ctrActivate}`);
         load(currentOffset);
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     }));
   }
 

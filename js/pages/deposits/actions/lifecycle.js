@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function openDepositSimpleCmd({ apiObj, id, command, label, dateField, danger = false }) {
   const mid = 'dep-cmd-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -49,7 +50,7 @@ export function openDepositSimpleCmd({ apiObj, id, command, label, dateField, da
       el.remove();
       toast('success', label + ' successful', '#' + id);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', label + ' failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', label + ' failed', extractFineractError(e)); }
   });
 }
 
@@ -133,7 +134,7 @@ export async function openEditDepositModal(apiObj, d, label) {
       el.remove();
       toast('success', 'Account updated', '');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -201,6 +202,6 @@ export async function openPrematureCloseModal(apiObj, id, label, prefilledDate) 
       el.remove();
       toast('success', 'Account closed prematurely', '');
       import('../../../router.js').then(r => r.navigate('deposits'));
-    } catch (e) { toast('error', 'Premature close failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Premature close failed', extractFineractError(e)); }
   });
 }

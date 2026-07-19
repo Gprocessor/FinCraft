@@ -6,6 +6,7 @@ import { api } from '../../../api.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openReageModal(id) {
   const mid = `ln-reage-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -41,7 +42,7 @@ export async function openReageModal(id) {
       box.innerHTML = `<div class="msg-banner b-info small">
         ${installments.length ? `Preview shows ${installments.length} resulting installment(s).` : 'Preview returned no schedule detail.'}
       </div>`;
-    } catch (e) { box.innerHTML = `<div class="text-error small">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+    } catch (e) { box.innerHTML = `<div class="text-error small">${escapeHtml(extractFineractError(e))}</div>`; }
   });
   el.querySelector('#ra-save').addEventListener('click', async () => {
     try {
@@ -49,7 +50,7 @@ export async function openReageModal(id) {
       el.remove();
       toast('success', 'Loan re-aged', '');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Re-age failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Re-age failed', extractFineractError(e)); }
   });
 }
 
@@ -88,7 +89,7 @@ export async function openReamortizeModal(id) {
       box.innerHTML = `<div class="msg-banner b-info small">
         ${installments.length ? `Preview shows ${installments.length} resulting installment(s).` : 'Preview returned no schedule detail.'}
       </div>`;
-    } catch (e) { box.innerHTML = `<div class="text-error small">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+    } catch (e) { box.innerHTML = `<div class="text-error small">${escapeHtml(extractFineractError(e))}</div>`; }
   });
   el.querySelector('#rm-save').addEventListener('click', async () => {
     try {
@@ -96,7 +97,7 @@ export async function openReamortizeModal(id) {
       el.remove();
       toast('success', 'Loan re-amortized', '');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Re-amortize failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Re-amortize failed', extractFineractError(e)); }
   });
 }
 
@@ -132,7 +133,7 @@ export async function openTrancheEditorModal(loanId, existing, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Tranche updated' : 'Tranche added', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
@@ -144,7 +145,7 @@ export async function openBulkTrancheEditorModal(loanId, onSuccess) {
     const l = await api.loans.get(loanId, 'disbursementDetails');
     list = (l.disbursementDetails || []).filter(d => !d.actualDisbursementDate);
   } catch (e) {
-    toast('error', 'Failed to load tranches', e.detail?.defaultUserMessage || e.message); return;
+    toast('error', 'Failed to load tranches', extractFineractError(e)); return;
   }
   if (!list.length) { toast('warn', 'No editable (undisbursed) tranches found', ''); return; }
   const mid = `ln-bulktranche-${Date.now()}`;
@@ -191,7 +192,7 @@ export async function openBulkTrancheEditorModal(loanId, onSuccess) {
     try {
       await api.loans.editDisbursements(loanId, { disbursementData, dateFormat: DATE_FORMAT, locale: LOCALE });
       el.remove(); toast('success', 'Disbursements updated', ''); onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -232,6 +233,6 @@ export async function openDelinquencyActionModal(loanId, onSuccess) {
       el.remove();
       toast('success', 'Delinquency action posted', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }

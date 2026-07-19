@@ -5,6 +5,7 @@ import { api } from '../../../api.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, ini } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openGlimDetailModal(glimId) {
   const mid = `glim-view-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -69,10 +70,10 @@ export async function openGlimDetailModal(glimId) {
           await api.loans.glimAccountCommand(glimId, cmd, {});
           toast('success', `${b.textContent} successful`, '');
           reload();
-        } catch (e) { toast('error', `${b.textContent} failed`, e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', `${b.textContent} failed`, extractFineractError(e)); }
       }));
     } catch (e) {
-      body.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
     }
   }
   openGlimAccountData();
@@ -130,7 +131,7 @@ export async function openAssignRoleModal(groupId, group, onSuccess) {
       }
       el.remove();
       onSuccess?.();
-    } catch (e) { toast('error', isUpdate ? 'Update failed' : 'Assign failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isUpdate ? 'Update failed' : 'Assign failed', extractFineractError(e)); }
   });
 }
 
@@ -203,7 +204,7 @@ export async function openAddMembersModal(groupId, group, onSuccess) {
       el.remove();
       toast('success', 'Members added', `${selected.size} clients added`);
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
@@ -251,6 +252,6 @@ export async function openTransferMembersModal(groupId, group) {
       el.remove();
       toast('success', 'Members transferred', `${checked.length} client(s)`);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Transfer failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Transfer failed', extractFineractError(e)); }
   });
 }

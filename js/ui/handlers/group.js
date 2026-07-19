@@ -37,7 +37,7 @@ export const GroupHandlers = {
             await api.centers.associateGroups(f.centerId, { groupMembers: [String(id)] });
             statusMsg = 'Group created & attached to center';
           } catch (assocErr) {
-            toast('warn', 'Created, but attaching to center failed', assocErr.detail?.defaultUserMessage || assocErr.message);
+            toast('warn', 'Created, but attaching to center failed', extractFineractError(assocErr));
             statusMsg = null;
           }
         }
@@ -47,7 +47,7 @@ export const GroupHandlers = {
             await api.groups.activate(id, { activationDate: f.submittedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
             statusMsg = statusMsg ? statusMsg + ' & activated' : 'Group activated';
           } catch (actErr) {
-            toast('warn', 'Group created, but activation failed', actErr.detail?.defaultUserMessage || actErr.message);
+            toast('warn', 'Group created, but activation failed', extractFineractError(actErr));
             if (!statusMsg) statusMsg = null;
           }
         }

@@ -6,6 +6,7 @@ import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate } from '../../../utils.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadSavingsNotes(c, id) {
   const wrap = c.querySelector('#sv-notes-wrap');
   wrap.innerHTML = `
@@ -22,7 +23,7 @@ export async function loadSavingsNotes(c, id) {
     const note = inp.value.trim();
     if (!note) return;
     try { await api.notes.create('savings', id, { note }); inp.value = ''; loadSavingsNotes(c, id); toast('success', 'Note added', ''); }
-    catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 
   const listEl = wrap.querySelector('#sv-note-list');
@@ -106,7 +107,7 @@ export async function loadSavingsDocuments(c, id) {
         await api.documents.delete('savingsaccounts', id, b.dataset.docDel);
         toast('success', 'Deleted', '');
         loadSavingsDocuments(c, id);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

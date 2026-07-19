@@ -6,6 +6,7 @@ import { api } from '../../../api.js';
 import { escapeHtml, fmt } from '../../../utils.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openApplyLoanChargeModal(loanId, onSuccess) {
   let charges = [];
   try {
@@ -51,7 +52,7 @@ export async function openApplyLoanChargeModal(loanId, onSuccess) {
       el.remove();
       toast('success', 'Charge applied', '');
       onSuccess();
-    } catch (e) { toast('error', 'Apply failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Apply failed', extractFineractError(e)); }
   });
 }
 
@@ -94,14 +95,14 @@ export async function openPayLoanChargeModal(loanId, chargeId, onSuccess) {
       el.remove();
       toast('success', 'Charge paid', '');
       onSuccess();
-    } catch (e) { toast('error', 'Payment failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Payment failed', extractFineractError(e)); }
   });
 }
 
 export async function openEditLoanChargeModal(loanId, chargeId, onSuccess) {
   let charge = null;
   try { charge = await api.loans.getCharge(loanId, chargeId); } catch (e) {
-    toast('error', 'Failed to load charge', e.detail?.defaultUserMessage || e.message); return;
+    toast('error', 'Failed to load charge', extractFineractError(e)); return;
   }
   const mid = `ln-editcharge-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -130,7 +131,7 @@ export async function openEditLoanChargeModal(loanId, chargeId, onSuccess) {
     try {
       await api.loans.updateCharge(loanId, chargeId, payload);
       el.remove(); toast('success', 'Charge updated', ''); onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -166,6 +167,6 @@ export async function openAdjustLoanChargeModal(loanId, chargeId, onSuccess) {
       el.remove();
       toast('success', 'Charge adjusted', '');
       onSuccess();
-    } catch (e) { toast('error', 'Adjust failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Adjust failed', extractFineractError(e)); }
   });
 }

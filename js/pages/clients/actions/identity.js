@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmt } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openAddIdentifierModal(clientId, onSuccess) {
   let docTypes = [];
   try {
@@ -48,7 +49,7 @@ export async function openAddIdentifierModal(clientId, onSuccess) {
         ...(description && { description })
       });
       el.remove(); toast('success', 'Identifier added', documentKey); onSuccess();
-    } catch (e) { toast('error', 'Failed to add', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed to add', extractFineractError(e)); }
   });
 }
 
@@ -108,14 +109,14 @@ export async function openAddClientCollateralModal(clientId, onSuccess) {
     try {
       await api.clients.addCollateral(clientId, { collateralId: parseInt(collateralId), quantity, locale: LOCALE });
       el.remove(); toast('success', 'Collateral added', ''); onSuccess();
-    } catch (e) { toast('error', 'Failed to add', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed to add', extractFineractError(e)); }
   });
 }
 
 export async function openEditClientCollateralModal(clientId, collateralId, onSuccess) {
   let record = null;
   try { record = await api.clients.getCollateral(clientId, collateralId); } catch (e) {
-    toast('error', 'Failed to load collateral', e.detail?.defaultUserMessage || e.message); return;
+    toast('error', 'Failed to load collateral', extractFineractError(e)); return;
   }
   const mid = `cl-coll-edit-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -140,7 +141,7 @@ export async function openEditClientCollateralModal(clientId, collateralId, onSu
     try {
       await api.clients.updateCollateral(clientId, collateralId, { quantity, locale: LOCALE });
       el.remove(); toast('success', 'Collateral updated', ''); onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -205,7 +206,7 @@ export async function openAddFamilyModal(clientId, onSuccess) {
         ...(occupation && { occupation })
       });
       el.remove(); toast('success', 'Family member added', firstName); onSuccess();
-    } catch (e) { toast('error', 'Failed to add', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed to add', extractFineractError(e)); }
   });
 }
 
@@ -264,7 +265,7 @@ export async function openAddAddressModal(clientId, onSuccess) {
         isActive: el.querySelector('#addr-active').checked
       });
       el.remove(); toast('success', 'Address added', ''); onSuccess();
-    } catch (e) { toast('error', 'Failed to add', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed to add', extractFineractError(e)); }
   });
 }
 
@@ -326,6 +327,6 @@ export async function openEditAddressModal(clientId, address, onSuccess) {
         isActive: el.querySelector('#addr-edit-active').checked
       });
       el.remove(); toast('success', 'Address updated', ''); onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }

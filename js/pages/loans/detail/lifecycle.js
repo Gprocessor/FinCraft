@@ -8,6 +8,7 @@ import { confirm, openModal, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { openDelinquencyActionModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadLoanDelinquency(c, loanId) {
   const wrap = c.querySelector('#ln-delq-wrap');
   wrap.innerHTML = `
@@ -135,7 +136,7 @@ export async function loadLoanReschedule(c, loanId) {
         });
         toast('success', 'Reschedule approved', `#${b.dataset.rsApprove}`);
         loadLoanReschedule(c, loanId);
-      } catch (e) { toast('error', 'Approve failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Approve failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-rs-reject]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Reject reschedule request?', confirmText: 'Reject', danger: true })) return;
@@ -145,9 +146,9 @@ export async function loadLoanReschedule(c, loanId) {
         });
         toast('success', 'Reschedule rejected', `#${b.dataset.rsReject}`);
         loadLoanReschedule(c, loanId);
-      } catch (e) { toast('error', 'Reject failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Reject failed', extractFineractError(e)); }
     }));
-  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`; }
 }
 
 export async function loadLoanBuyDown(c, loanId) {

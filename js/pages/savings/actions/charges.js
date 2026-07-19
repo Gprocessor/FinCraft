@@ -6,10 +6,11 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmt } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openEditSavingsChargeModal(savingsId, chargeId, onSuccess) {
   let charge = null;
   try { charge = await api.savings.getCharge(savingsId, chargeId); } catch (e) {
-    toast('error', 'Failed to load charge', e.detail?.defaultUserMessage || e.message); return;
+    toast('error', 'Failed to load charge', extractFineractError(e)); return;
   }
   const mid = `sv-editcharge-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -38,7 +39,7 @@ export async function openEditSavingsChargeModal(savingsId, chargeId, onSuccess)
     try {
       await api.savings.updateCharge(savingsId, chargeId, payload);
       el.remove(); toast('success', 'Charge updated', ''); onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -88,7 +89,7 @@ export async function openApplySavingsChargeModal(id, onSuccess) {
       el.remove();
       toast('success', 'Charge applied', '');
       onSuccess();
-    } catch (e) { toast('error', 'Apply failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Apply failed', extractFineractError(e)); }
   });
 }
 
@@ -122,6 +123,6 @@ export async function openPaySavingsChargeModal(id, chargeId, onSuccess) {
       el.remove();
       toast('success', 'Charge paid', '');
       onSuccess();
-    } catch (e) { toast('error', 'Payment failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Payment failed', extractFineractError(e)); }
   });
 }

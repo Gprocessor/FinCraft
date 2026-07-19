@@ -7,6 +7,7 @@ import { toast, closeModal, openModal } from './ui.js';
 import { api } from './api.js';
 import { LOCALE, DATE_FORMAT, today } from './config.js';
 import { escapeHtml, fmt } from './utils.js';
+import { extractFineractError } from './ui/dom-helpers.js';
 
 export const Remit = {
   step: 1,
@@ -89,7 +90,7 @@ export const Remit = {
       this.reset();
       document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) {
-      const msg = e.detail?.defaultUserMessage || e.detail?.errors?.[0]?.defaultUserMessage || e.message || String(e);
+      const msg = extractFineractError(e);
       toast('error', 'Remittance failed', msg);
       if (btn) { btn.disabled = false; btn.textContent = 'Confirm & Send'; }
     }
@@ -218,13 +219,13 @@ export const Remit = {
                   }
                 } catch (e) {
                   accountSel.innerHTML = '<option value="">Failed to load accounts</option>';
-                  toast('error', 'Account fetch failed', e.message || '');
+                  toast('error', 'Account fetch failed', extractFineractError(e));
                 }
               });
             });
           } catch (e) {
             results.style.display = 'none';
-            toast('error', 'Search failed', e.message || '');
+            toast('error', 'Search failed', extractFineractError(e));
           }
         }, 300);
       });

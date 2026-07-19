@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmt } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openEditOfficeModal(officeId, allOffices, onSuccess) {
   const mid = 'edit-office-' + Date.now();
   const el = document.getElementById('modalRoot');
@@ -57,7 +58,7 @@ export async function openEditOfficeModal(officeId, allOffices, onSuccess) {
       m.remove();
       toast('success', 'Office updated', name);
       onSuccess?.();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -115,7 +116,7 @@ export async function openEditStaffModal(staffId, onSuccess) {
       m.remove();
       toast('success', 'Staff updated', '');
       onSuccess?.();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -169,7 +170,7 @@ export async function openAllocateCashierModal(tellerId, tellerName, onSuccess) 
       modalEl.remove();
       toast('success', 'Cashier allocated', '');
       onSuccess();
-    } catch (e) { toast('error', 'Allocation failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Allocation failed', extractFineractError(e)); }
   });
 }
 
@@ -213,7 +214,7 @@ export async function openCashInModal(tellerId, cashierId, cashierName, onSucces
       modalEl.remove();
       toast('success', 'Cash allocated', fmt(txnAmount));
       onSuccess();
-    } catch (e) { toast('error', 'Cash-in failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Cash-in failed', extractFineractError(e)); }
   });
 }
 
@@ -256,7 +257,7 @@ export async function openSettleCashierModal(tellerId, cashierId, onSuccess) {
       modalEl.remove();
       toast('success', 'Cash settled', fmt(amount));
       onSuccess();
-    } catch (e) { toast('error', 'Settlement failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Settlement failed', extractFineractError(e)); }
   });
 }
 
@@ -306,14 +307,14 @@ export async function openEditTellerModal(tellerId, allTellers, onSuccess) {
     try {
       await api.tellers.update(tellerId, payload);
       modalEl.remove(); toast('success', 'Teller updated', ''); onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
 export async function openEditCashierModal(tellerId, cashierId, onSuccess) {
   let record = null;
   try { record = await api.tellers.getCashier(tellerId, cashierId); } catch (e) {
-    toast('error', 'Failed to load cashier', e.detail?.defaultUserMessage || e.message); return;
+    toast('error', 'Failed to load cashier', extractFineractError(e)); return;
   }
   const mid = 'edit-cashier-' + Date.now();
   const modalEl = document.createElement('div');
@@ -353,7 +354,7 @@ export async function openEditCashierModal(tellerId, cashierId, onSuccess) {
     try {
       await api.tellers.updateCashier(tellerId, cashierId, payload);
       modalEl.remove(); toast('success', 'Cashier updated', ''); onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -393,6 +394,6 @@ export async function openCashierTransactionsModal(tellerId, cashierId) {
             </tr>`).join('')}</tbody>
         </table>` : '<div class="empty-state-row">No transactions found for this cashier</div>'}`;
   } catch (e) {
-    body.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

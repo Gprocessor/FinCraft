@@ -8,6 +8,7 @@ import { confirm, openModal, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { openAdjustLoanChargeModal, openAdjustTransactionModal, openApplyLoanChargeModal, openBulkTrancheEditorModal, openChargeRefundModal, openChargebackModal, openEditLoanChargeModal, openGoodwillModal, openPayLoanChargeModal, openTrancheEditorModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadLoanTransactions(c, loanId) {
   const wrap = c.querySelector('#ln-tx-list');
   wrap.innerHTML = `
@@ -95,14 +96,14 @@ export async function loadLoanTransactions(c, loanId) {
           });
           toast('success', 'Transaction reversed', `#${b.dataset.reverseTx}`);
           reload();
-        } catch (e) { toast('error', 'Reversal failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Reversal failed', extractFineractError(e)); }
       }));
       tableWrap.querySelectorAll('[data-adjust-tx]').forEach(b => b.addEventListener('click', () =>
         openAdjustTransactionModal(loanId, b.dataset.adjustTx, reload)));
       tableWrap.querySelectorAll('[data-chargeback-tx]').forEach(b => b.addEventListener('click', () =>
         openChargebackModal(loanId, b.dataset.chargebackTx, reload)));
     } catch (e) {
-      tableWrap.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      tableWrap.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
     }
   }
 
@@ -172,7 +173,7 @@ export async function loadLoanCharges(c, loanId) {
     listEl.querySelectorAll('[data-waive-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Waive charge?', confirmText: 'Waive' })) return;
       try { await api.loans.waiveCharge(loanId, b.dataset.waiveCharge); toast('success', 'Charge waived', ''); loadLoanCharges(c, loanId); }
-      catch (e) { toast('error', 'Waive failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Waive failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-pay-charge]').forEach(b => b.addEventListener('click', () =>
       openPayLoanChargeModal(loanId, b.dataset.payCharge, () => loadLoanCharges(c, loanId))));
@@ -183,7 +184,7 @@ export async function loadLoanCharges(c, loanId) {
     listEl.querySelectorAll('[data-del-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete charge?', danger: true, confirmText: 'Delete' })) return;
       try { await api.loans.deleteCharge(loanId, b.dataset.delCharge); toast('success', 'Charge deleted', ''); loadLoanCharges(c, loanId); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -245,5 +246,5 @@ export async function loadLoanDisbursements(c, loanId) {
       const disb = list.find(d => String(d.id) === b.dataset.editTranche);
       openTrancheEditorModal(loanId, disb, () => loadLoanDisbursements(c, loanId));
     }));
-  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`; }
 }

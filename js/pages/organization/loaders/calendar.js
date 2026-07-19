@@ -8,6 +8,7 @@ import { escapeHtml, fmtDate, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openHolidayModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadHolidays(c, officeList) {
   const el = c.querySelector('#og-3');
   const headOffice = officeList.find(o => o.hierarchy === '.') || officeList[0];
@@ -62,7 +63,7 @@ export async function loadHolidays(c, officeList) {
         await api.holidays.activate(b.dataset.activateHol);
         toast('success', 'Holiday activated', '');
         loadHolidays(c, officeList);
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     }));
     el.querySelectorAll('[data-del-hol]').forEach(b => b.addEventListener('click', async () => {
       if (!await modalConfirm({ title: 'Delete this holiday?', danger: true, confirmText: 'Delete' })) return;
@@ -70,7 +71,7 @@ export async function loadHolidays(c, officeList) {
         await api.holidays.delete(b.dataset.delHol);
         toast('success', 'Holiday deleted', '');
         loadHolidays(c, officeList);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -106,7 +107,7 @@ export async function loadWorkingDays(c) {
           locale: LOCALE
         });
         toast('success', 'Working days saved', selected.join(', '));
-      } catch (err) { toast('error', 'Save failed', err.detail?.defaultUserMessage || err.message); }
+      } catch (err) { toast('error', 'Save failed', extractFineractError(err)); }
       finally { e.target.disabled = false; }
     });
   } catch (e) { el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }

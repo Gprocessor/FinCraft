@@ -7,6 +7,7 @@ import { toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate } from '../../../utils.js';
 import { dynModal, glList, v, vi } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openJournalEntryDetailModal(entryId) {
   const mid = 'je-view-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -41,7 +42,7 @@ export async function openJournalEntryDetailModal(entryId) {
         ${je.transactionDetails?.transactionEntityType ? `<dt>Source</dt><dd>${escapeHtml(je.transactionDetails.transactionEntityType)} #${escapeHtml(String(je.transactionDetails.transactionEntityId || ''))}</dd>` : ''}
       </dl>`;
   } catch (e) {
-    body.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -78,7 +79,7 @@ export function openReverseJEModal(transactionId, onSuccess) {
       m.remove();
       toast('success', 'Entry reversed', String(transactionId));
       onSuccess?.();
-    } catch (e) { toast('error', 'Reversal failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Reversal failed', extractFineractError(e)); }
   });
 }
 
@@ -145,7 +146,7 @@ export async function openFrequentPostingModal(ruleId, rule, onSuccess) {
       toast('success', 'Posted via rule', rule?.name || '');
       onSuccess();
     } catch (e) {
-      toast('error', 'Posting failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Posting failed', extractFineractError(e));
     }
   });
 }
@@ -247,6 +248,6 @@ export async function openJournalEntryModal(onSuccess) {
       el.remove();
       toast('success', 'Journal entry created', '');
       onSuccess();
-    } catch (e) { toast('error', 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Create failed', extractFineractError(e)); }
   });
 }

@@ -6,6 +6,7 @@ import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 import { APP_TABLES, COLUMN_TYPES, can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export function openDatatableEntryModal(tableName, entityId, columns, existing, onSuccess) {
   const mid = 'dt-entry-' + Date.now();
   const modalEl = document.createElement('div');
@@ -71,7 +72,7 @@ export function openDatatableEntryModal(tableName, entityId, columns, existing, 
         await api.dataTables.createEntry(tableName, entityId, body);
       }
       modalEl.remove(); toast('success', existing ? 'Entry updated' : 'Entry created', ''); onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }
 
@@ -222,7 +223,7 @@ export function openCreateDataTableModal(onSuccess) {
       modalEl.remove();
       toast('success', 'Data table created', name);
       onSuccess();
-    } catch (e) { toast('error', 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Create failed', extractFineractError(e)); }
   });
 }
 
@@ -296,7 +297,7 @@ export function openAddColumnModal(tableName, onSuccess) {
       modalEl.remove();
       toast('success', 'Column added', name);
       onSuccess();
-    } catch (e) { toast('error', 'Add column failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Add column failed', extractFineractError(e)); }
   });
 }
 
@@ -347,6 +348,6 @@ export function openRegisterModal(tableName, onSuccess) {
       modalEl.remove();
       toast('success', 'Registered', `${tableName} → ${app}`);
       onSuccess();
-    } catch (e) { toast('error', 'Register failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Register failed', extractFineractError(e)); }
   });
 }

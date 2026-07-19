@@ -7,13 +7,14 @@ import { escapeHtml } from '../../utils.js';
 import { render } from './index.js';
 import { ENTITY_OPTIONS, TYPE_OPTIONS } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function openTemplateFormModal(templateId, onSuccess) {
   const isEdit = !!templateId;
   let existing = {};
 
   if (isEdit) {
     try { existing = await api.templates.get(templateId); }
-    catch (e) { toast('error', 'Could not load template', e.detail?.defaultUserMessage || e.message); return; }
+    catch (e) { toast('error', 'Could not load template', extractFineractError(e)); return; }
   }
 
   const existingMappers = existing.mappers || existing.mappersData || [];
@@ -141,7 +142,7 @@ export async function openTemplateFormModal(templateId, onSuccess) {
       toast('success', isEdit ? 'Template updated' : 'Template created', name);
       onSuccess();
     } catch (e) {
-      toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Save failed', extractFineractError(e));
     }
   });
 }
@@ -159,7 +160,7 @@ function mapperRow(idx, existing = {}) {
 export async function openPreviewModal(templateId) {
   let tpl;
   try { tpl = await api.templates.get(templateId); }
-  catch (e) { toast('error', 'Could not load template', e.detail?.defaultUserMessage || e.message); return; }
+  catch (e) { toast('error', 'Could not load template', extractFineractError(e)); return; }
 
   const mid = 'tpl-preview-' + Date.now();
   const modalEl = document.createElement('div');
@@ -231,7 +232,7 @@ export async function openPreviewModal(templateId) {
       const res = await api.templates.preview(templateId, data);
       out.textContent = typeof res === 'string' ? res : (res?.text || JSON.stringify(res, null, 2));
     } catch (e) {
-      out.innerHTML = `<div class="text-error">Server render failed: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      out.innerHTML = `<div class="text-error">Server render failed: ${escapeHtml(extractFineractError(e))}</div>`;
     }
   });
 }

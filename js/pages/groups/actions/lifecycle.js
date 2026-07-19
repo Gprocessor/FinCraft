@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openEditGroupModal(g, onSuccess) {
   const mid = `grp-edit-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -39,7 +40,7 @@ export async function openEditGroupModal(g, onSuccess) {
       el.remove();
       toast('success', 'Group updated', '');
       onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -83,7 +84,7 @@ export async function openCloseGroupModal(id) {
       el.remove();
       toast('success', 'Group closed', '');
       import('../../../router.js').then(r => r.navigate('groups'));
-    } catch (e) { toast('error', 'Close failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Close failed', extractFineractError(e)); }
   });
 }
 
@@ -124,6 +125,6 @@ export async function openAssignStaffModal(id, g) {
       el.remove();
       toast('success', 'Staff updated', '');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
