@@ -1,0 +1,27 @@
+name: Fix Script Permissions
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  chmod:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set executable permissions
+        run: |
+          chmod +x deploy/*.sh
+          chmod +x deploy/init-db/*.sh || true
+
+      - name: Commit permission changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add deploy
+          git diff --cached --quiet || git commit -m "Fix script permissions"
+          git push
