@@ -256,17 +256,17 @@ and route entries added to `router.js`'s `PAGES`.
 1. ~~Persistence confirmation~~ — **RESOLVED by user: datatables only, no backend.** See §3.
 2. ~~GL balance source~~ — **RESOLVED: two-tier `fetchRunningBalance` + office-scoped
    journal-entry summation strategy.** See §3.
-3. **Vault GL identification (still open):** which `glaccounts` id represents "Vault" per office,
-   and is that 1:1 with office or could a single vault serve multiple offices? Planned answer:
-   store this mapping per-office in `dt_treasury_thresholds` (a config row, not a code constant),
-   so it doesn't need to be re-opened per deployment/tenant — but the *initial* values still need
-   to come from someone who knows the target chart of accounts.
-4. **Environment/config strategy (still open):** given there's no `.env`/backend, GL-account
-   mappings (vault/bank/expense/borrowings-liability/interest-payable/interest-expense) and the
-   reserve buffer will be stored per-office in `dt_treasury_thresholds` (consistent with the
-   "datatables only" decision) — confirm a "Treasury Settings" admin screen (Phase 11) is the
-   right place to edit these, as opposed to seeding them once via a script/direct datatable
-   entry per tenant.
+3. ~~Vault GL identification~~ — **RESOLVED as code (Phase 5):** stored per-office in
+   `dt_treasury_thresholds` via `js/treasury/thresholds.js`. Still genuinely open: who supplies the
+   *initial* correct GL account ids for a given deployment's real chart of accounts — that's a
+   data/config question for whoever administers the target Fineract instance, not a code question,
+   and there is deliberately no hard-coded fallback (`requireThresholds()` throws rather than
+   guessing).
+4. ~~Environment/config strategy~~ — **RESOLVED as code (Phase 5):** same `dt_treasury_thresholds`
+   table holds all the GL mappings + reserve buffer, seeded via `upsertThresholds()`. A "Treasury
+   Settings" UI to edit these (Phase 11) is still not built — until then, seeding happens by
+   calling `upsertThresholds()` directly (e.g. from a console/admin script), which is a real gap
+   for non-technical operators and should be prioritized early in Phase 11.
 5. Should the remaining phase checklist be executed strictly in order with a stop-and-confirm
    after each phase, or is there a preferred subset/priority (e.g. Teller Console + Vault Control
    before Borrowings)? Not yet answered — proceeding phase-by-phase, exporting a zip after each
@@ -336,11 +336,165 @@ and route entries added to `router.js`'s `PAGES`.
 - [x] Automated tests — `tests/treasury-teller-balance.test.js` (7 assertions incl. multi-cashier
       office total and graceful degradation when Fineract's summary call fails)
 
-### Phase 5 - Vault Control — not started
-### Phase 6 - Loan Disbursement Through Teller — not started
-### Phase 7 - Expense Management — not started
-### Phase 8 - Borrowings Management — not started
-### Phase 9 - Treasury Dashboard — not started
+### Phase 5 - Vault Control
+- [x] Create VaultControlService — `js/treasury/vault-control.js` (plus a new prerequisite,
+      `js/treasury/thresholds.js`, for reading/seeding `dt_treasury_thresholds` — see Open
+      Question #3/#4 resolution below)
+- [x] Get vault balance — `getVaultBalance(officeId, {precise})`: `precise=true` (default) uses
+      the Tier 2 office-scoped `computeOfficeBalance`; `precise=false` uses the cheap Tier 1
+      `fetchRunningBalance` figure — both paths exercised by tests, deliberately returning
+      different stub values to prove the right one is used in each mode
+- [x] Get reserve buffer — `getReserveBuffer(officeId)`, reads `dt_treasury_thresholds`
+- [x] Calculate available vault — `validateVaultCanAllocate(...)` returns `availableVault`
+- [x] Block allocations below reserve buffer — throws the brief's exact message format
+      ("Insufficient vault cash. Available after buffer: {availableVault}, Requested: {amount}")
+- [x] Wrap Fineract allocate cash API — `allocateCashToCashier(...)` calls
+      `api.tellers.allocateCashTo(tellerId, cashierId, body)`
+- [x] Record teller CASH_ALLOCATION event — via `recordTellerEvent` from Phase 3, only after the
+      Fineract call succeeds
+- [x] **Beyond the checklist:** explicit failure-mode handling for the "Fineract succeeded but the
+      FinCraft event write failed" case (a real risk called out in §5 of this log) — a new
+      `TreasuryReconciliationGapError` class carries the orphaned Fineract `resourceId` so it can
+      be traced/reconciled, rather than being swallowed or looking like an ordinary validation error
+- [x] Resolved Open Questions #3/#4 as code, not just documentation: the Vault GL mapping and
+      reserve buffer are per-office rows in `dt_treasury_thresholds`
+      (`getThresholds`/`upsertThresholds`/`requireThresholds` in `js/treasury/thresholds.js`) —
+      "not yet configured" is a distinct, explicit state (`null`, with a clear thrown error message
+      from `requireThresholds`), never silently defaulted to zero. A real UI to edit this (Phase
+      11, "Treasury Settings") is still not built — `upsertThresholds()` is the seed path until then.
+- [x] Automated tests — `tests/treasury-vault-control.test.js` (config CRUD, both balance-precision
+      modes, buffer math + exact error message, full allocation happy path incl. event-shape
+      assertions, "blocked before Fineract is ever called", "Fineract fails → no event recorded",
+      and the reconciliation-gap error path)
+### Phase 6 - Loan Disbursement Through Teller
+- [x] Create LoanCashDisbursementService — `js/treasury/loan-disbursement.js`
+- [x] Require teller and cashier selection — throws if either is missing, before any other check
+- [x] Validate active cashier — `isCashierActive()`, derived from Fineract's cashier assignment
+      window (`startDate`/`endDate`) since Fineract's cashier resource has no standalone
+      `isActive` boolean
+- [x] Validate cashier has sufficient cash — reuses `validateCashierCanPay` from Phase 4 (same
+      exact error message, no duplicated logic)
+- [x] Call Fineract loan disbursement API — `api.loans.disburse(loanId, body)`
+- [x] Record LOAN_DISBURSEMENT CASH_OUT event — via Phase 3's `recordTellerEvent`, linked back to
+      the loan via `fineract_entity_type: 'LOAN'` / `fineract_entity_id: loanId`
+- [x] Prevent duplicate disbursement — `alreadyDisbursedThroughTeller()` checks for an existing
+      un-reversed `LOAN_DISBURSEMENT` event for the same `loanId` before calling Fineract at all
+      (explicitly scoped: this only guards the FinCraft-teller-workflow path, not a disbursement
+      made directly against Fineract through another channel — see log §5)
+- [x] Handle failure safely — reuses the Phase 5 pattern: Fineract call fails → propagate as-is,
+      no event recorded; Fineract succeeds but event write fails → `TreasuryReconciliationGapError`
+- [x] **Refactor:** moved `TreasuryReconciliationGapError` out of `vault-control.js` into a new
+      shared `js/treasury/errors.js`, since Phase 6 needed the identical shape — done proactively
+      per this log's own §17 recommendation from the previous checkpoint, before it could drift
+      into two subtly-different copies. `vault-control.js` re-exports it for backward compatibility.
+- [x] Automated tests — `tests/treasury-loan-disbursement.test.js` (7 scenarios: missing
+      teller/cashier, inactive cashier, insufficient cash, happy path incl. event-shape assertions,
+      duplicate-disbursement guard, Fineract-call failure, and the reconciliation-gap path)
+### Phase 7 - Expense Management
+- [x] Create ExpenseService — `js/treasury/expenses.js`
+- [x] Create expense request workflow — `createExpenseRequest(payload)`, starts `PENDING`
+- [x] Add approval workflow — `approveExpense(officeId, expenseId, approver)`, requires
+      `PENDING`, writes a `dt_expense_approvals` row
+- [x] Add rejection workflow — `rejectExpense(officeId, expenseId, approver, reason)`, requires
+      `PENDING`
+- [x] Add pay from teller workflow — `payExpense(..., {paymentSource:'TELLER_CASH', tellerId,
+      cashierId, transactionDate})`, requires `APPROVED`, reuses Phase 4's `validateCashierCanPay`
+- [x] Add pay from bank workflow — `payExpense(..., {paymentSource:'BANK', transactionDate})`,
+      requires `APPROVED`
+- [x] Post Dr Expense / Cr Cash At Tellers for teller-paid expense — via `api.journalEntries.create`,
+      GL account read from `dt_treasury_thresholds.cash_at_tellers_gl_account_id`
+- [x] Post Dr Expense / Cr Bank for bank-paid expense — GL account read from
+      `dt_treasury_thresholds.bank_gl_account_id` (or an explicit per-payment override)
+- [x] Record EXPENSE_PAYMENT teller event when paid from teller — via Phase 3's
+      `recordTellerEvent`; **explicitly not recorded for BANK payments** (verified by test:
+      "BANK payments must never touch the teller event ledger")
+- [x] Store Fineract JE reference — `fineract_je_transaction_id` column on `dt_expense_requests`
+- [x] **Beyond the checklist:** explicit status-transition guards (`assertStatus`) — cannot pay a
+      `PENDING`/`REJECTED` expense, cannot approve/reject an already-decided one — written as one
+      small shared guard rather than scattered if-checks, per this log's own recommendation in the
+      previous checkpoint's §17. Both payment branches reuse the same
+      "Fineract-succeeds-but-FinCraft-write-fails → `TreasuryReconciliationGapError`" pattern from
+      Phases 5-6 (via the shared `js/treasury/errors.js`), and a failed journal entry leaves the
+      expense `APPROVED` (not silently `PAID`), verified by test.
+- [x] Automated tests — `tests/treasury-expenses.test.js` (6 scenarios: full BANK lifecycle, full
+      TELLER_CASH lifecycle, insufficient-cash block before any JE is posted, all four
+      out-of-order status-guard combinations, JE-itself-fails leaves status `APPROVED`, and the
+      post-JE reconciliation-gap path)
+### Phase 8 - Borrowings Management
+- [x] Create BorrowingService — split across `js/treasury/borrowing-schedule.js` (pure schedule
+      math, zero Fineract/datatable calls by design — easy to unit-test with plain numbers) and
+      `js/treasury/borrowings.js` (orchestration: persistence + the four accounting postings),
+      per this log's own §17 recommendation from the previous checkpoint
+- [x] Create borrowing record — `createBorrowing(payload)`, status starts `PENDING`
+- [x] Generate borrowing schedule — `generateBorrowingSchedule({...})`, called by `createBorrowing`
+      and persisted as one `dt_office_borrowing_schedule` row per installment
+- [x] Support flat interest — `generateFlatSchedule` (level principal + level interest, remainder
+      absorbed by the final installment so both sum exactly)
+- [x] Support reducing balance interest — `generateReducingBalanceSchedule` (annuity/level-payment
+      amortization; explicit 0%-interest edge case handled rather than dividing by zero)
+- [x] Post borrowing drawdown — `postBorrowingDrawdown`: Dr Bank-or-Vault / Cr Borrowings
+      Liability, `PENDING → ACTIVE`, blocked from running twice
+- [x] Accrue interest — `accrueInterest`: Dr Interest Expense / Cr Interest Payable, guarded
+      against double-accrual per installment (checks existing txns first)
+- [x] Pay borrowing interest — `payBorrowingInterest`: Dr Interest Payable / Cr Bank-or-Vault,
+      defaults to the installment's full remaining interest, rejects amounts that would overpay it
+- [x] Repay borrowing principal — `repayBorrowingPrincipal`: Dr Borrowings Liability / Cr
+      Bank-or-Vault, same default/overpayment-guard shape, decrements `outstanding_principal`,
+      auto-closes the borrowing (`status → CLOSED`) once it reaches ~zero
+- [x] Track outstanding principal — `dt_office_borrowings.outstanding_principal`, updated on every
+      principal repayment
+- [x] Store Fineract JE references — `fineract_je_transaction_id` on both the borrowing row
+      (drawdown) and every `dt_office_borrowing_txns` row (all four transaction types)
+- [x] `getBorrowingsDashboard(officeId)` also added (per-office totals; deliberately does not
+      aggregate upcoming-due installments across every borrowing's schedule — left to Phase 9 to
+      avoid scope creep here, noted explicitly in the file's own comments)
+- [x] Schedule row status (`SCHEDULED`/`PARTIALLY_PAID`/`PAID`) is *derived* from paid-vs-due
+      amounts on every write (`deriveScheduleStatus`), not tracked as an independently-settable
+      flag that could drift out of sync with the actual paid amounts
+- [x] Automated tests — `tests/treasury-borrowing-schedule.test.js` (5 pure-math scenarios: FLAT
+      exact-sum incl. an unevenly-divisible tenor, REDUCING_BALANCE exact-sum + declining-interest
+      shape + zero-outstanding-at-end, the 0%-interest edge case, and input validation) plus
+      `tests/treasury-borrowings.test.js` (8 orchestration scenarios: create+schedule persistence,
+      drawdown incl. duplicate-drawdown guard, double-accrual guard, interest payment incl.
+      overpayment guard and default-remaining-amount behavior, principal repayment incl.
+      auto-close and rejecting repayment on a closed borrowing, JE-fails-leaves-PENDING, the
+      reconciliation-gap path, and multi-borrowing dashboard aggregation). One arithmetic mistake
+      was made in drafting the tests themselves (expected interest amount was miscalculated) —
+      caught by the test run itself and fixed before this checkpoint, not left in the codebase.
+### Phase 9 - Treasury Dashboard
+- [x] Create TreasuryDashboardService — split into `js/treasury/liquidity-status.js` (pure
+      RED/AMBER/GREEN logic, kept separate/independently testable, same pattern as
+      borrowing-schedule.js) and `js/treasury/dashboard.js` (`getTreasuryDashboard`, the
+      aggregator) — per this log's own §17 recommendation
+- [x] Show bank balance — `bankBalance` (Tier 1 org-wide `fetchRunningBalance`)
+- [x] Show vault balance — `vaultBalance` (Tier 2 precise office-scoped, reusing Phase 5's
+      `getVaultBalance` — deliberately the precise mode, since this figure gates the buffer check)
+- [x] Show Cash At Tellers GL — `cashAtTellersGlBalance`
+- [x] Show teller operational total — `tellerOperationalTotal` (Phase 4's
+      `getOfficeTellerBreakdown`)
+- [x] Show teller/GL difference — `tellerGlDifference`, the brief's central worked example
+      (Ada+Bola+Chidi vs. pooled GL) — verified by test to be a real computed difference, not a
+      hardcoded zero, using a stub deliberately set up so FinCraft and Fineract's figures disagree
+- [x] Show borrowings outstanding — `borrowingsOutstanding`/`borrowingsActiveCount` (Phase 8's
+      `getBorrowingsDashboard`)
+- [x] Show interest payable — `interestPayableBalance`, correctly `null` (not `0`) when that
+      optional GL mapping isn't configured for the office — verified by test
+- [x] Show pending expenses — `pendingExpensesTotal`, sums `dt_expense_requests` rows in either
+      `PENDING` or `APPROVED` (approved-but-not-yet-paid also counts; `PAID`/`REJECTED` do not)
+- [x] Show reserve buffer — `reserveBuffer`
+- [x] Show available vault — `availableVault` (= `vaultBalance - reserveBuffer`)
+- [x] Show liquidity status — `liquidityStatus`
+- [x] Add RED/AMBER/GREEN status logic — `deriveLiquidityStatus(availableVault, reserveBuffer)`:
+      RED at/below zero headroom, AMBER below one full buffer's worth of headroom, GREEN at or
+      above it (thresholds documented as a judgment call in the file's own header comment, plus
+      the zero-buffer edge case handled explicitly)
+- [x] Automated tests — `tests/treasury-liquidity-status.test.js` (9 pure boundary-condition
+      assertions incl. the zero-buffer edge case) and `tests/treasury-dashboard.test.js` (2
+      scenarios; notably an **integration-style test that drives the real Phase 3/7/8 functions**
+      — `recordTellerEvent`, `createExpenseRequest`/`approveExpense`,
+      `createBorrowing`/`postBorrowingDrawdown`/`repayBorrowingPrincipal` — through one shared
+      stub rather than hand-crafting fixture rows, which also double-checks those modules compose
+      correctly together, not just in isolation)
 ### Phase 10 - Daily Reconciliation — not started
 ### Phase 11 - UI Integration — not started
 ### Phase 12 - Permissions — not started (see risk: must map to *real* Fineract permission codes
@@ -419,6 +573,71 @@ and route entries added to `router.js`'s `PAGES`.
   Fineract instance is reachable from this sandbox), and pass cleanly. Full suite re-run after
   every change this session: **6 passed / 1 pre-existing failure, unchanged** (see §16).
 
+- **Phase 5 — Vault Control.** Added `js/treasury/thresholds.js` (read/seed helper for the
+  one-to-one `dt_treasury_thresholds` config table — resolves Open Questions #3/#4 as code, not
+  just documentation) and `js/treasury/vault-control.js`: `getVaultBalance` (dual-mode, precise
+  office-scoped vs. cheap org-wide), `getReserveBuffer`, `validateVaultCanAllocate` (brief's exact
+  error message), `allocateCashToCashier` (wraps `api.tellers.allocateCashTo` + records the Phase
+  3 teller event). Added a new `TreasuryReconciliationGapError` type for the "Fineract succeeded,
+  FinCraft's event write failed" partial-failure case identified as a risk in §5 — this is
+  deliberately distinguishable from an ordinary validation error so it can be surfaced/handled
+  differently by calling UI. `tests/treasury-vault-control.test.js` added, covering config
+  CRUD, both balance-precision modes, the buffer-block path (and that it never reaches Fineract),
+  the happy path, "Fineract fails → no event recorded," and the reconciliation-gap path. Full
+  suite: **7 passed / 1 pre-existing unrelated failure, unchanged.**
+
+- **Phase 6 — Loan Disbursement Through Teller.** Added `js/treasury/loan-disbursement.js`
+  (`disburseLoanThroughCashier`), reusing Phase 4's `validateCashierCanPay` rather than
+  re-implementing cash-sufficiency logic. Added a required/active-teller-cashier check
+  (Fineract's cashier resource has no `isActive` field, so "active" is derived from the
+  `startDate`/`endDate` assignment window) and a duplicate-disbursement guard scoped to this
+  workflow's own event history. Proactively refactored `TreasuryReconciliationGapError` out of
+  `vault-control.js` into a new shared `js/treasury/errors.js` before Phase 6 could end up with a
+  second, drifted copy (this was flagged as the recommended next step in the previous checkpoint's
+  §17, and acted on immediately rather than deferred). `tests/treasury-loan-disbursement.test.js`
+  added — 7 scenarios. Full suite: **8 passed / 1 pre-existing unrelated failure, unchanged.**
+
+- **Phase 7 — Expense Management.** Added `js/treasury/expenses.js`: full
+  `PENDING → APPROVED → PAID` (or `→ REJECTED`) lifecycle across two datatables
+  (`dt_expense_requests`, `dt_expense_approvals`), with a shared `assertStatus()` guard instead of
+  scattered if-checks (again, acting on this log's own §17 recommendation rather than deferring
+  it). Both payment branches implemented together as the brief suggested: `TELLER_CASH` reuses
+  Phase 4's cash-sufficiency check and Phase 3's event recording; `BANK` posts a journal entry and
+  deliberately never touches the teller ledger. Both reuse the Phase 5/6
+  `TreasuryReconciliationGapError` pattern for the post-JE failure case, and a *failed* journal
+  entry (Fineract itself rejects it) correctly leaves the expense `APPROVED`, not silently `PAID`.
+  `tests/treasury-expenses.test.js` added — 6 scenarios, including a stub-design fix mid-session
+  (the first draft of the "post-JE write fails" stub accidentally broke the earlier approve step
+  too, since both go through the same `updateRow` mock — fixed by keying the failure on the
+  specific patch shape rather than failing unconditionally). Full suite: **9 passed / 1
+  pre-existing unrelated failure, unchanged.**
+
+- **Phase 8 — Borrowings Management.** Split as planned across two files:
+  `js/treasury/borrowing-schedule.js` (pure FLAT/REDUCING_BALANCE amortization math, zero external
+  calls) and `js/treasury/borrowings.js` (`createBorrowing`, `postBorrowingDrawdown`,
+  `accrueInterest`, `payBorrowingInterest`, `repayBorrowingPrincipal`, `getBorrowingsDashboard`),
+  covering all four accounting legs specified in the brief and reusing the established
+  Fineract-JE-then-FinCraft-write / `TreasuryReconciliationGapError` pattern throughout. Added
+  overpayment guards (can't pay/repay more than an installment's remaining due), a double-accrual
+  guard, and status that's *derived* from paid-vs-due amounts rather than independently tracked.
+  `tests/treasury-borrowing-schedule.test.js` (5 pure-math scenarios) and
+  `tests/treasury-borrowings.test.js` (8 orchestration scenarios) added. One arithmetic error was
+  introduced while drafting the orchestration test's expectations (not the source code) — caught
+  immediately by the failing test run and corrected before this checkpoint. Full suite: **11
+  passed / 1 pre-existing unrelated failure, unchanged.**
+
+- **Phase 9 — Treasury Dashboard.** Added `js/treasury/liquidity-status.js` (pure RED/AMBER/GREEN
+  logic, split out the same way `borrowing-schedule.js` was — this is genuinely new logic, not a
+  restatement of an existing rule, so it earned its own file/tests) and `js/treasury/dashboard.js`
+  (`getTreasuryDashboard`, aggregating Phases 4-8 plus new reads of pending expenses and Bank/
+  Interest-Payable GL balances). Confirmed `tellerGlDifference` is a real computed comparison (not
+  a coincidental/hardcoded zero) by deliberately stubbing FinCraft's and Fineract's figures to
+  disagree in the test. `tests/treasury-liquidity-status.test.js` (9 pure assertions) and
+  `tests/treasury-dashboard.test.js` (2 scenarios, one of which is a genuine integration-style test
+  driving the real Phase 3/7/8 functions through one shared stub, rather than only unit-testing
+  dashboard.js in isolation) added. Full suite: **13 passed / 1 pre-existing unrelated failure,
+  unchanged.**
+
 ## 9. Deferred Work
 
 - All of Phases 3–13 are deferred pending answers to the Open Questions in §6, per the mandatory
@@ -434,6 +653,23 @@ and route entries added to `router.js`'s `PAGES`.
   office-wide/Fineract-cross-check reconciliation.
 - `tests/treasury-teller-events.test.js`, `tests/treasury-teller-balance.test.js` — automated
   coverage for both, using in-memory stubs of `api.treasury`/`api.tellers`.
+- `js/treasury/thresholds.js` — `dt_treasury_thresholds` read/seed helper (Phase 5 prerequisite).
+- `js/treasury/vault-control.js` — Phase 5 balance/buffer/allocation service.
+- `js/treasury/errors.js` — shared `TreasuryReconciliationGapError` (factored out of
+  vault-control.js once Phase 6 needed the identical shape).
+- `js/treasury/loan-disbursement.js` — Phase 6 disbursement orchestration service.
+- `tests/treasury-vault-control.test.js`, `tests/treasury-loan-disbursement.test.js` — automated
+  coverage for both.
+- `js/treasury/expenses.js` — Phase 7 request/approve/reject/pay lifecycle service.
+- `tests/treasury-expenses.test.js` — automated coverage for it.
+- `js/treasury/borrowing-schedule.js` — Phase 8 pure FLAT/REDUCING_BALANCE amortization math.
+- `js/treasury/borrowings.js` — Phase 8 orchestration (drawdown/accrual/interest/principal).
+- `tests/treasury-borrowing-schedule.test.js`, `tests/treasury-borrowings.test.js` — automated
+  coverage for both.
+- `js/treasury/liquidity-status.js` — Phase 9 pure RED/AMBER/GREEN threshold logic.
+- `js/treasury/dashboard.js` — Phase 9 `getTreasuryDashboard` aggregator.
+- `tests/treasury-liquidity-status.test.js`, `tests/treasury-dashboard.test.js` — automated
+  coverage for both.
 
 ## 11. Files Modified
 
@@ -482,23 +718,30 @@ designed (§3's multi-tenancy note).
 
 ## 16. Testing Status
 
-`npm test` re-run after every change this session: **6 passed / 1 failed, unchanged throughout**.
-Passing: `accounting-fixes`, `business-logic`, `error-extraction`, `module-integrity`,
-**`treasury-teller-balance` (new)**, **`treasury-teller-events` (new)**. The one failure
-(`utils.test.js`, `document is not defined` in `js/store.js`) reproduces identically against an
-untouched copy of the original zip — confirmed pre-existing/sandbox-environment (`jsdom`), not a
-regression from this session.
+`npm test` re-run after every change this session: **13 passed / 1 failed, unchanged
+throughout**. Passing: `accounting-fixes`, `business-logic`, `error-extraction`,
+`module-integrity`, `treasury-teller-balance`, `treasury-teller-events`, `treasury-vault-control`,
+`treasury-loan-disbursement`, `treasury-expenses`, `treasury-borrowing-schedule`,
+`treasury-borrowings`, **`treasury-liquidity-status` (new)**, **`treasury-dashboard` (new)**. The
+one failure (`utils.test.js`, `document is not defined` in `js/store.js`) reproduces identically
+against an untouched copy of the original zip — confirmed pre-existing/sandbox-environment
+(`jsdom`), not a regression from this session.
 
 ## 17. Next Recommended Phase
 
-Phase 5 (Vault Control) is next — it's the natural continuation of Phase 4 and is a hard
-prerequisite for Phase 6 (Loan Disbursement Through Teller: allocation has to happen before a
-cashier has anything to disburse from). Before writing it, Open Questions #3/#4 (which
-`glaccounts` id is "Vault" per office, and how `dt_treasury_thresholds` gets seeded) become
-directly relevant, since `VaultControlService.getVaultBalance()`/`getReserveBuffer()` need to read
-that config table — Phase 5's first sub-step will be a small `js/treasury/thresholds.js` (or
-folded into vault-control.js) read/seed helper for `dt_treasury_thresholds`, using the
-`ensureTreasuryDatatables()` bootstrap from Phase 2. `ensureTreasuryDatatables()` itself still
-needs its first real execution against a live Fineract tenant (no server reachable from this
-sandbox) — recommend doing that as an early, cheap smoke test before Phase 6 (loan disbursement,
-which has real accounting/business consequences) is attempted.
+**Phase 10 (Daily Reconciliation)** is the last backend phase, and the last piece before UI work
+(Phase 11) can begin in earnest. It should reuse `computeCashierExpectedBalance` (Phase 4) as its
+"expected cash" side, add a physical-count submission step, compute
+`variance = physicalCash - expectedCash`, and — structurally similar to Phase 7's approve/reject —
+require an explicit approval step before any variance is posted as a journal entry (the brief:
+"Post shortage JE after approval / Post overage JE after approval," i.e. submitting a count is NOT
+itself authorization to post the accounting difference). GL accounts for shortage/overage entries
+aren't named in the brief or in `dt_treasury_thresholds` yet — this is a genuinely open question to
+flag before Phase 10 rather than guess at (a shortage is typically an expense/loss GL, an overage a
+misc-income GL, neither of which exists in the current threshold config). After Phase 10, Phases
+11-13 (UI, Permissions, remaining cross-cutting tests) are what's left — all of Phases 3-9's actual
+business logic will be done and fully unit-tested by that point. `ensureTreasuryDatatables()` and
+`upsertThresholds()` still await their first real run against a live Fineract tenant — this is
+now the single largest outstanding risk to the whole plan (all nine phases' worth of tests use
+stubs) and should not be deferred any further; recommend doing it before or alongside Phase 10,
+not after.
