@@ -1,4 +1,6 @@
-const CACHE = 'fincraft-v9'; // bumped: split components.css into cards/tables/forms/modals.css (audit item 9)
+const CACHE = 'fincraft-v11'; // bumped: this session touched several core files (chart loader,
+// create->approve->activate handlers, group/center/client modals+wiring) — bumping forces the
+// activate-phase cache cleanup below to run and guarantees no stale mix of old/new assets.
 const ASSETS = [
   './',
   './index.html',
@@ -27,8 +29,18 @@ const ASSETS = [
   // Assets
   './manifest.json',
   './favicon.svg',
-  // Modal HTML
-  './views/modals.html'
+  // Modal HTML — split into domain partials (see js/ui/shell.js)
+  './views/modals/clients.html',
+  './views/modals/loans.html',
+  './views/modals/savings-deposits.html',
+  './views/modals/shares.html',
+  './views/modals/groups-centers.html',
+  './views/modals/accounting.html',
+  './views/modals/organization.html',
+  './views/modals/admin.html',
+  './views/modals/products.html',
+  './views/modals/integrations.html',
+  './views/modals/system.html'
 ];
 
 self.addEventListener('install', e =>
@@ -52,12 +64,24 @@ self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   // Never cache API calls — always go to the network
   if (u.pathname.includes('/fineract-provider/')) return;
-  // Network-first for HTML (so updates ship immediately) — cache-first otherwise
-  if (e.request.mode === 'navigate' || e.request.destination === 'document') {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
-    );
-    return;
-  }
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+  // Network-first for EVERYTHING we control (HTML, JS, CSS), falling back to
+  // the cache only when the network is unavailable. This used to be
+  // cache-first for JS/CSS, which meant a broken deploy (missing/half-cloned
+  // frontend, wrong config.js, etc.) got cached in the browser and kept
+  // being served — blank screen — even after the server-side issue was
+  // fixed, until this service-worker.js file itself changed. Network-first
+  // means a fix on the server is picked up on the very next load.
+  e.respondWith(
+    fetch(e.request)
+      .then(r => {
+        const copy = r.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        return r;
+      })
+      .catch(() => caches.match(e.request).then(r => r || (
+        (e.request.mode === 'navigate' || e.request.destination === 'document')
+          ? caches.match('./index.html')
+          : undefined
+      )))
+  );
 });

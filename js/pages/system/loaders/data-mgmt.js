@@ -7,6 +7,7 @@ import { escapeHtml, num, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openAccountNumberPrefModal, openEntityMappingDetail, openSurveyFormModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadAccountNumberPrefs(c) {
   const el = c.querySelector('#sy-8');
   el.innerHTML = '<div class="empty-state-row">Loading account number preferences…</div>';
@@ -66,11 +67,11 @@ export async function loadAccountNumberPrefs(c) {
         toast('success', 'Preference deleted', '');
         loadAccountNumberPrefs(c);
       } catch (e) {
-        toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Delete failed', extractFineractError(e));
       }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Account number preferences not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Account number preferences not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -112,7 +113,7 @@ export async function loadEntityMappings(c) {
                 <td>${escapeHtml(m.toType || m.secondEntity || '—')}</td>
                 <td class="text-right">${num(mappedCount)}</td>
                 <td class="text-right">
-                  ${can('UPDATE_ENTITYTOENTITYMAPPING') ? `<button class="btn-mini" data-edit-map="${m.mapId || m.id}" data-map-name="${escapeHtml(m.mappingName || '—')}">View / Edit</button>` : ''}
+                  ${can('UPDATE_ENTITYMAPPING') ? `<button class="btn-mini" data-edit-map="${m.mapId || m.id}" data-map-name="${escapeHtml(m.mappingName || '—')}">View / Edit</button>` : ''}
                 </td>
               </tr>`;
           }).join('')}</tbody>
@@ -127,7 +128,7 @@ export async function loadEntityMappings(c) {
       openEntityMappingDetail(b.dataset.editMap, b.dataset.mapName)
     ));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Entity mappings not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Entity mappings not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -141,7 +142,7 @@ export async function loadSurveys(c) {
     el.innerHTML = `
       <div class="section-header mb-2">
         <span class="text-muted">${num(list.length)} survey${list.length !== 1 ? 's' : ''}</span>
-        ${can('CREATE_SURVEY') ? `<button class="btn-primary" id="btn-new-survey"><i class="fa-solid fa-plus"></i> New Survey</button>` : ''}
+        ${can('REGISTER_SURVEY') ? `<button class="btn-primary" id="btn-new-survey"><i class="fa-solid fa-plus"></i> New Survey</button>` : ''}
       </div>
       <div class="text-muted small mb-2">
         <i class="fa-solid fa-circle-info"></i>
@@ -164,14 +165,20 @@ export async function loadSurveys(c) {
                 <td>${num((s.questionDatas || s.questions || []).length)}</td>
                 <td>${isActive ? sb('Active') : sb('Inactive')}</td>
                 <td class="text-right">
-                  ${can('UPDATE_SURVEY') ? `<button class="btn-mini" data-edit-survey="${s.id}">Edit</button>` : ''}
-                  ${isActive && can('DEACTIVATE_SURVEY')
+                  <!-- Edit/Activate/Deactivate hit real SpmApiResource endpoints (editSurvey PUT, and
+                       activateOrDeactivateSurvey POST with command=activate|deactivate) — confirmed via source
+                       parse. Only the gating permission is uncertain: no UPDATE_SURVEY/ACTIVATE_SURVEY/etc. exist
+                       in the 961-code set, so REGISTER_SURVEY (the one real code tied to this resource) is used
+                       as a fallback for all three — confirm against a live server if precise gating matters.
+                       Delete is different: SpmApiResource has no DELETE method at all, so that button is removed
+                       below rather than gated on a fallback permission for an endpoint that doesn't exist. -->
+                  ${can('REGISTER_SURVEY') ? `<button class="btn-mini" data-edit-survey="${s.id}">Edit</button>` : ''}
+                  ${isActive && can('REGISTER_SURVEY')
                     ? `<button class="btn-mini btn-warning" data-deactivate-survey="${s.id}">Deactivate</button>`
                     : ''}
-                  ${!isActive && can('ACTIVATE_SURVEY')
+                  ${!isActive && can('REGISTER_SURVEY')
                     ? `<button class="btn-mini btn-success" data-activate-survey="${s.id}">Activate</button>`
                     : ''}
-                  ${can('DELETE_SURVEY') ? `<button class="btn-mini btn-danger" data-del-survey="${s.id}">Delete</button>` : ''}
                 </td>
               </tr>`;
           }).join('')}</tbody>
@@ -179,7 +186,7 @@ export async function loadSurveys(c) {
         <div class="empty-state">
           <i class="fa-solid fa-clipboard-list"></i>
           <h3>No surveys defined</h3>
-          ${can('CREATE_SURVEY') ? '<div class="text-muted mt-2">Create a survey to start collecting customer feedback.</div>' : ''}
+          ${can('REGISTER_SURVEY') ? '<div class="text-muted mt-2">Create a survey to start collecting customer feedback.</div>' : ''}
         </div>`}`;
 
     el.querySelector('#btn-new-survey')?.addEventListener('click', () =>
@@ -195,7 +202,7 @@ export async function loadSurveys(c) {
         await api.surveysAdmin.activate(b.dataset.activateSurvey);
         toast('success', 'Survey activated', '');
         loadSurveys(c);
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-deactivate-survey]').forEach(b => b.addEventListener('click', async () => {
@@ -204,24 +211,10 @@ export async function loadSurveys(c) {
         await api.surveysAdmin.deactivate(b.dataset.deactivateSurvey);
         toast('success', 'Survey deactivated', '');
         loadSurveys(c);
-      } catch (e) { toast('error', 'Deactivation failed', e.detail?.defaultUserMessage || e.message); }
-    }));
-
-    el.querySelectorAll('[data-del-survey]').forEach(b => b.addEventListener('click', async () => {
-      if (!await modalConfirm({
-        title: 'Delete survey?',
-        message: 'This permanently removes the survey and its question definitions. Responses are preserved.',
-        danger: true,
-        confirmText: 'Delete'
-      })) return;
-      try {
-        await api.surveysAdmin.delete(b.dataset.delSurvey);
-        toast('success', 'Survey deleted', '');
-        loadSurveys(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Deactivation failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Surveys not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Surveys not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 

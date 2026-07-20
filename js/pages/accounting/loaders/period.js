@@ -5,9 +5,10 @@ import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate } from '../../../utils.js';
-import { openFAModal, openProvisioningModal } from '../actions.js';
+import { openFAModal, openProvisioningModal, openProvisioningCategoryModal } from '../actions.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadRunAccruals(c) {
   const el = c.querySelector('#acc-5');
   try {
@@ -26,7 +27,7 @@ export async function loadRunAccruals(c) {
       </div>
 
       <div class="mt-3">
-        ${can('EXECUTE_ACCRUAL') ? `<button class="btn-primary" id="btn-run-accruals">Run Accruals</button>` : ''}
+        ${can('EXECUTE_PERIODICACCRUALACCOUNTING') ? `<button class="btn-primary" id="btn-run-accruals">Run Accruals</button>` : ''}
       </div>
       <div id="acc-run-result" class="mt-3"></div>
 
@@ -53,8 +54,8 @@ export async function loadRunAccruals(c) {
         result.innerHTML = '<div class="msg-banner b-success"><i class="fa-solid fa-check"></i> Accruals completed for ' + escapeHtml(tillDate) + '</div>';
         toast('success', 'Accruals completed', 'Up to ' + tillDate);
       } catch (e) {
-        result.innerHTML = '<div class="text-error">' + escapeHtml(e.detail?.defaultUserMessage || e.message) + '</div>';
-        toast('error', 'Accruals failed', e.detail?.defaultUserMessage || e.message);
+        result.innerHTML = '<div class="text-error">' + escapeHtml(extractFineractError(e)) + '</div>';
+        toast('error', 'Accruals failed', extractFineractError(e));
       }
       btn.disabled = false;
     });
@@ -122,7 +123,7 @@ export async function loadGLClosure(c) {
         });
         toast('success', 'GL period closed', today());
         loadGLClosure(c);
-      } catch (e) { toast('error', 'GL closure failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'GL closure failed', extractFineractError(e)); }
     });
   } catch (e) {
     el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`;
@@ -132,21 +133,23 @@ export async function loadGLClosure(c) {
 export async function loadProvisioning(c) {
   const el = c.querySelector('#acc-7');
   try {
-    const [criteria, entries] = await Promise.all([
+    const [criteria, entries, categories] = await Promise.all([
       api.provisioning.criteria(),
-      api.provisioning.entries().catch(() => [])
+      api.provisioning.entries().catch(() => []),
+      api.provisioningCategory.list().catch(() => [])
     ]);
     const clist = Array.isArray(criteria) ? criteria : [];
     const elist = Array.isArray(entries) ? entries : [];
+    const catlist = Array.isArray(categories) ? categories : [];
 
     el.innerHTML = `
       <div class="section-header mb-2">
         <h3>Provisioning</h3>
         <div>
           <span class="text-muted mr-2">${clist.length} criteria</span>
-          ${elist.length && can('CREATE_PROVISIONINGENTRY') ? `<button class="btn-secondary" id="btn-prov-journal"><i class="fa-solid fa-receipt"></i> Create Journal Entry</button>` : ''}
-          ${can('CREATE_PROVISIONINGENTRY') ? `<button class="btn-secondary" id="btn-prov-entry"><i class="fa-solid fa-plus"></i> Create Provisioning Entry</button>` : ''}
-          ${can('CREATE_PROVISIONINGCRITERIA') ? `<button class="btn-primary" id="btn-prov-new"><i class="fa-solid fa-plus"></i> New Criteria</button>` : ''}
+          ${elist.length && can('CREATE_PROVISIONJOURNALENTRIES') ? `<button class="btn-secondary" id="btn-prov-journal"><i class="fa-solid fa-receipt"></i> Create Journal Entry</button>` : ''}
+          ${can('CREATE_PROVISIONENTRIES') ? `<button class="btn-secondary" id="btn-prov-entry"><i class="fa-solid fa-plus"></i> Create Provisioning Entry</button>` : ''}
+          ${can('CREATE_PROVISIONCRITERIA') ? `<button class="btn-primary" id="btn-prov-new"><i class="fa-solid fa-plus"></i> New Criteria</button>` : ''}
         </div>
       </div>
 
@@ -160,19 +163,43 @@ export async function loadProvisioning(c) {
               <td>${escapeHtml(p.criteriaName || p.name || '—')}</td>
               <td>${escapeHtml(p.createdBy || '—')}</td>
               <td class="text-right">
-                ${can('DELETE_PROVISIONINGCRITERIA') ? `<button class="btn-mini btn-danger" data-del-prov="${p.id}">Delete</button>` : ''}
+                ${can('UPDATE_PROVISIONCRITERIA') ? `<button class="btn-mini" data-edit-prov="${p.id}">Edit</button>` : ''}
+                ${can('DELETE_PROVISIONCRITERIA') ? `<button class="btn-mini btn-danger" data-del-prov="${p.id}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
-        </table>` : '<div class="empty-state-row">No provisioning criteria</div>'}`;
+        </table>` : '<div class="empty-state-row">No provisioning criteria</div>'}
+
+      <div class="section-header mb-2 mt-4">
+        <h3>Provisioning Categories</h3>
+        <div>
+          <span class="text-muted mr-2">${catlist.length} categor${catlist.length === 1 ? 'y' : 'ies'}</span>
+          ${can('CREATE_PROVISIONCATEGORY') ? `<button class="btn-primary" id="btn-pcat-new"><i class="fa-solid fa-plus"></i> New Category</button>` : ''}
+        </div>
+      </div>
+      ${catlist.length ? `
+        <table class="table">
+          <thead><tr><th>Category Name</th><th>Description</th><th></th></tr></thead>
+          <tbody>${catlist.map(cat => `
+            <tr>
+              <td>${escapeHtml(cat.categoryName || cat.name || '—')}</td>
+              <td>${escapeHtml(cat.categoryDescription || cat.description || '—')}</td>
+              <td class="text-right">
+                ${can('UPDATE_PROVISIONCATEGORY') ? `<button class="btn-mini" data-edit-pcat="${cat.id}">Edit</button>` : ''}
+                ${can('DELETE_PROVISIONCATEGORY') ? `<button class="btn-mini btn-danger" data-del-pcat="${cat.id}">Delete</button>` : ''}
+              </td>
+            </tr>`).join('')}</tbody>
+        </table>` : '<div class="empty-state-row">No provisioning categories defined</div>'}`;
 
     el.querySelector('#btn-prov-new')?.addEventListener('click', () => openProvisioningModal(() => loadProvisioning(c)));
+    el.querySelectorAll('[data-edit-prov]').forEach(b => b.addEventListener('click', () =>
+      openProvisioningModal(() => loadProvisioning(c), b.dataset.editProv)));
     el.querySelector('#btn-prov-entry')?.addEventListener('click', async () => {
       if (!await modalConfirm({ title: 'Create provisioning entry?', message: 'For all active loans.', confirmText: 'Create' })) return;
       try {
         await api.provisioning.createEntry({ dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Provisioning entry created', '');
         loadProvisioning(c);
-      } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     el.querySelector('#btn-prov-journal')?.addEventListener('click', async () => {
       const latest = elist[elist.length - 1];
@@ -181,7 +208,7 @@ export async function loadProvisioning(c) {
       try {
         await api.provisioning.createJournal(latest.id);
         toast('success', 'Journal entries created', '');
-      } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     el.querySelectorAll('[data-del-prov]').forEach(b => b.addEventListener('click', async () => {
       if (!await modalConfirm({ title: 'Delete provisioning criteria?', danger: true, confirmText: 'Delete' })) return;
@@ -189,7 +216,19 @@ export async function loadProvisioning(c) {
         await api.provisioning.deleteCriteria(b.dataset.delProv);
         toast('success', 'Deleted', '');
         loadProvisioning(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
+    }));
+    el.querySelector('#btn-pcat-new')?.addEventListener('click', () =>
+      openProvisioningCategoryModal(() => loadProvisioning(c)));
+    el.querySelectorAll('[data-edit-pcat]').forEach(b => b.addEventListener('click', () =>
+      openProvisioningCategoryModal(() => loadProvisioning(c), catlist.find(cat => String(cat.id) === b.dataset.editPcat))));
+    el.querySelectorAll('[data-del-pcat]').forEach(b => b.addEventListener('click', async () => {
+      if (!await modalConfirm({ title: 'Delete provisioning category?', danger: true, confirmText: 'Delete' })) return;
+      try {
+        await api.provisioningCategory.delete(b.dataset.delPcat);
+        toast('success', 'Category deleted', '');
+        loadProvisioning(c);
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
     el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`;
@@ -201,7 +240,7 @@ export async function loadFinancialActivities(c) {
   try {
     const [fa, tpl] = await Promise.all([
       api.financialActivityAccounts.list(),
-      api.financialActivityAccounts.list().catch(() => ({ financialActivityOptions: [] }))
+      api.financialActivityAccounts.template().catch(() => ({ financialActivityOptions: [] }))
     ]);
     const list = Array.isArray(fa) ? fa : [];
     const actOpts = (tpl?.financialActivityOptions || []).map(a => `<option value="${a.id}">${escapeHtml(a.name || a.value || '')}</option>`).join('');
@@ -237,7 +276,7 @@ export async function loadFinancialActivities(c) {
         await api.financialActivityAccounts.delete(b.dataset.delFa);
         toast('success', 'Deleted', '');
         loadFinancialActivities(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
     el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`;

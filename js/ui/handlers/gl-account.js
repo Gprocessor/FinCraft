@@ -16,7 +16,7 @@ export const GlAccountHandlers = {
         glCode: f.glCode,
         type: parseInt(f.type),
         usage: parseInt(f.usage),
-        manualEntries: f.manualEntries === 'on' || f.manualEntries === 'true'
+        manualEntriesAllowed: f.manualEntries === 'on' || f.manualEntries === 'true'
       };
       if (f.parentId) payload.parentId = parseInt(f.parentId);
       if (f.description) payload.description = f.description;

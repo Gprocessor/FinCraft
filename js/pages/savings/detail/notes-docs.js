@@ -6,12 +6,13 @@ import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate } from '../../../utils.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadSavingsNotes(c, id) {
   const wrap = c.querySelector('#sv-notes-wrap');
   wrap.innerHTML = `
     <h3>Notes</h3>
     <div id="sv-note-list"><div class="empty-state-row">Loading…</div></div>
-    ${can('CREATE_NOTE') ? `
+    ${can('CREATE_SAVINGNOTE') ? `
       <div class="mt-3">
         <textarea id="sv-note-input" class="form-control" rows="2" placeholder="Add a note…"></textarea>
         <button class="btn-primary mt-2" id="sv-note-save"><i class="fa-solid fa-plus"></i> Add</button>
@@ -22,7 +23,7 @@ export async function loadSavingsNotes(c, id) {
     const note = inp.value.trim();
     if (!note) return;
     try { await api.notes.create('savings', id, { note }); inp.value = ''; loadSavingsNotes(c, id); toast('success', 'Note added', ''); }
-    catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 
   const listEl = wrap.querySelector('#sv-note-list');
@@ -106,7 +107,7 @@ export async function loadSavingsDocuments(c, id) {
         await api.documents.delete('savingsaccounts', id, b.dataset.docDel);
         toast('success', 'Deleted', '');
         loadSavingsDocuments(c, id);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

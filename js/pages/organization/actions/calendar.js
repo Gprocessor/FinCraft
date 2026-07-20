@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openHolidayModal(officeList, onSuccess) {
   const offCheckboxes = officeList.map(o => `
     <label class="checkbox-row"><input type="checkbox" class="hol-off-chk" value="${o.id}"/> ${escapeHtml(o.name)}</label>`).join('');
@@ -58,6 +59,6 @@ export async function openHolidayModal(officeList, onSuccess) {
       modalEl.remove();
       toast('success', 'Holiday created', name);
       onSuccess();
-    } catch (e) { toast('error', 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Create failed', extractFineractError(e)); }
   });
 }

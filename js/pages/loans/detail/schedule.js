@@ -5,13 +5,14 @@ import { api } from '../../../api.js';
 import { escapeHtml } from '../../../utils.js';
 import { renderScheduleTable } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadSchedule(c, id) {
   const wrap = c.querySelector('#ln-schedule');
   wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
   try {
     const r = await api.loans.schedule(id);
     renderScheduleTable(wrap, r.repaymentSchedule);
-  } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+  } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`; }
 }
 
 export async function loadOriginalSchedule(c, id) {
@@ -25,5 +26,5 @@ export async function loadOriginalSchedule(c, id) {
       return;
     }
     renderScheduleTable(wrap, sched, true);
-  } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+  } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`; }
 }

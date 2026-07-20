@@ -6,12 +6,13 @@ import { can } from '../shared.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadLoanNotes(c, loanId) {
   const wrap = c.querySelector('#ln-notes-wrap');
   wrap.innerHTML = `
     <h3>Notes</h3>
     <div id="ln-note-list"><div class="empty-state-row">Loading…</div></div>
-    ${can('CREATE_NOTE') ? `
+    ${can('CREATE_LOANNOTE') ? `
       <div class="mt-3">
         <textarea id="ln-note-input" class="form-control" rows="2" placeholder="Add a note…"></textarea>
         <button class="btn-primary mt-2" id="ln-note-save"><i class="fa-solid fa-plus"></i> Add Note</button>
@@ -26,7 +27,7 @@ export async function loadLoanNotes(c, loanId) {
       inp.value = '';
       loadLoanNotes(c, loanId);
       toast('success', 'Note added', '');
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 
   const listEl = wrap.querySelector('#ln-note-list');
@@ -111,7 +112,7 @@ export async function loadLoanDocuments(c, loanId) {
         await api.documents.delete('loans', loanId, b.dataset.docDel);
         toast('success', 'Document deleted', '');
         loadLoanDocuments(c, loanId);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

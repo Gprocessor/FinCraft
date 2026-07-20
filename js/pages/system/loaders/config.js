@@ -7,6 +7,7 @@ import { escapeHtml, num, sb } from '../../../utils.js';
 import { extractMCEntityGroup, openCodeValuesModal, openNewCodeModal } from '../actions.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadConfigurations(c) {
   const el = c.querySelector('#sy-0');
   el.innerHTML = '<div class="empty-state-row">Loading configurations…</div>';
@@ -57,11 +58,11 @@ export async function loadConfigurations(c) {
         toast('success', 'Config updated', sw.dataset.cfg + (sw.checked ? ' enabled' : ' disabled'));
       } catch (e) {
         sw.checked = !sw.checked;
-        toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Update failed', extractFineractError(e));
       }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -105,10 +106,10 @@ export async function loadCodes(c) {
         await api.codes.delete(b.dataset.delCode);
         toast('success', 'Code deleted', '');
         loadCodes(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -116,10 +117,10 @@ export async function loadMakerCheckerConfig(c) {
   const el = c.querySelector('#sy-11');
   el.innerHTML = '<div class="empty-state-row">Loading maker-checker tasks…</div>';
   try {
-    const res = await api.makerCheckerTasks.list();
+    const res = await api.permissions.list(true); // GET /permissions?makerCheckerable=true
     const list = Array.isArray(res) ? res : (res?.permissions || []);
 
-    const canEdit = can('UPDATE_PERMISSION') || can('UPDATE_MAKERCHECKERPERMISSIONS');
+    const canEdit = can('UPDATE_USER');
 
     // Group by entity prefix (CLIENT, LOAN, SAVINGS, etc.)
     const groups = {};
@@ -225,14 +226,14 @@ export async function loadMakerCheckerConfig(c) {
       });
 
       try {
-        await api.makerCheckerTasks.update({ permissions });
+        await api.permissions.update({ permissions });
         toast('success', 'Maker-checker configuration saved', '');
         loadMakerCheckerConfig(c);
       } catch (e) {
-        toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Save failed', extractFineractError(e));
       }
     });
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Maker-checker configuration not available on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Maker-checker configuration not available on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

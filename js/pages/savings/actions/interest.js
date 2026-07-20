@@ -5,6 +5,7 @@ import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function openPostInterestAsOnModal(id) {
   const mid = `sv-pi-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -31,7 +32,7 @@ export function openPostInterestAsOnModal(id) {
       el.remove();
       toast('success', 'Interest posted as-on', transactionDate);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
@@ -62,6 +63,6 @@ export function openAnnualFeesModal(id) {
       el.remove();
       toast('success', 'Annual fees applied', '');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Apply failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Apply failed', extractFineractError(e)); }
   });
 }

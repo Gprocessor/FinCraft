@@ -5,6 +5,7 @@ import { api } from '../../../api.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function viewServiceConfig(group, label) {
   const mid = 'svc-' + Date.now();
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -54,7 +55,7 @@ export function viewServiceConfig(group, label) {
     })
     .catch(e => {
       m.querySelector('#svc-cfg-body').innerHTML =
-        `<div class="empty-state-row text-muted">Service not configured: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+        `<div class="empty-state-row text-muted">Service not configured: ${escapeHtml(extractFineractError(e))}</div>`;
     });
 }
 
@@ -167,7 +168,7 @@ export async function openWebhookModal(hookId, onSuccess) {
       toast('success', isEdit ? 'Webhook updated' : 'Webhook created', name);
       onSuccess?.();
     } catch (e) {
-      toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e));
     }
   });
 }

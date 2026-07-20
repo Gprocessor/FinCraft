@@ -7,6 +7,7 @@ import { escapeHtml } from '../../../utils.js';
 import { glSelect, modal, populateGl, v, vb, vf, vi } from '../shared.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openLoanProductModal(productId, onSuccess) {
   const isEdit = !!productId;
   let tpl = {}, existing = {};
@@ -155,7 +156,7 @@ export async function openLoanProductModal(productId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Loan product updated' : 'Loan product created', name);
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }
 
@@ -240,6 +241,6 @@ export async function openFloatingRateModal(rateId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Floating rate updated' : 'Floating rate created', name);
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }

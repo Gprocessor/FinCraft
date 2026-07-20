@@ -7,6 +7,7 @@ import { confirm as modalConfirm, toast } from '../../ui.js';
 import { escapeHtml, fmtDate, num } from '../../utils.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadCheckerInbox(c) {
   const el = c.querySelector('#tk-0');
   el.innerHTML = `<div class="empty-state-row">Loading checker inbox…</div>`;
@@ -34,9 +35,13 @@ export async function loadCheckerInbox(c) {
     const topAction = Object.entries(actionGroups).sort((a, b) => b[1] - a[1])[0];
     const topEntity = Object.entries(entityGroups).sort((a, b) => b[1] - a[1])[0];
 
-    const canApprove = can('CHECKER_APPROVE') || can('CHECKER_SUPER_USER');
-    const canReject  = can('CHECKER_REJECT')  || can('CHECKER_SUPER_USER');
-    const canDelete  = can('CHECKER_DELETE')  || can('CHECKER_SUPER_USER');
+    // No generic CHECKER_APPROVE/CHECKER_REJECT/CHECKER_DELETE permission exists in Fineract — real maker-checker
+    // approval is granted per originating action (e.g. approving a pending "create loan" task requires the specific
+    // CREATE_LOAN_CHECKER permission, not a blanket checker-approve code). CHECKER_SUPER_USER is the only real
+    // permission that bypasses all of them, so it's the only gate applied here (matches the router.js page gate).
+    const canApprove = can('CHECKER_SUPER_USER');
+    const canReject  = can('CHECKER_SUPER_USER');
+    const canDelete  = can('CHECKER_SUPER_USER');
     const showCheckboxes = canApprove || canReject || canDelete;
     const colspan = showCheckboxes ? 7 : 6;
 
@@ -152,7 +157,7 @@ export async function loadCheckerInbox(c) {
 
     draw(list);
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -172,7 +177,7 @@ function wireRowActions(c, el) {
       if (task) openTaskDetailModal(task);
       else toast('warn', 'Task not found', '');
     } catch (e) {
-      toast('error', 'Failed to load', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Failed to load', extractFineractError(e));
     }
   }));
 
@@ -183,7 +188,7 @@ function wireRowActions(c, el) {
       b.closest('tr')?.remove();
       toast('success', 'Approved', `Task #${b.dataset.approve}`);
     } catch (e) {
-      toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Approval failed', extractFineractError(e));
     }
   }));
 
@@ -200,7 +205,7 @@ function wireRowActions(c, el) {
       b.closest('tr')?.remove();
       toast('warn', 'Rejected', `Task #${b.dataset.reject}`);
     } catch (e) {
-      toast('error', 'Rejection failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Rejection failed', extractFineractError(e));
     }
   }));
 
@@ -217,7 +222,7 @@ function wireRowActions(c, el) {
       b.closest('tr')?.remove();
       toast('info', 'Task cancelled', `Task #${b.dataset.cancel}`);
     } catch (e) {
-      toast('error', 'Cancel failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Cancel failed', extractFineractError(e));
     }
   }));
 }

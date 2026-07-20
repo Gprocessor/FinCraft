@@ -4,6 +4,7 @@ import { api, configureAPI } from './api.js';
 import { store } from './store.js';
 import { FINERACT_DEMO } from './config.js';
 
+import { extractFineractError } from './ui/dom-helpers.js';
 const LOGIN_ID = 'loginScreen';
 const SHELL_ID = 'appShell';
 
@@ -125,6 +126,23 @@ export async function login({ serverUrl, tenantId, username, password }) {
   });
   store.set('perms', authPerms);
 
+  // Fineract flags accounts that must set a new password before doing
+  // anything else — first login, or an admin-forced reset, or an expired
+  // password policy. The token issued in this state is only valid for the
+  // password-change endpoint, so we must stop here (before 2FA or any other
+  // authenticated call) and force the change-password step. The caller
+  // (renderLogin) catches PASSWORD_RESET_REQUIRED and shows that step;
+  // completeMustChangePassword() below resumes once it succeeds.
+  if (authResponse.shouldRenewPassword) {
+    throw Object.assign(new Error('PASSWORD_RESET_REQUIRED'), { code: 'PASSWORD_RESET_REQUIRED' });
+  }
+
+  await _continueAfterCredentials({ serverUrl, tenantId, username, authPerms });
+}
+
+/** Shared tail of the sign-in flow, run once credentials are fully accepted
+ *  (i.e. after any forced password change), but before 2FA/finishLogin. */
+async function _continueAfterCredentials({ serverUrl, tenantId, username, authPerms }) {
   // If the tenant has two-factor auth enabled, stop here and require OTP
   // verification before making any further authenticated calls or completing
   // sign-in. The caller (renderLogin) catches OTP_REQUIRED and shows the OTP
@@ -134,6 +152,22 @@ export async function login({ serverUrl, tenantId, username, password }) {
   }
 
   await finishLogin({ serverUrl, tenantId, username, authPerms });
+}
+
+/**
+ * Called once the user has successfully set a new password in response to a
+ * PASSWORD_RESET_REQUIRED login. Resumes the normal sign-in flow (2FA check,
+ * then finishLogin) using the session already stored by login().
+ */
+export async function completeMustChangePassword({ password, repeatPassword }) {
+  await changePassword({ password, repeatPassword });
+  const auth = store.get('auth') || {};
+  await _continueAfterCredentials({
+    serverUrl: auth.serverUrl,
+    tenantId:  auth.tenantId,
+    username:  auth.username,
+    authPerms: store.get('perms') || []
+  });
 }
 
 /**
@@ -219,6 +253,13 @@ export function canDo(code) { return store.hasPermission(code); }
 /* Logout                                                              */
 /* ------------------------------------------------------------------ */
 export function logout() {
+  // Fineract's docs: "Two factor access tokens should be invalidated on
+  // logout." Best-effort — fire it off but never let a network hiccup
+  // block the user from actually signing out.
+  const auth = store.get('auth');
+  if (auth?.tfaToken) {
+    api.twoFactor.invalidate(auth.tfaToken).catch(() => {});
+  }
   _clearSession();
   showLogin();
 }
@@ -243,8 +284,14 @@ export async function changePassword({ password, repeatPassword }) {
 /* ------------------------------------------------------------------ */
 /* Forgot password                                                     */
 /* ------------------------------------------------------------------ */
-export async function forgotPassword({ username, email }) {
+export async function forgotPassword({ serverUrl, tenantId, username, email }) {
   if (!username && !email) throw new Error('Provide username or email');
+  // The user may not have successfully logged in yet (that's the whole point
+  // of "forgot password"), so the API client might not be configured with a
+  // server/tenant at all. Without this, the request silently falls back to a
+  // relative URL and hits whatever origin FinCraft itself is hosted on
+  // (e.g. GitHub Pages), which returns 405 since it's static hosting.
+  if (serverUrl || tenantId) configureAPI({ serverUrl, tenantId });
   return api.password.forgot({ username, email });
 }
 
@@ -292,10 +339,10 @@ function showApp() {
   import('./ui.js').then(m => {
     m.mountAppShell();
     import('./router.js').then(r => {
-      r.initRouter();
       if (!location.hash || location.hash === '#') {
         r.navigate(store.get('lastPage') || 'dashboard');
       }
+      r.initRouter();
     });
   });
 }
@@ -402,7 +449,8 @@ function renderLogin(container, banner) {
     try {
       await login({ serverUrl, tenantId, username, password });
     } catch (e) {
-      if (e.code === 'OTP_REQUIRED')  { setBusy(false); return renderOtpStep(container); }
+      if (e.code === 'OTP_REQUIRED')             { setBusy(false); return renderOtpStep(container); }
+      if (e.code === 'PASSWORD_RESET_REQUIRED')  { setBusy(false); return renderMustChangePasswordStep(container); }
       if (e.status === 401)        showErr('Invalid username or password.');
       else if (e.code === 'TIMEOUT') showErr('Server did not respond. Check the URL and try again.');
       else                          showErr(e.message || 'Sign in failed.');
@@ -456,13 +504,16 @@ function renderLogin(container, banner) {
 
   forgotLink.addEventListener('click', async (e) => {
     e.preventDefault();
+    const serverUrl = container.querySelector('#l-server').value.trim().replace(/\/$/, '');
+    const tenantId  = container.querySelector('#l-tenant').value.trim() || 'default';
     const u = container.querySelector('#l-user').value.trim();
+    if (!serverUrl) return showErr('Enter the server URL first, then click "Forgot password?".');
     if (!u) return showErr('Enter your username first, then click "Forgot password?".');
     try {
-      await forgotPassword({ username: u });
+      await forgotPassword({ serverUrl, tenantId, username: u });
       showOk('If the account exists, a reset has been initiated.');
     } catch (ex) {
-      showErr(ex.detail?.defaultUserMessage || ex.message || 'Could not initiate password reset.');
+      showErr(extractFineractError(ex) || 'Could not initiate password reset.');
     }
   });
 }
@@ -516,7 +567,7 @@ async function renderOtpStep(container) {
       await requestOtp(deliveryMethod);
       showInfo('A verification code has been sent. Enter it below.');
     } catch (ex) {
-      showErr(ex.detail?.defaultUserMessage || ex.message || 'Could not send verification code.');
+      showErr(extractFineractError(ex) || 'Could not send verification code.');
     } finally {
       sendBtn.disabled = false;
     }
@@ -531,12 +582,75 @@ async function renderOtpStep(container) {
       const tfaToken = result?.token ?? result?.authenticationToken ?? null;
       await completeTwoFactorLogin(tfaToken);
     } catch (ex) {
-      showErr(ex.detail?.defaultUserMessage || ex.message || 'Invalid or expired code.');
+      showErr(extractFineractError(ex) || 'Invalid or expired code.');
       verifyBtn.disabled = false;
     }
   });
 
   codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') verifyBtn.click(); });
+
+  backLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    _clearSession();
+    renderLogin(container);
+  });
+}
+
+/** Renders the forced password-change step. Shown after login() throws
+ *  PASSWORD_RESET_REQUIRED (first login, admin-forced reset, or an expired
+ *  password policy). */
+function renderMustChangePasswordStep(container) {
+  container.innerHTML = `
+    <div class="login-wrap active" style="width:100%;height:100vh;display:flex;align-items:center;justify-content:center">
+      <div class="login-form-box" style="max-width:420px">
+        <div class="login-form-title">Set a new password</div>
+        <div class="login-form-sub">Your password has expired or must be changed before you can continue.</div>
+        <div id="mcp-error" class="msg-banner b-danger mb-4" style="display:none"></div>
+        <div class="form-group mb-3"><label class="form-label">New password</label>
+          <input id="mcp-new" class="form-control" type="password" autocomplete="new-password"/></div>
+        <div class="form-group mb-4"><label class="form-label">Confirm new password</label>
+          <input id="mcp-confirm" class="form-control" type="password" autocomplete="new-password"/></div>
+        <button class="btn btn-primary btn-full" id="mcp-btn" type="button">
+          <i class="fa-solid fa-key"></i> Set password &amp; sign in
+        </button>
+        <div class="login-footer mt-3">
+          <a href="#" id="mcp-back" class="link" style="font-size:12px">&larr; Back to sign in</a>
+        </div>
+      </div>
+    </div>`;
+
+  const err       = container.querySelector('#mcp-error');
+  const newPass   = container.querySelector('#mcp-new');
+  const confirm   = container.querySelector('#mcp-confirm');
+  const btn       = container.querySelector('#mcp-btn');
+  const backLink  = container.querySelector('#mcp-back');
+
+  const showErr = (msg) => { err.style.display = ''; err.textContent = msg; };
+  const setBusy = (on) => {
+    btn.disabled = on;
+    btn.innerHTML = on
+      ? '<i class="fa-solid fa-circle-notch fa-spin"></i> Setting password…'
+      : '<i class="fa-solid fa-key"></i> Set password &amp; sign in';
+  };
+
+  const submit = async () => {
+    const password = newPass.value;
+    const repeatPassword = confirm.value;
+    if (!password || !repeatPassword) return showErr('Enter and confirm your new password.');
+    if (password !== repeatPassword) return showErr('Passwords do not match.');
+    err.style.display = 'none';
+    setBusy(true);
+    try {
+      await completeMustChangePassword({ password, repeatPassword });
+    } catch (ex) {
+      if (ex.code === 'OTP_REQUIRED') { setBusy(false); return renderOtpStep(container); }
+      showErr(extractFineractError(ex) || 'Could not set your new password.');
+      setBusy(false);
+    }
+  };
+
+  btn.addEventListener('click', submit);
+  confirm.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
 
   backLink.addEventListener('click', (e) => {
     e.preventDefault();

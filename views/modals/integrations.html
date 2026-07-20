@@ -1,0 +1,216 @@
+<!-- FinCraft modal partials — integrations domain. Fetched and concatenated at
+     runtime by js/ui/shell.js alongside the other views/modals/*.html files (mirrors
+     the js/api/integrations.js domain split). All forms have name= attrs and
+     data-populate= hooks. -->
+
+<!-- Account Transfer -->
+<div id="newTransferModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Account Transfer</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newTransferForm">
+        <label><span class="form-label">From office *</span>
+          <select name="fromOfficeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">To office *</span>
+          <select name="toOfficeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">From client ID *</span>
+          <input name="fromClientId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">From account ID *</span>
+          <input name="fromAccountId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">From account type</span>
+          <select name="fromAccountType" class="form-control">
+            <option value="2">Savings</option><option value="1">Loan</option></select></label>
+        <label><span class="form-label">To client ID *</span>
+          <input name="toClientId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">To account ID *</span>
+          <input name="toAccountId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">To account type</span>
+          <select name="toAccountType" class="form-control">
+            <option value="2">Savings</option><option value="1">Loan</option></select></label>
+        <label><span class="form-label">Amount *</span>
+          <input name="transferAmount" type="number" min="0.01" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Date *</span>
+          <input name="transferDate" type="date" class="form-control" required/></label>
+        <label class="full"><span class="form-label">Description</span>
+          <input name="transferDescription" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-transfer"><i class="fa-solid fa-check"></i> Transfer</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Standing Instruction -->
+<div id="newSIModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Standing Instruction</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newSIForm">
+        <label class="full"><span class="form-label">Instruction name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">From client ID *</span>
+          <input name="fromClientId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">From account ID *</span>
+          <input name="fromAccountId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">From account type</span>
+          <select name="fromAccountType" class="form-control">
+            <option value="2">Savings</option><option value="1">Loan</option></select></label>
+        <label><span class="form-label">To client ID *</span>
+          <input name="toClientId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">To account ID *</span>
+          <input name="toAccountId" type="number" class="form-control" required/></label>
+        <label><span class="form-label">To account type</span>
+          <select name="toAccountType" class="form-control">
+            <option value="2">Savings</option><option value="1">Loan</option></select></label>
+        <label><span class="form-label">Amount *</span>
+          <input name="amount" type="number" min="0.01" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Transfer type</span>
+          <select name="transferType" class="form-control">
+            <option value="1">Account Transfer</option>
+            <option value="2">Loan Repayment</option></select></label>
+        <label><span class="form-label">Valid from *</span>
+          <input name="validFrom" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Valid till</span>
+          <input name="validTill" type="date" class="form-control"/></label>
+        <label><span class="form-label">Recurrence type *</span>
+          <select name="recurrenceType" class="form-control" required>
+            <option value="1">Fixed</option><option value="2">Variable</option></select></label>
+        <label><span class="form-label">Recurrence frequency</span>
+          <select name="recurrenceFrequency" class="form-control">
+            <option value="1">Daily</option>
+            <option value="2">Weekly</option>
+            <option value="3">Monthly</option>
+            <option value="4">Yearly</option></select></label>
+        <label><span class="form-label">Every (interval)</span>
+          <input name="recurrenceInterval" type="number" min="1" value="1" class="form-control"/></label>
+        <label><span class="form-label">On month day</span>
+          <input name="recurrenceOnMonthDay" type="number" min="1" max="31" class="form-control"/></label>
+        <label class="full"><span class="form-label">Instruction type</span>
+          <select name="instructionType" class="form-control">
+            <option value="1">Fixed</option><option value="2">Best effort (partial allowed)</option></select></label>
+        <label><span class="form-label">Priority</span>
+          <select name="priority" class="form-control">
+            <option value="1">Urgent</option><option value="2">High</option>
+            <option value="3">Medium</option><option value="4">Low</option></select></label>
+        <label><span class="form-label">Status</span>
+          <select name="status" class="form-control">
+            <option value="1">Active</option><option value="2">Disabled</option></select></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-si"><i class="fa-solid fa-check"></i> Create Instruction</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remittance Stepper -->
+<!-- Remittance Stepper -->
+<div id="remittanceModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <h3 class="modal-title">Send Remittance</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="stepper">
+        <div class="step-item"><div class="step-circle active">1</div><div class="step-label active">Sender</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle">2</div><div class="step-label">Beneficiary</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle">3</div><div class="step-label">Transfer</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-circle">4</div><div class="step-label">Confirm</div></div>
+      </div>
+
+      <!-- Pane 1: Sender -->
+      <div data-remit-pane="1">
+        <div class="form-grid fg-2">
+          <label class="fg-span"><span class="form-label">Search sender client *</span>
+            <div class="search-field">
+              <input class="form-control client-search" placeholder="Type client name…" autocomplete="off"/>
+              <div class="client-results search-dropdown" style="display:none"></div>
+            </div>
+          </label>
+          <label class="fg-span"><span class="form-label">Source savings account *</span>
+            <select class="form-control account-select"><option value="">Pick a client first…</option></select>
+          </label>
+        </div>
+      </div>
+
+      <!-- Pane 2: Beneficiary -->
+      <div data-remit-pane="2" style="display:none">
+        <div class="form-grid fg-2">
+          <label class="fg-span"><span class="form-label">Search beneficiary client *</span>
+            <div class="search-field">
+              <input class="form-control client-search" placeholder="Type client name…" autocomplete="off"/>
+              <div class="client-results search-dropdown" style="display:none"></div>
+            </div>
+          </label>
+          <label class="fg-span"><span class="form-label">Destination savings account *</span>
+            <select class="form-control account-select"><option value="">Pick a client first…</option></select>
+          </label>
+          <label><span class="form-label">Country</span>
+            <select class="form-control beneficiary-country">
+              <option value="">— Select —</option>
+              <option>Nigeria</option><option>Ghana</option><option>Kenya</option>
+              <option>South Africa</option><option>United Kingdom</option><option>United States</option>
+            </select>
+          </label>
+          <label><span class="form-label">Address</span>
+            <input class="form-control beneficiary-address" placeholder="Optional"/>
+          </label>
+        </div>
+      </div>
+
+      <!-- Pane 3: Transfer details -->
+      <div data-remit-pane="3" style="display:none">
+        <div class="form-grid fg-2">
+          <label><span class="form-label">Amount *</span>
+            <input type="number" min="0.01" step="0.01" class="form-control transfer-amount" placeholder="0.00"/>
+          </label>
+          <label><span class="form-label">Transfer date *</span>
+            <input type="date" class="form-control transfer-date"/>
+          </label>
+          <label><span class="form-label">Source currency</span>
+            <select class="form-control transfer-source-currency">
+              <option>USD</option><option>NGN</option><option>EUR</option><option>GBP</option>
+            </select>
+          </label>
+          <label><span class="form-label">Destination currency</span>
+            <select class="form-control transfer-dest-currency">
+              <option>USD</option><option>GBP</option><option>GHS</option><option>KES</option><option>NGN</option>
+            </select>
+          </label>
+          <label><span class="form-label">Purpose</span>
+            <select class="form-control transfer-purpose">
+              <option value="">— Select —</option>
+              <option>Family support</option><option>Education</option><option>Business</option>
+              <option>Medical</option><option>Investment</option><option>Other</option>
+            </select>
+          </label>
+          <label class="fg-span"><span class="form-label">Description (optional)</span>
+            <input class="form-control transfer-description" placeholder="Internal note…"/>
+          </label>
+        </div>
+      </div>
+
+      <!-- Pane 4: Review (rendered dynamically by remit.js) -->
+      <div data-remit-pane="4" style="display:none">
+        <div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin empty-state-icon"></i><h3>Preparing review…</h3></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-action="remit-back"><i class="fa-solid fa-arrow-left"></i> Back</button>
+      <button class="btn-secondary" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="remit-next">
+        <i class="fa-solid fa-arrow-right"></i> Continue
+      </button>
+    </div>
+  </div>
+</div>
+

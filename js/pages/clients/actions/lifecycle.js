@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openEditClientModal(cl, onSuccess) {
   const mid = `cl-edit-modal-${Date.now()}`;
   const isEntity = cl.legalForm?.id === 2;
@@ -52,7 +53,7 @@ export async function openEditClientModal(cl, onSuccess) {
       el.remove();
       toast('success', 'Client updated', cl.displayName);
       onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -100,7 +101,7 @@ export async function openCloseClientModal(id) {
       el.remove();
       toast('success', 'Client closed', `#${id}`);
       import('../../../router.js').then(r => r.navigate('clients'));
-    } catch (e) { toast('error', 'Close failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Close failed', extractFineractError(e)); }
   });
 }
 
@@ -147,7 +148,7 @@ export async function openRejectClientModal(id) {
       el.remove();
       toast('success', 'Application rejected', '');
       import('../../../router.js').then(r => r.navigate('clients'));
-    } catch (e) { toast('error', 'Reject failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Reject failed', extractFineractError(e)); }
   });
 }
 
@@ -192,7 +193,7 @@ export async function openTransferModal(id, displayName) {
       el.remove();
       toast('success', 'Transfer proposed', 'Awaiting acceptance at destination office');
       import('../../../router.js').then(r => r.navigate('clients'));
-    } catch (e) { toast('error', 'Transfer failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Transfer failed', extractFineractError(e)); }
   });
 }
 
@@ -230,6 +231,6 @@ export async function openAssignStaffModal(id, cl) {
       el.remove();
       toast('success', 'Staff updated', '');
       import('../../../router.js').then(r => r.navigate('client-detail', { id }));
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }

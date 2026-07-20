@@ -1,0 +1,33 @@
+# FinCraft · deploy/docker-compose.birt.yml
+#
+# Overlay for BIRT reporting (openMF/mifos-reporting-plugin). ON by default —
+# merged in by fincraft-autoupdate.sh whenever ENABLE_BIRT_REPORTING=true,
+# which is .env.example's shipped default, so reporting comes up as part of
+# a normal deploy. Easy to turn off (set ENABLE_BIRT_REPORTING=false) because
+# the plugin's own README lists its Fineract-version compatibility as "TBD" —
+# see .env.example for the non-fatal build-failure fallback behavior.
+#
+# Manual use:
+#   docker compose -f docker-compose.yml -f docker-compose.birt.yml up -d --build
+#
+# Prerequisite: reporting/plugin-libs/ must already contain the built plugin
+# jars — run build-birt-plugin.sh (or setup-birt-reporting.sh for the full
+# interactive walkthrough with the smoke test) before bringing this up.
+
+services:
+  fineract:
+    build:
+      context: reporting
+      dockerfile: Dockerfile.fineract-birt
+      args:
+        BASE_IMAGE: ${FINERACT_IMAGE}
+    image: fincraft-fineract-birt:latest
+    environment:
+      MIFOS_BIRT_REPORTS_LOCALE: en
+      MIFOS_BIRT_REPORTS_PATH: /app/birt/reports
+      MIFOS_BIRT_REPORTS_FONTS_PATH: /app/birt/fonts
+      MIFOS_BIRT_REPORTS_FONTS_CONFIG_PATH: /app/birt/config
+    volumes:
+      - ./reporting/data/reports:/app/birt/reports
+      - ./reporting/data/fonts:/app/birt/fonts
+      - ./reporting/data/config:/app/birt/config

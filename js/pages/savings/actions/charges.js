@@ -6,6 +6,43 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmt } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
+export async function openEditSavingsChargeModal(savingsId, chargeId, onSuccess) {
+  let charge = null;
+  try { charge = await api.savings.getCharge(savingsId, chargeId); } catch (e) {
+    toast('error', 'Failed to load charge', extractFineractError(e)); return;
+  }
+  const mid = `sv-editcharge-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Edit Charge</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <div class="text-muted mb-2">${escapeHtml(charge?.name || '—')}</div>
+          <label>Amount * <input type="number" step="0.01" id="esc-amount" class="form-control" value="${charge?.amount ?? charge?.amountOrPercentage ?? ''}" required/></label>
+          <label class="mt-2">Due date <input type="date" id="esc-due" class="form-control" value="${charge?.dueDate ? (Array.isArray(charge.dueDate) ? charge.dueDate.join('-') : charge.dueDate) : ''}"/></label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="esc-save">Save</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#esc-save').addEventListener('click', async () => {
+    const amount = parseFloat(el.querySelector('#esc-amount').value);
+    const dueDate = el.querySelector('#esc-due').value;
+    if (!isFinite(amount)) { toast('warn', 'Enter a valid amount', ''); return; }
+    const payload = { amount, dateFormat: DATE_FORMAT, locale: LOCALE };
+    if (dueDate) payload.dueDate = dueDate;
+    try {
+      await api.savings.updateCharge(savingsId, chargeId, payload);
+      el.remove(); toast('success', 'Charge updated', ''); onSuccess();
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
+  });
+}
+
 export async function openApplySavingsChargeModal(id, onSuccess) {
   let charges = [];
   try {
@@ -52,7 +89,7 @@ export async function openApplySavingsChargeModal(id, onSuccess) {
       el.remove();
       toast('success', 'Charge applied', '');
       onSuccess();
-    } catch (e) { toast('error', 'Apply failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Apply failed', extractFineractError(e)); }
   });
 }
 
@@ -86,6 +123,6 @@ export async function openPaySavingsChargeModal(id, chargeId, onSuccess) {
       el.remove();
       toast('success', 'Charge paid', '');
       onSuccess();
-    } catch (e) { toast('error', 'Payment failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Payment failed', extractFineractError(e)); }
   });
 }

@@ -1,0 +1,41 @@
+<!-- FinCraft modal partials — shares domain. Fetched and concatenated at
+     runtime by js/ui/shell.js alongside the other views/modals/*.html files (mirrors
+     the js/api/shares.js domain split). All forms have name= attrs and
+     data-populate= hooks. -->
+
+<!-- New Share Account -->
+<div id="newShareModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Share Account</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newShareForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="shClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="shClientId"/>
+            <div id="shClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">Share product *</span>
+          <select name="productId" class="form-control" id="shareProductSel" required>
+            <option value="">Select product…</option></select></label>
+        <label><span class="form-label">Requested shares *</span>
+          <input name="requestedShares" type="number" min="1" class="form-control" required/></label>
+        <label><span class="form-label">Unit price *</span>
+          <input name="unitPrice" type="number" min="0.01" step="0.01" class="form-control" required placeholder="Share price per unit"/></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
+        <label class="full form-check" style="align-items:center">
+          <input type="checkbox" name="autoApproveActivate" checked/> <span>Also approve &amp; activate immediately</span></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-share"><i class="fa-solid fa-check"></i> Submit</button>
+    </div>
+  </div>
+</div>
+

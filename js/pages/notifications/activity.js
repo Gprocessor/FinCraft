@@ -9,6 +9,7 @@ import { openAuditDetailModal } from './audit.js';
 import { buildEntityLink } from './feed.js';
 import { timeAgo } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadMyActivity(c) {
   const el = c.querySelector('#nt-2');
   el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin empty-state-icon"></i><h3>Loading…</h3></div>';
@@ -126,7 +127,7 @@ export async function loadMyActivity(c) {
       <div class="empty-state">
         <i class="fa-solid fa-triangle-exclamation empty-state-icon"></i>
         <h3>Failed to load activity</h3>
-        <p>${escapeHtml(e.detail?.defaultUserMessage || e.message || '')}</p>
+        <p>${escapeHtml(extractFineractError(e) || '')}</p>
       </div>`;
   }
 }

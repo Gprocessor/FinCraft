@@ -3,10 +3,11 @@
 
 import { api } from '../../../api.js';
 import { can } from '../shared.js';
-import { escapeHtml, fmtDate, num, sb } from '../../../utils.js';
+import { escapeHtml, num, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openSetBusinessDateModal, openWebhookModal, viewServiceConfig } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadExternalServices(c) {
   const el = c.querySelector('#sy-5');
 
@@ -56,8 +57,8 @@ export async function loadCOB(c) {
     const cfgs = cfgRes.status === 'fulfilled' ? cfgRes.value : null;
     const cfgList = Array.isArray(cfgs) ? cfgs : (cfgs?.businessSteps || []);
 
-    const canCatchUp = can('CATCHUP_LOAN_COB') || can('EXECUTE_JOB');
-    const canSetDate = can('UPDATE_BUSINESSDATE');
+    const canCatchUp = can('EXECUTEJOB_SCHEDULER'); // LoanCOBCatchUpApiResource has no documented permission requirement in Fineract source at all
+    const canSetDate = can('UPDATE_BUSINESS_DATE');
 
     const dateDisplay = date
       ? escapeHtml(String(date.date || date.businessDate || JSON.stringify(date)))
@@ -120,13 +121,13 @@ export async function loadCOB(c) {
         await api.cob.catchUp();
         toast('success', 'COB catch-up triggered', 'Processing asynchronously');
       } catch (e) {
-        toast('error', 'COB catch-up failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'COB catch-up failed', extractFineractError(e));
       }
     });
 
     el.querySelector('#cob-set-date')?.addEventListener('click', () => openSetBusinessDateModal());
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -196,11 +197,11 @@ export async function loadHooks(c) {
         toast('success', 'Webhook deleted', '');
         loadHooks(c);
       } catch (e) {
-        toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Delete failed', extractFineractError(e));
       }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -208,19 +209,12 @@ export async function loadExternalEvents(c) {
   const el = c.querySelector('#sy-10');
   el.innerHTML = '<div class="empty-state-row">Loading external event configuration…</div>';
   try {
-    const [eventsRes, configRes] = await Promise.allSettled([
-      api.externalEvents.list({ limit: 50 }),
-      api.externalEvents.configurations()
-    ]);
+    // FIXLOG #3: externalEvents.list() removed — no public Fineract route backs it.
+    const configRes = await api.externalEvents.configurations().catch(() => null);
 
-    const recentEvents = eventsRes.status === 'fulfilled'
-      ? (Array.isArray(eventsRes.value) ? eventsRes.value : (eventsRes.value?.pageItems || []))
-      : [];
-    const configList = configRes.status === 'fulfilled'
-      ? (Array.isArray(configRes.value) ? configRes.value : (configRes.value?.externalEventConfiguration || []))
-      : [];
+    const configList = Array.isArray(configRes) ? configRes : (configRes?.externalEventConfiguration || []);
 
-    const canEdit = can('UPDATE_EXTERNALEVENT_CONFIGURATION');
+    const canEdit = can('UPDATE_EXTERNAL_EVENT_CONFIGURATION');
 
     el.innerHTML = `
       <div class="section-header mb-2">
@@ -255,22 +249,7 @@ export async function loadExternalEvents(c) {
         </table>
 
         ${canEdit ? `<div class="mt-3"><button class="btn-primary" id="ee-save">Save Changes</button></div>` : ''}
-      ` : '<div class="empty-state-row">No event configurations available</div>'}
-
-      <h3 class="mt-4">Recent Events (last 50)</h3>
-      ${recentEvents.length ? `
-        <table class="table table-compact">
-          <thead><tr>
-            <th>ID</th><th>Type</th><th>Status</th><th>Created</th>
-          </tr></thead>
-          <tbody>${recentEvents.slice(0, 50).map(e => `
-            <tr>
-              <td>#${e.id || '—'}</td>
-              <td>${escapeHtml(e.type || e.eventType || '—')}</td>
-              <td>${escapeHtml(e.status || e.eventStatus || '—')}</td>
-              <td>${fmtDate(e.createdAt || e.creationDate) || '—'}</td>
-            </tr>`).join('')}</tbody>
-        </table>` : '<div class="empty-state-row">No recent events recorded</div>'}`;
+      ` : '<div class="empty-state-row">No event configurations available</div>'}`;
 
     el.querySelector('#ee-search')?.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase().trim();
@@ -304,10 +283,10 @@ export async function loadExternalEvents(c) {
         toast('success', 'Event configuration saved', '');
         loadExternalEvents(c);
       } catch (e) {
-        toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Save failed', extractFineractError(e));
       }
     });
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">External events not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">External events not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

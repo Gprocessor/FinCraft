@@ -7,6 +7,7 @@ import { toast } from '../../ui.js';
 import { escapeHtml, fmt, fmtDate } from '../../utils.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadLoanApprovals(c) {
   const el = c.querySelector('#tk-1');
   el.innerHTML = '<div class="empty-state-row">Loading loan approvals…</div>';
@@ -55,12 +56,12 @@ export async function loadLoanApprovals(c) {
           b.closest('tr')?.remove();
           toast('success', 'Loan approved', '#' + b.dataset.loanApprove);
         } catch (e) {
-          toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message);
+          toast('error', 'Approval failed', extractFineractError(e));
         }
       });
     });
   } catch (e) {
-    el.innerHTML = '<div class="text-error">' + escapeHtml(e.detail?.defaultUserMessage || e.message) + '</div>';
+    el.innerHTML = '<div class="text-error">' + escapeHtml(extractFineractError(e)) + '</div>';
   }
 }
 
@@ -106,12 +107,12 @@ export async function loadClientApprovals(c) {
           b.closest('tr')?.remove();
           toast('success', 'Client activated', '#' + b.dataset.clientActivate);
         } catch (e) {
-          toast('error', 'Failed', e.detail?.defaultUserMessage || e.message);
+          toast('error', 'Failed', extractFineractError(e));
         }
       });
     });
   } catch (e) {
-    el.innerHTML = '<div class="text-error">' + escapeHtml(e.detail?.defaultUserMessage || e.message) + '</div>';
+    el.innerHTML = '<div class="text-error">' + escapeHtml(extractFineractError(e)) + '</div>';
   }
 }
 

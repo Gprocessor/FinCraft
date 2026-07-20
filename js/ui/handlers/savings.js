@@ -20,10 +20,30 @@ export const SavingsHandlers = {
       if (f.nominalAnnualInterestRate) payload.nominalAnnualInterestRate = parseFloat(f.nominalAnnualInterestRate);
       if (f.externalId) payload.externalId = f.externalId;
 
+      const autoApproveActivate = f.autoApproveActivate === 'on' || f.autoApproveActivate === 'true';
+
       setSubmitting(btn, true);
       try {
         const r = await api.savings.create(payload);
-        toast('success', 'Savings application submitted', `#${r.savingsId || r.resourceId}`);
+        const id = r.savingsId || r.resourceId;
+        let statusMsg = 'Savings application submitted';
+        if (autoApproveActivate && id) {
+          try {
+            await api.savings.approve(id, { approvedOnDate: f.submittedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+            try {
+              await api.savings.activate(id, { activatedOnDate: f.submittedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+              statusMsg = 'Savings account created, approved & activated';
+            } catch (actErr) {
+              statusMsg = 'Created & approved, but activation failed';
+              toast('warn', statusMsg, extractFineractError(actErr));
+              statusMsg = null;
+            }
+          } catch (appErr) {
+            toast('warn', 'Created, but approval failed', extractFineractError(appErr));
+            statusMsg = null;
+          }
+        }
+        if (statusMsg) toast('success', statusMsg, `#${id}`);
         closeModal('newSavingsModal');
         document.dispatchEvent(new CustomEvent('fc:reload'));
       } catch (e) {

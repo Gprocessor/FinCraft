@@ -6,6 +6,7 @@ import { api } from '../../../api.js';
 import { escapeHtml } from '../../../utils.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function openChargeOffModal(id) {
   openSimpleLoanCmdModal({ id, command: 'chargeOff', label: 'Charge Off Loan', dateField: 'transactionDate' });
 }
@@ -66,6 +67,6 @@ if (methodName && typeof api.loans[methodName] === 'function') {
       el.remove();
       toast('success', `${label} successful`, `Loan #${id}`);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', `${label} failed`, e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', `${label} failed`, extractFineractError(e)); }
   });
 }

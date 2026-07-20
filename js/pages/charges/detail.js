@@ -8,6 +8,7 @@ import { openChargeFormModal } from './actions.js';
 import { can } from './shared.js';
 import { enhanceScrollableTabs } from '../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading charge…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No charge selected</div>'; return; }
@@ -118,12 +119,12 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-ch-edit')?.addEventListener('click', () => openChargeFormModal(ch, () => document.dispatchEvent(new CustomEvent('fc:reload'))));
     c.querySelector('#btn-ch-activate')?.addEventListener('click', async () => {
       try { await api.charges.update(id, { active: true }); toast('success', 'Activated', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Activate failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Activate failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-ch-deactivate')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Deactivate charge?', confirmText: 'Deactivate' })) return;
       try { await api.charges.update(id, { active: false }); toast('success', 'Deactivated', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Deactivate failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Deactivate failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-ch-delete')?.addEventListener('click', async () => {
       if (!await confirm({
@@ -135,14 +136,14 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.charges.delete(id);
         toast('success', 'Charge deleted', '');
         import('../../router.js').then(r => r.navigate('charges'));
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     });
 
   } catch (e) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load charge</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }
@@ -202,7 +203,7 @@ async function loadChargeUsage(c, ch) {
         Open each product to confirm specific charge linkage.
       </div>`;
   } catch (e) {
-    wrapEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    wrapEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -253,6 +254,6 @@ async function loadChargeTaxLinkage(c, ch) {
           }).join('')}</tbody>
         </table>` : ''}`;
   } catch (e) {
-    content.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    content.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

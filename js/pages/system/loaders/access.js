@@ -5,6 +5,7 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { escapeHtml, num, sb } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadRoles(c) {
   const el = c.querySelector('#sy-3');
   el.innerHTML = '<div class="empty-state-row">Loading role summary…</div>';
@@ -39,6 +40,6 @@ export async function loadRoles(c) {
       import('../../../router.js').then(r => r.navigate('users'))
     );
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

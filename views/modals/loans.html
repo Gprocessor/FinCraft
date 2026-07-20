@@ -1,0 +1,143 @@
+<!-- FinCraft modal partials — loans domain. Fetched and concatenated at
+     runtime by js/ui/shell.js alongside the other views/modals/*.html files (mirrors
+     the js/api/loans.js domain split). All forms have name= attrs and
+     data-populate= hooks. -->
+
+<!-- New Loan -->
+<div id="newLoanModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Loan Application</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newLoanForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="loanClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="loanClientId"/>
+            <div id="loanClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">Loan type *</span>
+          <select name="loanType" class="form-control" required>
+            <option value="individual">Individual</option>
+            <option value="group">Group</option>
+            <option value="jlg">JLG</option>
+          </select></label>
+        <label><span class="form-label">Loan product *</span>
+          <select name="productId" class="form-control" data-populate="loanProducts" required></select></label>
+        <label><span class="form-label">Loan officer</span>
+          <select name="loanOfficerId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Principal *</span>
+          <input name="principal" type="number" min="0" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Interest rate % (per period)</span>
+          <input name="interestRate" type="number" min="0" step="0.01" class="form-control"/></label>
+        <label><span class="form-label">No. of repayments *</span>
+          <input name="numberOfRepayments" type="number" min="1" value="12" class="form-control" required/></label>
+        <label><span class="form-label">Repay every</span>
+          <input name="repaymentEvery" type="number" min="1" value="1" class="form-control"/></label>
+        <label><span class="form-label">Repayment frequency</span>
+          <select name="repaymentFrequencyType" class="form-control">
+            <option value="2">Months</option>
+            <option value="1">Weeks</option>
+            <option value="0">Days</option>
+          </select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Expected disbursement *</span>
+          <input name="expectedDisbursementDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Purpose</span>
+          <input name="purpose" class="form-control"/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-loan"><i class="fa-solid fa-check"></i> Submit Application</button>
+    </div>
+  </div>
+</div>
+
+<!-- Repayment -->
+<div id="repaymentModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">Make Repayment</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="repaymentForm">
+        <label class="full"><span class="form-label">Loan account *</span>
+          <input name="loanId" id="rp-loanid" placeholder="Loan account ID" class="form-control"/></label>
+        <label><span class="form-label">Transaction date *</span>
+          <input name="transactionDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Amount *</span>
+          <input name="transactionAmount" type="number" min="0.01" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Payment type</span>
+          <select name="paymentTypeId" id="rp-paymenttype" class="form-control"><option value="">— Default —</option></select></label>
+        <label><span class="form-label">Receipt #</span>
+          <input name="receiptNumber" class="form-control"/></label>
+        <label class="full"><span class="form-label">Note</span>
+          <textarea name="note" class="form-control" rows="2"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-repayment"><i class="fa-solid fa-check"></i> Submit Repayment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Write-Off Loan -->
+<div id="writeOffModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">Write Off Loan</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="msg-banner b-danger mb-4"><i class="fa-solid fa-triangle-exclamation"></i>
+        This action is <b>irreversible</b>. The loan will be written off to provision and marked as a loss.
+      </div>
+      <form class="form-grid" id="writeOffForm">
+        <label class="full"><span class="form-label">Transaction date *</span>
+          <input name="transactionDate" type="date" class="form-control" required/></label>
+        <label class="full"><span class="form-label">Note</span>
+          <textarea name="note" class="form-control" rows="2" placeholder="Reason for write-off…"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" style="background:var(--c-danger)" data-action="submit-writeoff">
+        <i class="fa-solid fa-skull-crossbones"></i> Confirm Write-Off
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Loan Reschedule -->
+<div id="rescheduleModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">Reschedule Loan</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="rescheduleForm">
+        <input type="hidden" name="loanId" id="rs-loanid"/>
+        <label><span class="form-label">Reschedule from date *</span>
+          <input name="rescheduleFromDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Adjusted due date</span>
+          <input name="adjustedDueDate" type="date" class="form-control"/></label>
+        <label><span class="form-label">Reason *</span>
+          <select name="rescheduleReasonId" id="rs-reason-sel" class="form-control" required>
+            <option value="">Loading reasons…</option>
+          </select></label>
+        <label><span class="form-label">New number of repayments</span>
+          <input name="numberOfRepayments" type="number" min="1" class="form-control" placeholder="Leave blank to keep original"/></label>
+        <label><span class="form-label">New interest rate % (per period)</span>
+          <input name="interestRatePerPeriod" type="number" min="0" step="0.01" class="form-control" placeholder="Leave blank to keep original"/></label>
+        <label class="full"><span class="form-label">Comments</span>
+          <textarea name="comments" class="form-control" rows="2"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-reschedule"><i class="fa-solid fa-calendar-days"></i> Submit Reschedule</button>
+    </div>
+  </div>
+</div>

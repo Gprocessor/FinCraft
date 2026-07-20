@@ -2,8 +2,138 @@
    Auto-split from the original monolithic pages/groups/actions.js for maintainability. */
 
 import { api } from '../../../api.js';
-import { toast } from '../../../ui.js';
-import { escapeHtml, ini } from '../../../utils.js';
+import { confirm, toast } from '../../../ui.js';
+import { escapeHtml, fmt, ini } from '../../../utils.js';
+
+import { extractFineractError } from '../../../ui/dom-helpers.js';
+export async function openGlimDetailModal(glimId) {
+  const mid = `glim-view-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-md">
+        <div class="modal-header"><h3>GLIM Account</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body" id="${mid}-body"><div class="empty-state-row">Loading…</div></div>
+        <div class="modal-footer" id="${mid}-footer">
+          <button class="btn-secondary" data-close-modal>Close</button>
+        </div>
+      </div>
+    </div>`);
+  const m = document.getElementById(mid);
+  m.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => m.remove()));
+  const body = m.querySelector(`#${mid}-body`);
+  const footer = m.querySelector(`#${mid}-footer`);
+
+  const reload = () => openGlimAccountData();
+  async function openGlimAccountData() {
+    try {
+      const g = await api.loans.getGlimAccount(glimId);
+      const memberLoans = g?.loans || g?.childLoans || g?.memberLoans || [];
+      body.innerHTML = `
+        <dl class="dl-grid">
+          <dt>Status</dt><dd>${escapeHtml(g?.status?.value || g?.status || '—')}</dd>
+          <dt>Total Principal</dt><dd>${fmt(g?.principalAmount ?? g?.totalPrincipal ?? 0)}</dd>
+          <dt>Product</dt><dd>${escapeHtml(g?.productName || '—')}</dd>
+        </dl>
+        ${memberLoans.length ? `
+          <h4 class="mt-2">Member Loans</h4>
+          <table class="table">
+            <thead><tr><th>Client</th><th class="text-right">Principal</th><th>Status</th></tr></thead>
+            <tbody>${memberLoans.map(l => `
+              <tr>
+                <td>${escapeHtml(l.clientName || '—')}</td>
+                <td class="text-right">${fmt(l.principal ?? l.principalAmount ?? 0)}</td>
+                <td>${escapeHtml(l.status?.value || l.status || '—')}</td>
+              </tr>`).join('')}</tbody>
+          </table>` : ''}
+        <div class="text-muted small mt-2">
+          <i class="fa-solid fa-circle-info"></i>
+          Fineract's GLIM command names aren't published in the API reference beyond
+          a summary line, so the actions below use the same command vocabulary as
+          regular loans (approve / reject / disburse) by convention — verify against
+          your Fineract instance if an action returns an unexpected error.
+        </div>`;
+
+      const st = (g?.status?.value || g?.status || '').toLowerCase();
+      const btn = (label, cmd, cls = 'btn-secondary') =>
+        `<button class="${cls}" data-glim-cmd="${cmd}">${label}</button>`;
+      let actions = '';
+      if (st.includes('pending') || st.includes('submitted')) actions += btn('Approve', 'approve', 'btn-primary') + btn('Reject', 'reject', 'btn-danger');
+      else if (st.includes('approved')) actions += btn('Undo Approval', 'undoApproval') + btn('Disburse', 'disburse', 'btn-primary');
+      else if (st.includes('active')) actions += btn('Undo Disbursal', 'undoDisbursal');
+      footer.innerHTML = actions + `<button class="btn-secondary" data-close-modal>Close</button>`;
+      footer.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => m.remove()));
+      footer.querySelectorAll('[data-glim-cmd]').forEach(b => b.addEventListener('click', async () => {
+        const cmd = b.dataset.glimCmd;
+        if (['reject', 'undoApproval', 'undoDisbursal'].includes(cmd) &&
+            !await confirm({ title: `${b.textContent}?`, danger: cmd === 'reject', confirmText: b.textContent })) return;
+        try {
+          await api.loans.glimAccountCommand(glimId, cmd, {});
+          toast('success', `${b.textContent} successful`, '');
+          reload();
+        } catch (e) { toast('error', `${b.textContent} failed`, extractFineractError(e)); }
+      }));
+    } catch (e) {
+      body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
+    }
+  }
+  openGlimAccountData();
+}
+
+export async function openAssignRoleModal(groupId, group, onSuccess) {
+  const isUpdate = !!group?.roleId;
+  let roleValues = [];
+  try { roleValues = await api.codes.valuesByName('GROUPROLE'); } catch {}
+  const mid = `grp-role-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>${isUpdate ? 'Change Role' : 'Assign Role'}</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          ${!isUpdate ? `
+          <label>Member *
+            <select id="ar-client" class="form-control" required>
+              <option value="">Select member…</option>
+              ${(group.clientMembers || []).map(m => `<option value="${m.id}">${escapeHtml(m.displayName)}</option>`).join('')}
+            </select>
+          </label>` : ''}
+          <label class="mt-2">Role *
+            <select id="ar-role" class="form-control" required>
+              <option value="">Select role…</option>
+              ${roleValues.map(v => `<option value="${v.id}">${escapeHtml(v.name)}</option>`).join('')}
+            </select>
+          </label>
+          ${!roleValues.length ? `<div class="text-muted small mt-2">
+            <i class="fa-solid fa-circle-info"></i>
+            No values found under the <b>GROUPROLE</b> system code — add some from
+            Admin &rsaquo; System &rsaquo; Manage Codes first.
+          </div>` : ''}
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="ar-save">${isUpdate ? 'Save' : 'Assign'}</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#ar-save').addEventListener('click', async () => {
+    const role = el.querySelector('#ar-role').value;
+    if (!role) { toast('warn', 'Select a role', ''); return; }
+    try {
+      if (isUpdate) {
+        await api.groups.updateRole(groupId, group.roleId, { role: parseInt(role) });
+        toast('success', 'Role updated', '');
+      } else {
+        const clientId = el.querySelector('#ar-client').value;
+        if (!clientId) { toast('warn', 'Select a member', ''); return; }
+        await api.groups.assignRole(groupId, { clientId: parseInt(clientId), role: parseInt(role) });
+        toast('success', 'Role assigned', '');
+      }
+      el.remove();
+      onSuccess?.();
+    } catch (e) { toast('error', isUpdate ? 'Update failed' : 'Assign failed', extractFineractError(e)); }
+  });
+}
 
 export async function openAddMembersModal(groupId, group, onSuccess) {
   const mid = `grp-addmem-${Date.now()}`;
@@ -74,7 +204,7 @@ export async function openAddMembersModal(groupId, group, onSuccess) {
       el.remove();
       toast('success', 'Members added', `${selected.size} clients added`);
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
@@ -122,6 +252,6 @@ export async function openTransferMembersModal(groupId, group) {
       el.remove();
       toast('success', 'Members transferred', `${checked.length} client(s)`);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Transfer failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Transfer failed', extractFineractError(e)); }
   });
 }

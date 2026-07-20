@@ -1,0 +1,110 @@
+<!-- FinCraft modal partials — system domain. Fetched and concatenated at
+     runtime by js/ui/shell.js alongside the other views/modals/*.html files (mirrors
+     the js/api/system.js domain split). All forms have name= attrs and
+     data-populate= hooks. -->
+
+<!-- Quick Action -->
+<div id="quickModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-md">
+    <div class="modal-head"><h3 class="modal-title">Quick Actions</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="grid-3">
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="newClientModal" data-close-modal>
+          <i class="fa-solid fa-user-plus" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>New Client</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="newLoanModal" data-close-modal>
+          <i class="fa-solid fa-hand-holding-dollar" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>New Loan</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="newSavingsModal" data-close-modal>
+          <i class="fa-solid fa-piggy-bank" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>New Savings</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="repaymentModal" data-close-modal>
+          <i class="fa-solid fa-money-bill-transfer" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>Repayment</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="newTransferModal" data-close-modal>
+          <i class="fa-solid fa-right-left" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>Transfer</b></div></button>
+        <button class="card" style="cursor:pointer;text-align:center;margin:0" data-modal="journalEntryModal" data-close-modal>
+          <i class="fa-solid fa-book" style="font-size:24px;color:var(--brand-teal)"></i><div class="mt-2"><b>Journal Entry</b></div></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Import -->
+<div id="bulkImportModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">Bulk Import</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label><span class="form-label">Entity</span>
+          <select name="entity" class="form-control" data-populate="bulkImportEntities">
+            <option value="">Select entity to import…</option>
+          </select></label>
+        <label><span class="form-label">Office</span>
+          <select name="officeId" class="form-control" data-populate="offices"></select></label>
+      </div>
+      <label class="full mt-4">
+        <div class="card" style="border-style:dashed;text-align:center;padding:48px;cursor:pointer">
+          <i class="fa-solid fa-cloud-arrow-up" style="font-size:36px;color:var(--brand-teal)"></i>
+          <div class="mt-3"><b>Drag &amp; drop file here</b> or click to browse</div>
+          <div class="text-muted">Accepted: .xlsx (max 10 MB)</div>
+        </div>
+        <input type="file" accept=".xlsx" style="display:none" id="bulkImportFile"/>
+      </label>
+      <div id="import-file-name" class="text-muted mt-2"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-secondary" data-action="download-import-template"><i class="fa-solid fa-download"></i> Download Template</button>
+      <button class="btn-primary" data-action="submit-import"><i class="fa-solid fa-upload"></i> Start Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Run Report -->
+<div id="runReportModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <h3 class="modal-title">Run Report: <span id="run-report-name">—</span></h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label><span class="form-label">From date</span><input type="date" id="rep-from" class="form-control"/></label>
+        <label><span class="form-label">To date</span><input type="date" id="rep-to" class="form-control"/></label>
+        <label><span class="form-label">Office</span>
+          <select class="form-control" data-populate="offices"></select></label>
+        <label><span class="form-label">Output format</span>
+          <select class="form-control" id="rep-fmt">
+            <option value="JSON">JSON (Preview)</option>
+            <option value="XLS">Excel (Download)</option>
+            <option value="PDF">PDF (Download)</option>
+          </select></label>
+      </div>
+      <div id="rep-output" class="mt-4"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Close</button>
+      <button class="btn-primary" data-action="run-report"><i class="fa-solid fa-play"></i> Run Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ad-hoc Query -->
+<div id="adhocQueryModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">Ad-hoc Query</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <label class="full mb-4">
+        <span class="form-label">Report / Query name</span>
+        <input id="sqlQuery" class="form-control" placeholder="e.g. Active Loans by Office"/>
+      </label>
+      <div id="sqlResult" class="mt-4">
+        <div class="empty-state"><i class="fa-solid fa-terminal"></i><div>Enter a registered report name and click Run</div></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Close</button>
+      <button class="btn-primary" data-action="run-sql"><i class="fa-solid fa-play"></i> Run</button>
+    </div>
+  </div>
+</div>
+

@@ -7,6 +7,7 @@ import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 import { APPLIES_TO_OPTIONS } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function openChargeFormModal(existing, onSuccess) {
   // Fetch template for dropdowns
   let tpl = {};
@@ -130,6 +131,6 @@ export async function openChargeFormModal(existing, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Charge updated' : 'Charge created', payload.name);
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }

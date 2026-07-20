@@ -4,17 +4,13 @@
 import { api } from '../../../api.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmtDate, ini } from '../../../utils.js';
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 import { can } from '../shared.js';
 
 export async function renderUserDetail(c, userId) {
   c.innerHTML = `<div class="empty-state-row">Loading user…</div>`;
   try {
-    const [user, roles, allPerms] = await Promise.all([
-      api.users.get(userId),
-      api.roles.list(),
-      api.permissions.list().catch(() => [])
-    ]);
-    const roleList = Array.isArray(roles) ? roles : [];
+    const user = await api.users.get(userId);
     const userRoles = user.selectedRoles || [];
 
     // Compute inherited permissions from selected roles
@@ -41,7 +37,7 @@ export async function renderUserDetail(c, userId) {
         </div>
         <div class="page-actions">
           <button class="btn-secondary" data-back-users><i class="fa-solid fa-arrow-left"></i> Back</button>
-          ${can('UPDATE_USER') ? `<button class="btn-secondary" id="btn-reset-pw"><i class="fa-solid fa-key"></i> Reset Password</button>` : ''}
+          ${can('CHANGEPWD_USER') ? `<button class="btn-secondary" id="btn-reset-pw"><i class="fa-solid fa-key"></i> Reset Password</button>` : ''}
           ${can('UPDATE_USER') ? `<button class="btn-primary" id="btn-edit-user"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
         </div>
       </div>
@@ -98,7 +94,7 @@ export async function renderUserDetail(c, userId) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load user</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }
@@ -111,7 +107,7 @@ export async function openUserFormModal(userId, onSuccess) {
     tpl = await api.users.template();
     if (isEdit) existing = await api.users.get(userId);
   } catch (e) {
-    toast('error', 'Could not load form data', e.detail?.defaultUserMessage || e.message);
+    toast('error', 'Could not load form data', extractFineractError(e));
     return;
   }
 
@@ -238,7 +234,7 @@ export async function openUserFormModal(userId, onSuccess) {
       toast('success', isEdit ? 'User updated' : 'User created', username);
       onSuccess();
     } catch (e) {
-      toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e));
     }
   });
 }
@@ -283,9 +279,14 @@ function openResetPasswordModal(userId, username) {
     if (modalEl.querySelector('#rpw-must-change').checked) payload.shouldRenewPassword = true;
 
     try {
-      await api.users.update(userId, payload);
+      // Fineract exposes a dedicated POST /users/{userId}/pwd for password
+      // changes (UsersApiResource#changePassword, gated by CHANGEPWD_USER).
+      // The generic PUT /users/{userId} update endpoint is a different
+      // resource and isn't guaranteed to validate/accept a password change
+      // the same way — see js/api/auth-account.js:makePasswordAPI().
+      await api.password.change(userId, payload);
       modalEl.remove();
       toast('success', 'Password reset', 'User notified to log in with new password');
-    } catch (e) { toast('error', 'Reset failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Reset failed', extractFineractError(e)); }
   });
 }

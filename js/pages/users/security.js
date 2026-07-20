@@ -5,20 +5,18 @@ import { api } from '../../api.js';
 import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 import { can } from './shared.js';
+import { extractFineractError } from '../../ui/dom-helpers.js';
 
 export async function loadPasswordPolicy(c) {
   const el = c.querySelector('#usr-2');
   try {
-    const prefs = await api.password.preferences();
-    const list = Array.isArray(prefs?.activePasswordValidationPolicy)
-      ? prefs.activePasswordValidationPolicy
-      : (Array.isArray(prefs) ? prefs : (prefs?.policies || []));
-
-    // Fineract returns activePasswordValidationPolicy as single object, with a list of available policies
-    const allPolicies = prefs.activePasswordValidationPolicy
-      ? [prefs.activePasswordValidationPolicy, ...(prefs.policies || [])]
-      : list;
-    const activeId = prefs.activePasswordValidationPolicy?.id || prefs.activePolicyId;
+    // GET /passwordpreferences/template returns an array of every policy, each with its own
+    // `active` flag already on it — confirmed against Apache_Fineract_API_Documentation.html's
+    // worked example. GET /passwordpreferences (no /template) returns a single flat object for
+    // the currently-active policy only and has no `policies`/`activePasswordValidationPolicy`
+    // field, which is why this always rendered "No password policies available" before.
+    const allPolicies = await api.password.preferencesTemplate();
+    const activeId = allPolicies.find(p => p.active)?.id;
 
     el.innerHTML = `
       <div class="section-header mb-2">
@@ -55,10 +53,10 @@ export async function loadPasswordPolicy(c) {
         await api.password.updatePreferences({ validationPolicyId: parseInt(selected.value) });
         toast('success', 'Password policy updated', '');
         loadPasswordPolicy(c);
-      } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
     });
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Password preferences not available: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Password preferences not available: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -82,14 +80,14 @@ export async function loadTwoFactorConfig(c) {
         <table class="table">
           <thead><tr>
             <th>Setting</th><th>Current Value</th>
-            <th>${can('UPDATE_TWOFACTOR_CONFIG') ? 'New Value' : ''}</th>
+            <th>${can('UPDATE_TWOFACTOR_CONFIGURATION') ? 'New Value' : ''}</th>
           </tr></thead>
           <tbody>${entries.map((e, i) => {
             const isBool = typeof e.value === 'boolean' || ['true', 'false'].includes(String(e.value).toLowerCase());
             const isNum = !isBool && (!isNaN(parseFloat(e.value)) && isFinite(e.value));
             const inputId = `tfa-${i}`;
             let input = '';
-            if (can('UPDATE_TWOFACTOR_CONFIG')) {
+            if (can('UPDATE_TWOFACTOR_CONFIGURATION')) {
               if (isBool) {
                 input = `<select id="${inputId}" class="form-control" data-name="${escapeHtml(e.name)}">
                   <option value="true" ${e.value === true || e.value === 'true' ? 'selected' : ''}>true</option>
@@ -111,7 +109,7 @@ export async function loadTwoFactorConfig(c) {
         </table>
 
         <div class="mt-3">
-          ${can('UPDATE_TWOFACTOR_CONFIG') ? `<button class="btn-primary" id="btn-save-tfa">Save Changes</button>` : ''}
+          ${can('UPDATE_TWOFACTOR_CONFIGURATION') ? `<button class="btn-primary" id="btn-save-tfa">Save Changes</button>` : ''}
         </div>` : `
         <div class="empty-state">
           <i class="fa-solid fa-shield"></i>
@@ -133,9 +131,9 @@ export async function loadTwoFactorConfig(c) {
         await api.twoFactor.config.update(payload);
         toast('success', '2FA config saved', '');
         loadTwoFactorConfig(c);
-      } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
     });
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">2FA configuration not available on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">2FA configuration not available on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

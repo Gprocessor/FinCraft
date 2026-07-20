@@ -6,6 +6,7 @@ import { confirm as modalConfirm, toast } from '../../ui.js';
 import { escapeHtml, num } from '../../utils.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadBeneficiaries(c) {
   const el = c.querySelector('#ss-1');
   el.innerHTML = '<div class="empty-state-row">Loading beneficiaries…</div>';
@@ -71,10 +72,10 @@ export async function loadBeneficiaries(c) {
         await api.selfService.deleteBeneficiary(b.dataset.delBen);
         toast('success', 'Beneficiary deleted', '');
         loadBeneficiaries(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">TPT beneficiaries not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">TPT beneficiaries not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -154,6 +155,6 @@ function openBeneficiaryFormModal(existing, onSuccess) {
       modalEl.remove();
       toast('success', isEdit ? 'Beneficiary updated' : 'Beneficiary added', name);
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }

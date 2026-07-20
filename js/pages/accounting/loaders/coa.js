@@ -4,7 +4,7 @@
 import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE } from '../../../config.js';
 import { escapeHtml, fmt, fmtDate } from '../../../utils.js';
-import { openFrequentPostingModal, openGLAccountModal, openJournalEntryModal, openReverseJEModal } from '../actions.js';
+import { openFrequentPostingModal, openGLAccountModal, openJournalEntryDetailModal, openJournalEntryModal, openReverseJEModal, deleteGLAccountConfirm } from '../actions.js';
 import { can, populateJEFilters, resetGlCache } from '../shared.js';
 
 export async function loadChartOfAccounts(c) {
@@ -32,6 +32,20 @@ export async function loadChartOfAccounts(c) {
     el.querySelector('#btn-add-gl')?.addEventListener('click', () =>
       openGLAccountModal(() => { resetGlCache(); loadChartOfAccounts(c); }));
 
+    const canEditGl = can('UPDATE_GLACCOUNT'), canDeleteGl = can('DELETE_GLACCOUNT');
+    const glRowActions = (a) => (canEditGl || canDeleteGl) ? `
+              <td class="text-right">
+                ${canEditGl ? `<button class="btn-mini" data-edit-gl="${a.id}">Edit</button>` : ''}
+                ${canDeleteGl ? `<button class="btn-mini btn-danger" data-del-gl="${a.id}" data-name="${escapeHtml(a.name || '')}">Delete</button>` : ''}
+              </td>` : '';
+
+    const wireGlRowActions = () => {
+      el.querySelectorAll('[data-edit-gl]').forEach(b => b.addEventListener('click', () =>
+        openGLAccountModal(() => { resetGlCache(); loadChartOfAccounts(c); }, b.dataset.editGl)));
+      el.querySelectorAll('[data-del-gl]').forEach(b => b.addEventListener('click', () =>
+        deleteGLAccountConfirm(b.dataset.delGl, b.dataset.name, () => { resetGlCache(); loadChartOfAccounts(c); })));
+    };
+
     const renderGrouped = () => {
       const grouped = accounts.reduce((acc, a) => {
         (acc[a.type?.value || a.type || 'Other'] ||= []).push(a);
@@ -41,7 +55,7 @@ export async function loadChartOfAccounts(c) {
         <h4 class="mt-3">${escapeHtml(type)} <span class="text-muted">${list.length}</span></h4>
         <table class="table">
           <thead><tr>
-            <th>Code</th><th>Name</th><th>Parent</th><th>Usage</th><th>Manual?</th>
+            <th>Code</th><th>Name</th><th>Parent</th><th>Usage</th><th>Manual?</th>${(canEditGl || canDeleteGl) ? '<th></th>' : ''}
           </tr></thead>
           <tbody>${list.map(a => `
             <tr>
@@ -49,9 +63,10 @@ export async function loadChartOfAccounts(c) {
               <td>${escapeHtml(a.name || '—')}</td>
               <td>${escapeHtml(a.nameDecorated?.split('.').slice(0, -1).join('.') || '—')}</td>
               <td>${escapeHtml(a.usage?.value || 'DETAIL')}</td>
-              <td>${a.manualEntriesAllowed ? 'Yes' : 'No'}</td>
+              <td>${a.manualEntriesAllowed ? 'Yes' : 'No'}</td>${glRowActions(a)}
             </tr>`).join('')}</tbody>
         </table>`).join('');
+      wireGlRowActions();
     };
 
     const renderTree = () => {
@@ -72,7 +87,7 @@ export async function loadChartOfAccounts(c) {
             <td>${indent}${icon} ${escapeHtml(a.glCode || '—')}</td>
             <td>${escapeHtml(a.name || '—')}</td>
             <td>${escapeHtml(a.type?.value || '—')}</td>
-            <td>${escapeHtml(a.usage?.value || '—')}</td>
+            <td>${escapeHtml(a.usage?.value || '—')}</td>${glRowActions(a)}
           </tr>
           ${children.map(child => treeNode(child, depth + 1)).join('')}`;
       };
@@ -80,9 +95,10 @@ export async function loadChartOfAccounts(c) {
       const roots = byParent['root'] || accounts.filter(a => !a.parentId);
       el.querySelector('#coa-content').innerHTML = `
         <table class="table">
-          <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Usage</th></tr></thead>
+          <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Usage</th>${(canEditGl || canDeleteGl) ? '<th></th>' : ''}</tr></thead>
           <tbody>${roots.map(a => treeNode(a)).join('')}</tbody>
         </table>`;
+      wireGlRowActions();
     };
 
     el.querySelector('#coa-view-grouped').addEventListener('click', () => {
@@ -116,6 +132,11 @@ export async function loadJournalEntries(c, params = {}) {
         ${can('CREATE_JOURNALENTRY') ? `<button class="btn-primary" id="btn-new-je"><i class="fa-solid fa-plus"></i> New Entry</button>` : ''}
       </div>
    <div class="filter-bar mb-2" id="je-filter-bar">
+  <select id="je-f-set" class="form-control" style="min-width:170px">
+    <option value="">All entries</option>
+    <option value="provisioning">Provisioning entries</option>
+    <option value="openingbalance">Opening balance entries</option>
+  </select>
   <select id="je-f-office" class="form-control" style="min-width:180px">
     <option value="">All offices</option>
   </select>
@@ -132,6 +153,7 @@ export async function loadJournalEntries(c, params = {}) {
 
    el.querySelector('#je-filter-go').addEventListener('click', () => {
   const p = {};
+  const entrySet = el.querySelector('#je-f-set').value;
   const offId = el.querySelector('#je-f-office').value.trim();
   const glId  = el.querySelector('#je-f-glacct').value.trim();
   const txId  = el.querySelector('#je-f-txid').value.trim();
@@ -143,6 +165,7 @@ export async function loadJournalEntries(c, params = {}) {
   if (from)  p.fromDate      = from;
   if (to)    p.toDate        = to;
   if (from || to) { p.dateFormat = DATE_FORMAT; p.locale = LOCALE; }
+  if (entrySet) p.__entrySet = entrySet;
   loadJournalEntries(c, p);
 });
 
@@ -151,6 +174,7 @@ populateJEFilters(el);
 
 // Clear filter button
 el.querySelector('#je-filter-clear')?.addEventListener('click', () => {
+  el.querySelector('#je-f-set').value    = '';
   el.querySelector('#je-f-office').value = '';
   el.querySelector('#je-f-glacct').value = '';
   el.querySelector('#je-f-txid').value   = '';
@@ -169,7 +193,10 @@ el.querySelector('#btn-new-je')?.addEventListener('click', () =>
   try {
     const queryParams = { limit: 50 };
     Object.assign(queryParams, params);
-    const res = await api.journalEntries.list(queryParams);
+    const entrySet = queryParams.__entrySet; delete queryParams.__entrySet;
+    const res = entrySet === 'provisioning'   ? await api.journalEntries.provisioning(queryParams)
+              : entrySet === 'openingbalance' ? await api.journalEntries.openingBalances(queryParams)
+              : await api.journalEntries.list(queryParams);
     const entries = Array.isArray(res) ? res : (res?.pageItems || []);
 
     wrap.innerHTML = `
@@ -189,6 +216,7 @@ el.querySelector('#btn-new-je')?.addEventListener('click', () =>
             <td class="text-right">${je.type?.value === 'CREDIT' ? fmt(je.amount) : '—'}</td>
             <td>${escapeHtml(je.comments || '—')}</td>
             <td class="text-right">
+              <button class="btn-mini" data-view-je="${je.id}">View</button>
               ${je.reversed
                 ? '<span class="badge b-warning">Reversed</span>'
                 : (can('REVERSE_JOURNALENTRY')
@@ -199,6 +227,8 @@ el.querySelector('#btn-new-je')?.addEventListener('click', () =>
         </tbody>
       </table>`;
 
+    wrap.querySelectorAll('[data-view-je]').forEach(b => b.addEventListener('click', () =>
+      openJournalEntryDetailModal(b.dataset.viewJe)));
     wrap.querySelectorAll('[data-reverse-je]').forEach(b => b.addEventListener('click', () =>
       openReverseJEModal(b.dataset.reverseJe, () => loadJournalEntries(c))));
   } catch (e) {

@@ -5,6 +5,7 @@ import { api } from '../../api.js';
 import { store } from '../../store.js';
 import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
+import { extractFineractError } from '../../ui/dom-helpers.js';
 
 export async function profile(c) {
   const auth = store.get('auth') || {};
@@ -99,13 +100,15 @@ export async function profile(c) {
     // Update password
     try {
       if (!auth.userId) throw new Error('Session missing user ID — sign out and back in');
-      await api.users.update(auth.userId, { password: nw, repeatPassword: cfm });
+      // POST /users/{userId}/pwd (UsersApiResource#changePassword), not the
+      // generic PUT /users/{userId} update endpoint — see api/auth-account.js.
+      await api.password.change(auth.userId, { password: nw, repeatPassword: cfm });
       toast('success', 'Password updated', 'Use the new password on next sign-in');
       c.querySelector('#pw-cur').value = '';
       c.querySelector('#pw-new').value = '';
       c.querySelector('#pw-cfm').value = '';
     } catch (e) {
-      toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Update failed', extractFineractError(e));
     } finally {
       btn.disabled = false;
       btn.innerHTML = orig;

@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../config.js';
 import { confirm, toast } from '../../ui.js';
 import { escapeHtml, sb } from '../../utils.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function disassociateSelectedGroups(c, id) {
   const checked = Array.from(c.querySelectorAll('.ctr-grp-chk:checked')).map(cb => parseInt(cb.value));
   if (!checked.length) { toast('warn', 'No groups selected', 'Tick at least one group'); return; }
@@ -18,7 +19,7 @@ export async function disassociateSelectedGroups(c, id) {
     await api.centers.disassociateGroups(id, { groupMembers: checked });
     toast('success', 'Groups disassociated', '');
     document.dispatchEvent(new CustomEvent('fc:reload'));
-  } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+  } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
 }
 
 export async function openAddGroupsModal(centerId, center, onSuccess) {
@@ -96,7 +97,7 @@ export async function openAddGroupsModal(centerId, center, onSuccess) {
       el.remove();
       toast('success', 'Groups associated', `${selected.size} group(s) added`);
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
@@ -145,7 +146,7 @@ export async function openScheduleMeetingModal(centerId, onSuccess, existingCal)
       el.remove();
       toast('success', isEdit ? 'Schedule updated' : 'Meeting scheduled', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
@@ -178,7 +179,7 @@ export async function openEditCenterModal(ctr, onSuccess) {
       el.remove();
       toast('success', 'Center updated', '');
       onSuccess();
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -222,6 +223,6 @@ export async function openCloseCenterModal(id) {
       el.remove();
       toast('success', 'Center closed', '');
       import('../../router.js').then(r => r.navigate('centers'));
-    } catch (e) { toast('error', 'Close failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Close failed', extractFineractError(e)); }
   });
 }

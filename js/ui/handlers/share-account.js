@@ -22,10 +22,30 @@ export const ShareAccountHandlers = {
       };
       if (f.externalId) payload.externalId = f.externalId;
 
+      const autoApproveActivate = f.autoApproveActivate === 'on' || f.autoApproveActivate === 'true';
+
       setSubmitting(btn, true);
       try {
         const r = await api.shares.create(payload);
-        toast('success', 'Share application submitted', `#${r.resourceId || r.savingsId}`);
+        const id = r.resourceId || r.savingsId;
+        let statusMsg = 'Share application submitted';
+        if (autoApproveActivate && id) {
+          try {
+            await api.shares.approve(id, { approvedDate: f.submittedDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+            try {
+              await api.shares.activate(id, { activatedDate: f.submittedDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+              statusMsg = 'Share account created, approved & activated';
+            } catch (actErr) {
+              statusMsg = 'Created & approved, but activation failed';
+              toast('warn', statusMsg, extractFineractError(actErr));
+              statusMsg = null;
+            }
+          } catch (appErr) {
+            toast('warn', 'Created, but approval failed', extractFineractError(appErr));
+            statusMsg = null;
+          }
+        }
+        if (statusMsg) toast('success', statusMsg, `#${id}`);
         closeModal('newShareModal');
         document.dispatchEvent(new CustomEvent('fc:reload'));
       } catch (e) {

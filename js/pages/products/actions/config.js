@@ -7,6 +7,7 @@ import { escapeHtml } from '../../../utils.js';
 import { glOptions, modal, v, vf, vi } from '../shared.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openTaxModal(forceType, taxId, onSuccess) {
   const isEdit = !!taxId;
   const glOpts = await glOptions();
@@ -114,7 +115,7 @@ export async function openTaxModal(forceType, taxId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Tax updated' : 'Tax created', '');
       onSuccess();
-    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e)); }
   });
 }
 
@@ -230,7 +231,7 @@ export async function openDelinquencyModal(bucketId, onSuccess) {
       toast('success', isEdit ? 'Delinquency bucket updated' : 'Delinquency bucket created', name);
       onSuccess();
     } catch (e) {
-      toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e));
     }
   });
 }
@@ -303,6 +304,6 @@ export async function openProductMixModal(loanProductId, onSuccess) {
       el.remove();
       toast('success', isEdit ? 'Product mix updated' : 'Product mix created', '');
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }

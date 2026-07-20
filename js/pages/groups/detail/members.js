@@ -6,6 +6,7 @@ import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, ini, sb } from '../../../utils.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadMembers(c, id, group) {
   const wrap = c.querySelector('#grp-members-list');
   wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
@@ -50,20 +51,75 @@ export async function loadMembers(c, id, group) {
         await api.groups.disassociateClients(id, { clientMembers: [parseInt(b.dataset.removeMember)] });
         toast('success', 'Member removed', '');
         loadMembers(c, id, group);
-      } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
     }));
   } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
+}
+
+export async function loadRoles(c, id) {
+  const wrap = c.querySelector('#grp-roles-list');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
+  try {
+    const fresh = await api.groups.get(id, { associations: 'groupRoles' });
+    // groupRoles' exact response shape isn't shown in the API reference beyond the
+    // write-side (assignRole/updateRole/unassignRole) examples, so this is rendered
+    // defensively against the field names those examples do confirm (clientId, role,
+    // roleId as the resourceId of the assignment) — same approach already used for
+    // glimaccounts/gsimaccounts above.
+    const list = fresh.groupRoles || [];
+    wrap.innerHTML = list.length ? `
+      <table class="table">
+        <thead><tr><th>Member</th><th>Role</th><th></th></tr></thead>
+        <tbody>${list.map(r => {
+          const roleId = r.id ?? r.roleId ?? r.resourceId;
+          const clientName = r.client?.displayName || r.clientName || '—';
+          const roleName = r.role?.name || r.roleName || '—';
+          return `
+          <tr>
+            <td>${escapeHtml(clientName)}</td>
+            <td>${escapeHtml(roleName)}</td>
+            <td class="text-right">
+              ${can('UPDATEROLE_GROUP') ? `<button class="btn-mini" data-update-role="${roleId}">Change</button>` : ''}
+              ${can('UNASSIGNROLE_GROUP') ? `<button class="btn-mini btn-danger" data-unassign-role="${roleId}">Remove</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>` : '<div class="empty-state-row">No roles assigned</div>';
+
+    wrap.querySelectorAll('[data-update-role]').forEach(b => b.addEventListener('click', async () => {
+      const { openAssignRoleModal } = await import('../actions/members.js');
+      openAssignRoleModal(id, { roleId: b.dataset.updateRole }, () => loadRoles(c, id));
+    }));
+    wrap.querySelectorAll('[data-unassign-role]').forEach(b => b.addEventListener('click', async () => {
+      if (!await confirm({ title: 'Remove role?', message: 'Unassign this role from the member?', danger: true, confirmText: 'Remove' })) return;
+      try {
+        await api.groups.unassignRole(id, b.dataset.unassignRole);
+        toast('success', 'Role removed', '');
+        loadRoles(c, id);
+      } catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
+    }));
+  } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`; }
 }
 
 export async function loadAccounts(c, id) {
   const wrap = c.querySelector('#grp-accounts-wrap');
   wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
   try {
-    const acc = await api.groups.accounts(id);
+    const [acc, glimRes, gsimRes] = await Promise.all([
+      api.groups.accounts(id),
+      api.groups.glimAccounts(id).catch(() => []),
+      api.groups.gsimAccounts(id).catch(() => [])
+    ]);
     const loans   = acc?.loanAccounts || [];
     const savings = acc?.savingsAccounts || [];
     const memberLoans   = acc?.memberLoanAccounts || [];
     const memberSavings = acc?.memberSavingsAccounts || [];
+    // Response shape for glimaccounts/gsimaccounts isn't documented in the API
+    // reference beyond the path — rendered defensively against several
+    // plausible field names rather than assumed as one fixed schema.
+    const glimList = Array.isArray(glimRes) ? glimRes : (glimRes?.pageItems || glimRes?.glimAccounts || []);
+    const gsimList = Array.isArray(gsimRes) ? gsimRes : (gsimRes?.pageItems || gsimRes?.gsimAccounts || []);
 
     const sect = (title, rows, mapper, cols) => `
       <h3 class="mt-3">${title}</h3>
@@ -100,10 +156,30 @@ export async function loadAccounts(c, id) {
           <td>${escapeHtml(s.clientName || '')}</td>
           <td>${escapeHtml(s.productName || '')}</td>
           <td>${sb(s.status?.value || '—')}</td></tr>`,
-        ['Account', 'Client', 'Product', 'Status']) : ''}`;
+        ['Account', 'Client', 'Product', 'Status']) : ''}
+      ${sect('GLIM Accounts <span class="text-muted small">(group loan, tracked per member)</span>', glimList,
+        g => `<tr>
+          <td>${escapeHtml(g.accountNo || g.parentAccountNo || String(g.id ?? g.parentAccountId ?? '—'))}</td>
+          <td>${escapeHtml(g.productName || '—')}</td>
+          <td class="text-right">${fmt(g.principalAmount ?? g.totalPrincipal ?? 0)}</td>
+          <td>${sb(g.status?.value || g.status || '—')}</td>
+          <td class="text-right"><button class="btn-mini" data-view-glim="${g.id ?? g.parentAccountId}">View</button></td></tr>`,
+        ['Account', 'Product', 'Principal', 'Status', ''])}
+      ${sect('GSIM Accounts <span class="text-muted small">(group savings, tracked per member)</span>', gsimList,
+        g => `<tr>
+          <td>${escapeHtml(g.accountNo || g.parentAccountNo || String(g.id ?? g.parentAccountId ?? '—'))}</td>
+          <td>${escapeHtml(g.productName || '—')}</td>
+          <td class="text-right">${fmt(g.totalDeposit ?? g.accountBalance ?? 0)}</td>
+          <td>${sb(g.status?.value || g.status || '—')}</td></tr>`,
+        ['Account', 'Product', 'Balance', 'Status'])}`;
+
     wrap.querySelectorAll('[data-view-loan]').forEach(b => b.addEventListener('click', (e) => {
       e.preventDefault();
       import('../../../router.js').then(r => r.navigate('loans', { id: b.dataset.viewLoan }));
+    }));
+    wrap.querySelectorAll('[data-view-glim]').forEach(b => b.addEventListener('click', async () => {
+      const { openGlimDetailModal } = await import('../actions.js');
+      openGlimDetailModal(b.dataset.viewGlim);
     }));
   } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

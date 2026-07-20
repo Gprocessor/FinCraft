@@ -7,6 +7,7 @@ import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { openAdjustDepositTxModal, openApplyDepositChargeModal, openPayDepositChargeModal } from '../actions.js';
 import { can } from '../shared.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadDepositTransactions(c, apiGroup, id) {
   const wrap = c.querySelector('#dep-tx-wrap');
   wrap.innerHTML = `
@@ -58,12 +59,12 @@ export async function loadDepositTransactions(c, apiGroup, id) {
       listEl.querySelectorAll('[data-undo-tx]').forEach(b => b.addEventListener('click', async () => {
         if (!await confirm({ title: 'Undo transaction?', danger: true, confirmText: 'Undo' })) return;
         try { await apiObj.undoTransaction(id, b.dataset.undoTx); toast('success', 'Undone', ''); reload(); }
-        catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+        catch (e) { toast('error', 'Failed', extractFineractError(e)); }
       }));
       listEl.querySelectorAll('[data-adj-tx]').forEach(b => b.addEventListener('click', () =>
         (typeof openAdjustDepositTxModal === 'function') && openAdjustDepositTxModal(apiObj, id, b.dataset.adjTx, reload)));
     } catch (e) {
-      listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      listEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
     }
   }
 
@@ -127,17 +128,17 @@ export async function loadDepositCharges(c, apiGroup, id) {
     listEl.querySelectorAll('[data-waive-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Waive charge?', confirmText: 'Waive' })) return;
       try { await apiObj.waiveCharge(id, b.dataset.waiveCharge); toast('success', 'Waived', ''); loadDepositCharges(c, apiGroup, id); }
-      catch (e) { toast('error', 'Waive failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Waive failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-inactivate-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Inactivate charge?', confirmText: 'Inactivate' })) return;
       try { await apiObj.inactivateCharge(id, b.dataset.inactivateCharge); toast('success', 'Inactivated', ''); loadDepositCharges(c, apiGroup, id); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-del-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete charge?', danger: true, confirmText: 'Delete' })) return;
       try { await apiObj.deleteCharge(id, b.dataset.delCharge); toast('success', 'Deleted', ''); loadDepositCharges(c, apiGroup, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

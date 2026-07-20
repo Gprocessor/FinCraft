@@ -7,6 +7,7 @@ import { escapeHtml, fmt, num } from '../../utils.js';
 import { openChargeFormModal } from './actions.js';
 import { APPLIES_TO_OPTIONS, can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
     <div class="page-header mb-3">
@@ -96,7 +97,7 @@ export async function renderList(c) {
       draw(list);
     } catch (e) {
       c.querySelector('#ch-rows').innerHTML =
-        `<tr><td colspan="9" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+        `<tr><td colspan="9" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 
@@ -128,7 +129,7 @@ export async function renderList(c) {
         await api.charges.update(b.dataset.chActivate, { active: true });
         toast('success', 'Charge activated', '');
         load();
-      } catch (e) { toast('error', 'Activate failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activate failed', extractFineractError(e)); }
     }));
     c.querySelectorAll('[data-ch-deactivate]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Deactivate charge?', confirmText: 'Deactivate' })) return;
@@ -136,7 +137,7 @@ export async function renderList(c) {
         await api.charges.update(b.dataset.chDeactivate, { active: false });
         toast('success', 'Charge deactivated', '');
         load();
-      } catch (e) { toast('error', 'Deactivate failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Deactivate failed', extractFineractError(e)); }
     }));
   }
 

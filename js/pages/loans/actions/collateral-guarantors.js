@@ -6,6 +6,7 @@ import { api } from '../../../api.js';
 import { escapeHtml, fmt, ini } from '../../../utils.js';
 import { toast } from '../../../ui.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openAddLoanCollateralModal(loanId, clientId, onSuccess) {
   // Try to fetch client's pre-registered collateral pool
   let clientCollaterals = [];
@@ -66,7 +67,54 @@ export async function openAddLoanCollateralModal(loanId, clientId, onSuccess) {
       el.remove();
       toast('success', 'Collateral added', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
+  });
+}
+
+export async function openEditLoanCollateralModal(loanId, collateralId, onSuccess) {
+  let record = null;
+  try { record = await api.loans.getCollateral(loanId, collateralId); } catch (e) {
+    toast('error', 'Failed to load collateral', extractFineractError(e)); return;
+  }
+  const isPooled = record?.clientCollateralId != null;
+  const mid = `ln-col-edit-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Edit Collateral</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <div class="text-muted mb-2">${escapeHtml(record?.collateralType?.name || record?.description || '—')}</div>
+          ${isPooled ? `
+            <label>Quantity pledged * <input type="number" step="0.01" id="col-edit-qty" class="form-control" value="${record?.quantity ?? ''}" required/></label>
+          ` : `
+            <label>Description <input id="col-edit-desc" class="form-control" value="${escapeHtml(record?.description || '')}"/></label>
+            <label class="mt-2">Value <input type="number" step="0.01" id="col-edit-value" class="form-control" value="${record?.value ?? ''}"/></label>
+          `}
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="col-edit-save">Save</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#col-edit-save').addEventListener('click', async () => {
+    let payload;
+    if (isPooled) {
+      const quantity = parseFloat(el.querySelector('#col-edit-qty').value);
+      if (!isFinite(quantity) || quantity <= 0) { toast('warn', 'Enter a valid quantity', ''); return; }
+      payload = { quantity, locale: LOCALE };
+    } else {
+      const description = el.querySelector('#col-edit-desc').value.trim();
+      const value = parseFloat(el.querySelector('#col-edit-value').value);
+      if (!description) { toast('warn', 'Enter description', ''); return; }
+      payload = { description, ...(isFinite(value) && { value }), locale: LOCALE };
+    }
+    try {
+      await api.loans.updateCollateral(loanId, collateralId, payload);
+      el.remove(); toast('success', 'Collateral updated', ''); onSuccess();
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -185,7 +233,53 @@ export async function openAddGuarantorModal(loanId, onSuccess) {
       el.remove();
       toast('success', 'Guarantor added', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
+  });
+}
+
+export async function openEditGuarantorModal(loanId, guarantorId, onSuccess) {
+  let record = null;
+  try { record = await api.loans.getGuarantor(loanId, guarantorId); } catch (e) {
+    toast('error', 'Failed to load guarantor', extractFineractError(e)); return;
+  }
+  const name = record?.clientName || record?.entityDisplayName ||
+    [record?.firstname, record?.lastname].filter(Boolean).join(' ') || '—';
+  const mid = `ln-guar-edit-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Edit Guarantor</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <div class="text-muted mb-2">${escapeHtml(name)}</div>
+          <label>Amount guaranteed <input type="number" step="0.01" id="gar-edit-amount" class="form-control" value="${record?.amount ?? ''}"/></label>
+          ${record?.firstname != null ? `
+            <label class="mt-2">First name <input id="gar-edit-fname" class="form-control" value="${escapeHtml(record?.firstname || '')}"/></label>
+            <label class="mt-2">Last name <input id="gar-edit-lname" class="form-control" value="${escapeHtml(record?.lastname || '')}"/></label>
+            <label class="mt-2">Mobile <input id="gar-edit-mobile" class="form-control" value="${escapeHtml(record?.mobileNumber || '')}"/></label>
+          ` : ''}
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="gar-edit-save">Save</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#gar-edit-save').addEventListener('click', async () => {
+    const amount = parseFloat(el.querySelector('#gar-edit-amount').value);
+    const payload = { ...(isFinite(amount) && { amount }) };
+    const fnameEl = el.querySelector('#gar-edit-fname');
+    if (fnameEl) {
+      payload.firstname = fnameEl.value.trim();
+      payload.lastname = el.querySelector('#gar-edit-lname').value.trim();
+      const mobile = el.querySelector('#gar-edit-mobile').value.trim();
+      if (mobile) payload.mobileNumber = mobile;
+    }
+    try {
+      await api.loans.updateGuarantor(loanId, guarantorId, payload);
+      el.remove(); toast('success', 'Guarantor updated', ''); onSuccess();
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -237,7 +331,7 @@ export async function openAttachOriginatorModal(loanId, onSuccess) {
       el.remove();
       toast('success', 'Originator attached', '');
       onSuccess();
-    } catch (e) { toast('error', 'Attach failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Attach failed', extractFineractError(e)); }
   });
 }
 
@@ -297,6 +391,6 @@ export async function openEAOTransferModal(loanId, mode, onSuccess) {
       el.remove();
       toast('success', isBuyback ? 'Buy-back recorded' : 'Transfer initiated', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }

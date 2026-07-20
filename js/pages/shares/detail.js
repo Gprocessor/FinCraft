@@ -4,10 +4,11 @@
 import { api } from '../../api.js';
 import { confirm, toast } from '../../ui.js';
 import { escapeHtml, fmt, fmtDate, num, sb } from '../../utils.js';
-import { openApplyAdditionalSharesModal, openApplyShareChargeModal, openCloseShareModal, openEditShareModal, openPayShareChargeModal, openRedeemSharesModal, openShareSimpleCmd } from './actions.js';
+import { openApplyAdditionalSharesModal, openCloseShareModal, openEditShareModal, openRedeemSharesModal, openShareSimpleCmd } from './actions.js';
 import { can } from './shared.js';
 import { enhanceScrollableTabs } from '../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading share account…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No account selected</div>'; return; }
@@ -21,15 +22,21 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     const isActive = status === 'Active';
 
     const canApprove        = isPending  && can('APPROVE_SHAREACCOUNT');
-    const canUndoApproval   = isApproved && can('APPROVALUNDO_SHAREACCOUNT');
+    const canUndoApproval   = isApproved && can('UNDOAPPROVAL_SHAREACCOUNT');
     const canReject         = isPending  && can('REJECT_SHAREACCOUNT');
-    const canWithdrawApp    = isPending  && can('WITHDRAW_SHAREACCOUNT');
+    // FLAGGED, NOT VERIFIED: no WITHDRAW_SHAREACCOUNT permission exists anywhere in the 961-code Fineract set.
+    // ShareAccountsApiResource wasn't captured by the source-derived API map either, so the real gate can't be
+    // confirmed statically. Falling back to CREATE_SHAREACCOUNT (matches the single-generic-permission command
+    // dispatch pattern used by ClientsApiResource/GroupsApiResource) as a best-effort placeholder — confirm
+    // against a live server before relying on this for access control.
+    const canWithdrawApp    = isPending  && can('CREATE_SHAREACCOUNT');
     const canActivate       = isApproved && can('ACTIVATE_SHAREACCOUNT');
     const canApplyAdditional= isActive   && can('APPLYADDITIONALSHARES_SHAREACCOUNT');
     const canRedeem         = isActive   && can('REDEEMSHARES_SHAREACCOUNT');
     const canClose          = isActive   && can('CLOSE_SHAREACCOUNT');
     const canEdit           = isPending  && can('UPDATE_SHAREACCOUNT');
-    const canDelete         = isPending  && can('DELETE_SHAREACCOUNT');
+    // FLAGGED, NOT VERIFIED: same situation as canWithdrawApp above — no DELETE_SHAREACCOUNT code exists.
+    const canDelete         = isPending  && can('CREATE_SHAREACCOUNT');
 
     const totalApprovedShares = s.totalApprovedShares || 0;
     const totalPendingForApproval = s.totalPendingForApprovalShares || 0;
@@ -68,7 +75,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           <button class="tab" data-shtab="requests">Share Requests</button>
           <button class="tab" data-shtab="charges">Charges</button>
           <button class="tab" data-shtab="dividends">Dividends</button>
-          ${can('READ_NOTE') ? `<button class="tab" data-shtab="notes">Notes</button>` : ''}
+          <button class="tab" data-shtab="notes">Notes</button>
           ${can('READ_DOCUMENT') ? `<button class="tab" data-shtab="documents">Documents</button>` : ''}
         </div>
 
@@ -162,7 +169,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     c.querySelector('#btn-sh-undo-approval')?.addEventListener('click', async () => {
       if (!await confirm({ title: 'Undo approval?', confirmText: 'Undo' })) return;
       try { await api.shares.undoApproval(id); toast('success', 'Approval undone', ''); document.dispatchEvent(new CustomEvent('fc:reload')); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
     c.querySelector('#btn-sh-reject')?.addEventListener('click', () => openShareSimpleCmd({
       id, command: 'reject', label: 'Reject Share Account', dateField: 'rejectedDate'
@@ -190,14 +197,14 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.shares.delete(id);
         toast('success', 'Account deleted', '');
         import('../../router.js').then(r => r.navigate('shares'));
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     });
 
   } catch (e) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load share account</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }
@@ -237,9 +244,9 @@ async function loadShareRequests(c, id, s) {
               <td class="text-right">${fmt((r.numberOfShares || 0) * (r.unitPrice || s.shareValue || 0))}</td>
               <td>${sb(stat)}</td>
               <td class="text-right">
-                ${isPending && can('APPROVESHARE_SHAREACCOUNT')
+                ${isPending && can('APPROVEADDITIONALSHARES_SHAREACCOUNT')
                   ? `<button class="btn-mini btn-success" data-req-approve="${r.id}">Approve</button>` : ''}
-                ${isPending && can('REJECTSHARE_SHAREACCOUNT')
+                ${isPending && can('REJECTADDITIONALSHARES_SHAREACCOUNT')
                   ? `<button class="btn-mini btn-warning" data-req-reject="${r.id}">Reject</button>` : ''}
               </td>
             </tr>`;
@@ -254,7 +261,7 @@ async function loadShareRequests(c, id, s) {
         });
         toast('success', 'Request approved', '#' + b.dataset.reqApprove);
         loadShareRequests(c, id, s);
-      } catch (e) { toast('error', 'Approve failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Approve failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-req-reject]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Reject share purchase request?', danger: true, confirmText: 'Reject' })) return;
@@ -264,87 +271,40 @@ async function loadShareRequests(c, id, s) {
         });
         toast('success', 'Request rejected', '#' + b.dataset.reqReject);
         loadShareRequests(c, id, s);
-      } catch (e) { toast('error', 'Reject failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Reject failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    listEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
 async function loadShareCharges(c, id) {
   const wrap = c.querySelector('#sh-charges-wrap');
+  // NOTE: Fineract has no /accounts/share/{id}/charges sub-resource — share
+  // account charges are only ever set via the account create/update JSON
+  // body (as `charges: [...]`), never through a nested REST path. The
+  // previous version of this tab called a fabricated endpoint that always
+  // returned 404. Until this is rebuilt against create/update payloads,
+  // show an explicit notice rather than a silently-broken UI.
   wrap.innerHTML = `
-    ${can('CREATE_SHAREACCOUNTCHARGE') ? `
-      <div class="section-header mb-2">
-        <h3>Account Charges</h3>
-        <button class="btn-primary btn-sm" id="sh-add-charge"><i class="fa-solid fa-plus"></i> Apply Charge</button>
-      </div>` : '<h3>Account Charges</h3>'}
-    <div id="sh-charges-list"><div class="empty-state-row">Loading…</div></div>`;
-
-  wrap.querySelector('#sh-add-charge')?.addEventListener('click', () =>
-    openApplyShareChargeModal(id, () => loadShareCharges(c, id)));
-
-  const listEl = wrap.querySelector('#sh-charges-list');
-  try {
-    const res = await api.shares.charges(id);
-    const list = Array.isArray(res) ? res : [];
-    listEl.innerHTML = list.length ? `
-      <table class="table">
-        <thead><tr>
-          <th>Charge</th><th>Timing</th><th>Due</th>
-          <th class="text-right">Amount</th>
-          <th class="text-right">Paid</th>
-          <th class="text-right">Outstanding</th>
-          <th>Status</th><th></th>
-        </tr></thead>
-        <tbody>${list.map(ch => `
-          <tr>
-            <td>${escapeHtml(ch.name || '—')}</td>
-            <td>${escapeHtml(ch.chargeTimeType?.value || '—')}</td>
-            <td>${fmtDate(ch.dueDate)}</td>
-            <td class="text-right">${fmt(ch.amount || 0)}</td>
-            <td class="text-right">${fmt(ch.amountPaid || 0)}</td>
-            <td class="text-right">${fmt(ch.amountOutstanding || 0)}</td>
-            <td>${sb(ch.paid ? 'Paid' : ch.waived ? 'Waived' : !ch.active ? 'Inactive' : 'Outstanding')}</td>
-            <td class="text-right">
-              ${!ch.paid && !ch.waived && ch.active && can('PAY_SHAREACCOUNTCHARGE')
-                ? `<button class="btn-mini btn-success" data-pay-charge="${ch.id}">Pay</button>` : ''}
-              ${!ch.paid && !ch.waived && ch.active && can('WAIVE_SHAREACCOUNTCHARGE')
-                ? `<button class="btn-mini btn-warning" data-waive-charge="${ch.id}">Waive</button>` : ''}
-              ${!ch.paid && ch.active && can('INACTIVATE_SHAREACCOUNTCHARGE')
-                ? `<button class="btn-mini" data-inactivate-charge="${ch.id}">Inactivate</button>` : ''}
-              ${can('DELETE_SHAREACCOUNTCHARGE')
-                ? `<button class="btn-mini btn-danger" data-del-charge="${ch.id}">Delete</button>` : ''}
-            </td>
-          </tr>`).join('')}</tbody>
-      </table>` : '<div class="empty-state-row">No charges on this account</div>';
-
-    listEl.querySelectorAll('[data-pay-charge]').forEach(b => b.addEventListener('click', () =>
-      openPayShareChargeModal(id, b.dataset.payCharge, () => loadShareCharges(c, id))));
-    listEl.querySelectorAll('[data-waive-charge]').forEach(b => b.addEventListener('click', async () => {
-      if (!await confirm({ title: 'Waive charge?', confirmText: 'Waive' })) return;
-      try { await api.shares.waiveCharge(id, b.dataset.waiveCharge); toast('success', 'Waived', ''); loadShareCharges(c, id); }
-      catch (e) { toast('error', 'Waive failed', e.detail?.defaultUserMessage || e.message); }
-    }));
-    listEl.querySelectorAll('[data-inactivate-charge]').forEach(b => b.addEventListener('click', async () => {
-      if (!await confirm({ title: 'Inactivate charge?', confirmText: 'Inactivate' })) return;
-      try { await api.shares.inactivateCharge(id, b.dataset.inactivateCharge); toast('success', 'Inactivated', ''); loadShareCharges(c, id); }
-      catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
-    }));
-    listEl.querySelectorAll('[data-del-charge]').forEach(b => b.addEventListener('click', async () => {
-      if (!await confirm({ title: 'Delete charge?', danger: true, confirmText: 'Delete' })) return;
-      try { await api.shares.deleteCharge(id, b.dataset.delCharge); toast('success', 'Deleted', ''); loadShareCharges(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
-    }));
-  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
+    <h3>Account Charges</h3>
+    <div class="msg-banner b-warning">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      Share account charges aren't exposed as a separate API in this Fineract version —
+      they can only be set when the account is created or updated. This tab has been
+      disabled to avoid failed requests; use the account's Edit form to manage charges instead.
+    </div>`;
 }
 
 async function loadShareDividends(c, productId) {
   const wrap = c.querySelector('#sh-div-wrap');
   wrap.innerHTML = `
-    <h3>Dividend Records</h3>
+    <div class="section-header">
+      <h3>Dividend Records</h3>
+      ${can('CREATE_DIVIDEND_SHAREPRODUCT') ? `<button class="btn-primary btn-sm" id="sh-div-declare"><i class="fa-solid fa-plus"></i> Declare Dividend</button>` : ''}
+    </div>
     <div class="text-muted small mb-2">
-      Dividend declarations are managed at the share product level. Shown here are dividends for this account's product.
+      Dividends are declared at the share product level; shown here for this account's product.
     </div>
     <div id="sh-div-list"><div class="empty-state-row">Loading…</div></div>`;
 
@@ -353,6 +313,12 @@ async function loadShareDividends(c, productId) {
     listEl.innerHTML = '<div class="empty-state-row text-muted">Product ID not available</div>';
     return;
   }
+
+  async function reload() { loadShareDividends(c, productId); }
+
+  wrap.querySelector('#sh-div-declare')?.addEventListener('click', () =>
+    openDeclareDividendModal(productId, null, reload));
+
   try {
     const res = await api.shares.dividends(productId);
     const list = Array.isArray(res) ? res : (res?.pageItems || []);
@@ -361,19 +327,79 @@ async function loadShareDividends(c, productId) {
         <thead><tr>
           <th>#</th><th>Dividend Date</th>
           <th class="text-right">Amount</th>
-          <th>Status</th>
+          <th>Status</th><th></th>
         </tr></thead>
-        <tbody>${list.map(d => `
+        <tbody>${list.map(d => {
+          const approved = d.approved || d.status?.value === 'Approved';
+          return `
           <tr>
             <td>${d.id}</td>
             <td>${fmtDate(d.dividendPeriodStartDate || d.dividendDate) || '—'}</td>
             <td class="text-right">${fmt(d.amount || d.dividendAmount || 0)}</td>
-            <td>${sb(d.status?.value || (d.approved ? 'Approved' : 'Pending'))}</td>
-          </tr>`).join('')}</tbody>
+            <td>${sb(d.status?.value || (approved ? 'Approved' : 'Pending'))}</td>
+            <td class="text-right">
+              ${!approved && can('UPDATE_SHAREPRODUCT') ? `<button class="btn-mini" data-edit-div="${d.id}">Edit</button>` : ''}
+              ${!approved && can('APPROVE_DIVIDEND_SHAREPRODUCT') ? `<button class="btn-mini btn-success" data-approve-div="${d.id}">Approve</button>` : ''}
+              ${!approved && can('DELETE_DIVIDEND_SHAREPRODUCT') ? `<button class="btn-mini btn-danger" data-del-div="${d.id}">Delete</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No dividends declared yet</div>';
+
+    listEl.querySelectorAll('[data-edit-div]').forEach(b => b.addEventListener('click', async () => {
+      let record = null;
+      try { record = await api.shares.getDividend(productId, b.dataset.editDiv); }
+      catch (e) { toast('error', 'Failed to load dividend', extractFineractError(e)); return; }
+      openDeclareDividendModal(productId, record, reload);
+    }));
+    listEl.querySelectorAll('[data-approve-div]').forEach(b => b.addEventListener('click', async () => {
+      if (!await confirm({ title: 'Approve this dividend?', confirmText: 'Approve' })) return;
+      try { await api.shares.approveDividend(productId, b.dataset.approveDiv); toast('success', 'Dividend approved', ''); reload(); }
+      catch (e) { toast('error', 'Approve failed', extractFineractError(e)); }
+    }));
+    listEl.querySelectorAll('[data-del-div]').forEach(b => b.addEventListener('click', async () => {
+      if (!await confirm({ title: 'Delete this dividend?', danger: true, confirmText: 'Delete' })) return;
+      try { await api.shares.deleteDividend(productId, b.dataset.delDiv); toast('success', 'Dividend deleted', ''); reload(); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
+    }));
   } catch (e) {
     listEl.innerHTML = `<div class="empty-state-row text-muted">Could not load dividends (${escapeHtml(e.message)})</div>`;
   }
+}
+
+async function openDeclareDividendModal(productId, existing, onSuccess) {
+  const mid = 'sh-div-modal-' + Date.now();
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>${existing ? 'Edit' : 'Declare'} Dividend</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <label>Dividend period start date * <input type="date" id="div-start" class="form-control" value="${existing?.dividendPeriodStartDate || ''}" required/></label>
+          <label class="mt-2">Dividend period end date * <input type="date" id="div-end" class="form-control" value="${existing?.dividendPeriodEndDate || ''}" required/></label>
+          <label class="mt-2">Amount * <input type="number" step="0.01" id="div-amount" class="form-control" value="${existing?.amount ?? existing?.dividendAmount ?? ''}" required/></label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="div-save">Save</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#div-save').addEventListener('click', async () => {
+    const dividendPeriodStartDate = el.querySelector('#div-start').value;
+    const dividendPeriodEndDate = el.querySelector('#div-end').value;
+    const amount = parseFloat(el.querySelector('#div-amount').value);
+    if (!dividendPeriodStartDate || !dividendPeriodEndDate || !isFinite(amount)) {
+      toast('warn', 'Fill in all fields with a valid amount', ''); return;
+    }
+    const payload = { dividendPeriodStartDate, dividendPeriodEndDate, amount };
+    try {
+      if (existing) await api.shares.updateDividend(productId, existing.id, payload);
+      else          await api.shares.postDividend(productId, payload);
+      el.remove(); toast('success', existing ? 'Dividend updated' : 'Dividend declared', ''); onSuccess();
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
+  });
 }
 
 async function loadShareNotes(c, id) {
@@ -381,18 +407,17 @@ async function loadShareNotes(c, id) {
   wrap.innerHTML = `
     <h3>Notes</h3>
     <div id="sh-note-list"><div class="empty-state-row">Loading…</div></div>
-    ${can('CREATE_NOTE') ? `
       <div class="mt-3">
         <textarea id="sh-note-input" class="form-control" rows="2" placeholder="Add a note…"></textarea>
         <button class="btn-primary mt-2" id="sh-note-save"><i class="fa-solid fa-plus"></i> Add</button>
-      </div>` : ''}`;
+      </div>`;
 
   wrap.querySelector('#sh-note-save')?.addEventListener('click', async () => {
     const inp = wrap.querySelector('#sh-note-input');
     const note = inp.value.trim();
     if (!note) return;
     try { await api.notes.create('share', id, { note }); inp.value = ''; loadShareNotes(c, id); toast('success', 'Note added', ''); }
-    catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 
   const listEl = wrap.querySelector('#sh-note-list');
@@ -473,7 +498,7 @@ async function loadShareDocuments(c, id) {
     listEl.querySelectorAll('[data-doc-del]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete document?', danger: true, confirmText: 'Delete' })) return;
       try { await api.documents.delete('shareaccounts', id, b.dataset.docDel); toast('success', 'Deleted', ''); loadShareDocuments(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

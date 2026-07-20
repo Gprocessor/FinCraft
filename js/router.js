@@ -6,7 +6,12 @@ import { setActiveNav, setBreadcrumb } from './ui.js';
 /**
  * `requiredPermission` is a single Fineract permission code OR an array (any-of).
  * `null` = authenticated user only. Use `'ALL_FUNCTIONS'` to bypass (admin-only).
+ * The sentinel `ANY_CHECKER_PERMISSION` below is a special third form, handled by
+ * `isAllowed()`, for routes gated on "holds CHECKER_SUPER_USER or any entity-level
+ * `..._CHECKER` permission" rather than one fixed code or a fixed list of codes.
  */
+export const ANY_CHECKER_PERMISSION = Symbol('ANY_CHECKER_PERMISSION');
+
 const PAGES = {
   dashboard:    { mod: () => import('./pages/dashboard.js'),    label: 'Dashboard',     icon: 'fa-gauge-high',     requiredPermission: null },
   clients:      { mod: () => import('./pages/clients.js'),      label: 'Clients',       icon: 'fa-users',          requiredPermission: 'READ_CLIENT' },
@@ -14,19 +19,19 @@ const PAGES = {
   loans:        { mod: () => import('./pages/loans.js'),        label: 'Loans',         icon: 'fa-hand-holding-dollar', requiredPermission: 'READ_LOAN' },
   savings:      { mod: () => import('./pages/savings.js'),      label: 'Savings',       icon: 'fa-piggy-bank',     requiredPermission: 'READ_SAVINGSACCOUNT' },
   deposits:     { mod: () => import('./pages/deposits.js'),     label: 'Deposits',      icon: 'fa-vault',          requiredPermission: ['READ_FIXEDDEPOSITACCOUNT','READ_RECURRINGDEPOSITACCOUNT'] },
-  shares:       { mod: () => import('./pages/shares.js'),       label: 'Shares',        icon: 'fa-chart-pie',      requiredPermission: 'READ_SHAREACCOUNT' },
+  shares:       { mod: () => import('./pages/shares.js'),       label: 'Shares',        icon: 'fa-chart-pie',      requiredPermission: null }, // no READ_SHAREACCOUNT code exists in the 961-code Fineract permission set; was permanently unreachable
   groups:       { mod: () => import('./pages/groups.js'),       label: 'Groups',        icon: 'fa-people-group',   requiredPermission: 'READ_GROUP' },
   centers:      { mod: () => import('./pages/centers.js'),      label: 'Centers',       icon: 'fa-building-columns', requiredPermission: 'READ_CENTER' },
   collections:  { mod: () => import('./pages/collections.js'),  label: 'Collections',   icon: 'fa-file-invoice-dollar', requiredPermission: 'READ_COLLECTIONSHEET' },
   transfers:    { mod: () => import('./pages/transfers.js'),    label: 'Transfers',     icon: 'fa-right-left',     requiredPermission: 'READ_ACCOUNTTRANSFER' },
   remittances:  { mod: () => import('./pages/misc.js'),         label: 'Remittances',   icon: 'fa-paper-plane',    view: 'remittances', requiredPermission: 'READ_ACCOUNTTRANSFER' },
   accounting:   { mod: () => import('./pages/accounting.js'),   label: 'Accounting',    icon: 'fa-calculator',     requiredPermission: 'READ_JOURNALENTRY' },
-  tasks:        { mod: () => import('./pages/tasks.js'),        label: 'Checker Inbox', icon: 'fa-inbox',          requiredPermission: ['CHECKER_SUPER_USER','CHECKER_APPROVE','CHECKER_REJECT','CHECKER_DELETE'] },
+  tasks:        { mod: () => import('./pages/tasks.js'),        label: 'Checker Inbox', icon: 'fa-inbox',          requiredPermission: ANY_CHECKER_PERMISSION }, // gated on CHECKER_SUPER_USER OR any real entity "..._CHECKER" permission (e.g. CREATE_ROLE_CHECKER) — see store.hasAnyCheckerPermission()
   reports:      { mod: () => import('./pages/reports.js'),      label: 'Reports',       icon: 'fa-file-chart-column', requiredPermission: 'READ_REPORT' },
   products:     { mod: () => import('./pages/products.js'),     label: 'Products',      icon: 'fa-cubes',          requiredPermission: 'READ_LOANPRODUCT' },
   charges:      { mod: () => import('./pages/charges.js'),      label: 'Charges',       icon: 'fa-tags',           requiredPermission: 'READ_CHARGE' },
   organization: { mod: () => import('./pages/organization.js'), label: 'Organization',  icon: 'fa-sitemap',        requiredPermission: 'READ_OFFICE' },
-  collaterals:  { mod: () => import('./pages/collateral.js'),   label: 'Collateral',    icon: 'fa-shield-halved',  requiredPermission: 'READ_COLLATERAL_PRODUCT' },
+  collaterals:  { mod: () => import('./pages/collateral.js'),   label: 'Collateral',    icon: 'fa-shield-halved',  requiredPermission: 'READ_COLLATERAL' },
   system:       { mod: () => import('./pages/system.js'),       label: 'System',        icon: 'fa-gears',          requiredPermission: 'READ_CONFIGURATION' },
   users:        { mod: () => import('./pages/users.js'), label: 'Users & Roles', icon: 'fa-user-shield', requiredPermission: 'READ_USER' },
   analytics:    { mod: () => import('./pages/analytics.js'),    label: 'Analytics',     icon: 'fa-chart-line',     requiredPermission: 'READ_REPORT' },
@@ -35,7 +40,7 @@ const PAGES = {
   profile:      { mod: () => import('./pages/misc.js'),         label: 'Profile',       icon: 'fa-user',           view: 'profile', requiredPermission: null },
   settings:     { mod: () => import('./pages/misc.js'),         label: 'Settings',      icon: 'fa-gear',           view: 'settings', requiredPermission: null },
   datatables:   { mod: () => import('./pages/datatables.js'),   label: 'Data Tables',   icon: 'fa-table',          requiredPermission: 'READ_DATATABLE' },
-  surveys:      { mod: () => import('./pages/misc.js'),         label: 'Surveys',       icon: 'fa-clipboard-list', view: 'surveys', requiredPermission: 'READ_SURVEY' },
+  surveys:      { mod: () => import('./pages/misc.js'),         label: 'Surveys',       icon: 'fa-clipboard-list', view: 'surveys', requiredPermission: null }, // no READ_SURVEY code exists; real SurveyApiResource GET endpoints carry no permission literal in Fineract source either
   templates:    { mod: () => import('./pages/templates.js'), label: 'Templates', icon: 'fa-file-lines', requiredPermission: 'READ_TEMPLATE' },
   navigation:   { mod: () => import('./pages/misc.js'),         label: 'Navigation',    icon: 'fa-folder-tree',    view: 'navigation', requiredPermission: null },
   'self-service': { mod: () => import('./pages/self-service.js'), label: 'Self Service', icon: 'fa-mobile-screen', requiredPermission: null },
@@ -60,6 +65,7 @@ export function isAllowed(def) {
   if (!def) return false;
   const need = def.requiredPermission;
   if (need === null || need === undefined) return true;            // public-to-authenticated
+  if (need === ANY_CHECKER_PERMISSION) return store.hasAnyCheckerPermission();
   const codes = Array.isArray(need) ? need : [need];
   return codes.some(c => store.hasPermission(c));
 }
@@ -140,7 +146,20 @@ export async function handleHash() {
 
 export function navigate(page, params = {}) { location.hash = buildHash(page, params); }
 
+let _hashListenerBound = false;
+
+/**
+ * Registers the hashchange listener (once ever — safe to call again on
+ * re-login within the same page session) and renders whatever route is
+ * currently in location.hash. Callers that need to redirect to a default
+ * page for an empty hash (see auth.js showApp()) must set location.hash
+ * BEFORE calling this, not after — calling navigate() afterwards would
+ * fire the listener a second time and double-render/double-fetch the page.
+ */
 export function initRouter() {
-  window.addEventListener('hashchange', handleHash);
+  if (!_hashListenerBound) {
+    window.addEventListener('hashchange', handleHash);
+    _hashListenerBound = true;
+  }
   handleHash();
 }

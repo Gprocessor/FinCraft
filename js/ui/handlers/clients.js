@@ -30,6 +30,10 @@ export const ClientsHandlers = {
       if (f.mobileNo) payload.mobileNo = f.mobileNo;
       if (f.externalId) payload.externalId = f.externalId;
       if (f.staffId) payload.staffId = parseInt(f.staffId);
+      // Center is UI-only (narrows the Group dropdown); only groupId is a real
+      // Fineract client-create field. Group becomes required once a center is
+      // picked — see the cl-center-sel cascade wiring in modal-init.js.
+      if (f.groupId) payload.groupId = parseInt(f.groupId);
       if (f.activationDate) { payload.activationDate = f.activationDate; payload.active = true; }
       if (f.isStaff === 'on' || f.isStaff === 'true') payload.isStaff = true;
 

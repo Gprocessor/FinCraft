@@ -71,6 +71,24 @@ class Store {
     if (perms.includes('ALL_FUNCTIONS_READ') && /^READ_/.test(code)) return true;
     return perms.includes(code);
   }
+
+  /**
+   * True if the user can act on *some* maker-checker approval queue item.
+   * Fineract's maker-checker model has no single umbrella "approve" permission —
+   * approval rights are granted per entity-action via a `..._CHECKER` suffix
+   * permission (e.g. `CREATE_ROLE_CHECKER`, `DISBURSE_LOAN_CHECKER`), of which
+   * there are 100+ real codes in the 961-code permission set. `CHECKER_SUPER_USER`
+   * is the only special/global permission and bypasses all of them. Gating the
+   * Checker Inbox on `CHECKER_SUPER_USER` alone locks out the overwhelmingly
+   * common case of a checker-role user who only holds specific entity `_CHECKER`
+   * grants.
+   */
+  hasAnyCheckerPermission() {
+    const perms = this.state.perms || [];
+    if (perms.includes('ALL_FUNCTIONS')) return true;
+    if (perms.includes('CHECKER_SUPER_USER')) return true;
+    return perms.some(c => typeof c === 'string' && c.endsWith('_CHECKER'));
+  }
 }
 
 export const store = new Store();

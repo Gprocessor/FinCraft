@@ -1,0 +1,73 @@
+<!-- FinCraft modal partials — groups-centers domain. Fetched and concatenated at
+     runtime by js/ui/shell.js alongside the other views/modals/*.html files (mirrors
+     the js/api/groups-centers.js domain split). All forms have name= attrs and
+     data-populate= hooks. -->
+
+<!-- New Group -->
+<div id="newGroupModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Group</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newGroupForm">
+        <label class="full"><span class="form-label">Group name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Center *</span>
+          <select name="centerId" id="grp-center-sel" class="form-control" data-populate="centers" required></select></label>
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Staff</span>
+          <select name="staffId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
+        <label class="full form-check" style="align-items:center">
+          <input type="checkbox" name="autoActivate" checked/> <span>Also activate immediately</span></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-group"><i class="fa-solid fa-check"></i> Create Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic Entity Detail (reused by Centers, Groups, etc.) -->
+<div id="entityDetailModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-md">
+    <div class="modal-head"><h3 class="modal-title" id="edm-title">Details</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body" id="edm-body"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div></div>
+    <div class="modal-foot" id="edm-foot"><button class="btn-ghost" data-close-modal>Close</button></div>
+  </div>
+</div>
+
+<!-- New Center -->
+<div id="newCenterModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Center</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newCenterForm">
+        <label class="full"><span class="form-label">Center name *</span>
+          <input name="name" required class="form-control"/></label>
+        <label><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label><span class="form-label">Staff</span>
+          <select name="staffId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
+        <label class="full form-check" style="align-items:center">
+          <input type="checkbox" name="autoActivate" checked/> <span>Also activate immediately</span></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-center"><i class="fa-solid fa-check"></i> Create Center</button>
+    </div>
+  </div>
+</div>
+

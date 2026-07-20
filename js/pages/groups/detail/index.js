@@ -5,13 +5,14 @@ import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate, sb } from '../../../utils.js';
-import { openAddMembersModal, openApplyChargeModal, openAssignStaffModal, openCloseGroupModal, openEditGroupModal, openScheduleMeetingModal, openTransferMembersModal } from '../actions.js';
+import { openAddMembersModal, openAssignRoleModal, openAssignStaffModal, openCloseGroupModal, openEditGroupModal, openScheduleMeetingModal, openTransferMembersModal } from '../actions.js';
 import { can } from '../shared.js';
 import { loadCharges, loadMeetings, loadStandingInstructions } from './meetings-charges.js';
-import { loadAccounts, loadMembers } from './members.js';
+import { loadAccounts, loadMembers, loadRoles } from './members.js';
 import { loadDocuments, loadNotes } from './notes-docs.js';
 import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading group…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No group selected</div>'; return; }
@@ -23,6 +24,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     const canActivate = status === 'Pending' && can('ACTIVATE_GROUP');
     const canClose    = status === 'Active'  && can('CLOSE_GROUP');
     const canEdit     = can('UPDATE_GROUP');
+    const canDelete   = can('DELETE_GROUP');
     const canAssign   = can('ASSIGNSTAFF_GROUP');
     const canMembers  = can('ASSOCIATECLIENTS_GROUP') || can('DISASSOCIATECLIENTS_GROUP');
     const canCollect  = can('READ_COLLECTIONSHEET');
@@ -43,6 +45,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           ${canClose    ? `<button class="btn-danger"    id="grp-close"><i class="fa-solid fa-circle-xmark"></i> Close</button>` : ''}
           ${canAssign   ? `<button class="btn-secondary" id="grp-assign-staff"><i class="fa-solid fa-user-tag"></i> Staff</button>` : ''}
           ${canCollect  ? `<button class="btn-secondary" id="grp-collection"><i class="fa-solid fa-file-invoice-dollar"></i> Collection Sheet</button>` : ''}
+          ${canDelete   ? `<button class="btn-danger"    id="grp-delete"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
         </div>
       </div>
 
@@ -52,9 +55,9 @@ export async function renderDetail(c, id, initialTab = 'overview') {
           ${canMembers || can('READ_GROUP') ? `<button class="tab" data-grptab="members">Members (${(g.clientMembers || []).length})</button>` : ''}
           ${can('READ_LOAN') || can('READ_SAVINGSACCOUNT') ? `<button class="tab" data-grptab="accounts">Accounts</button>` : ''}
           ${can('READ_MEETING') ? `<button class="tab" data-grptab="meetings">Meetings</button>` : ''}
-          ${can('READ_GROUPCHARGE') ? `<button class="tab" data-grptab="charges">Charges</button>` : ''}
-          ${can('READ_STANDINGINSTRUCTION') ? `<button class="tab" data-grptab="si">Standing Instructions</button>` : ''}
-          ${can('READ_NOTE') ? `<button class="tab" data-grptab="notes">Notes</button>` : ''}
+          <button class="tab" data-grptab="charges">Charges</button>
+          ${can('READ_ACCOUNTTRANSFER') ? `<button class="tab" data-grptab="si">Standing Instructions</button>` : ''}
+          ${can('READ_GROUPNOTE') ? `<button class="tab" data-grptab="notes">Notes</button>` : ''}
           ${can('READ_DOCUMENT') ? `<button class="tab" data-grptab="documents">Documents</button>` : ''}
         </div>
 
@@ -85,6 +88,12 @@ export async function renderDetail(c, id, initialTab = 'overview') {
               </div>` : ''}
           </div>
           <div id="grp-members-list"><div class="empty-state-row">Loading…</div></div>
+
+          <div class="section-header mt-4">
+            <h3>Member Roles</h3>
+            ${can('ASSIGNROLE_GROUP') ? `<button class="btn-secondary btn-sm" id="grp-assign-role"><i class="fa-solid fa-user-tag"></i> Assign Role</button>` : ''}
+          </div>
+          <div id="grp-roles-list"><div class="empty-state-row">Loading…</div></div>
         </div>
 
         <!-- Accounts -->
@@ -107,7 +116,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         <div class="tab-panel" data-grppanel="charges" hidden>
           <div class="section-header">
             <h3>Charges</h3>
-            ${can('CREATE_GROUPCHARGE') ? `<button class="btn-primary btn-sm" id="grp-add-charge"><i class="fa-solid fa-plus"></i> Apply Charge</button>` : ''}
+
           </div>
           <div id="grp-charges-list"><div class="empty-state-row">Loading…</div></div>
         </div>
@@ -147,7 +156,7 @@ export async function renderDetail(c, id, initialTab = 'overview') {
     const panels = c.querySelectorAll('[data-grppanel]');
     const lazyLoaded = {};
     const lazyLoaders = {
-      members:    () => loadMembers(c, id, g),
+      members:    () => { loadMembers(c, id, g); loadRoles(c, id); },
       accounts:   () => loadAccounts(c, id),
       meetings:   () => loadMeetings(c, id),
       charges:    () => loadCharges(c, id),
@@ -181,18 +190,30 @@ function switchTab(name) {
         await api.groups.activate(id, { activationDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE });
         toast('success', 'Group activated', g.name);
         document.dispatchEvent(new CustomEvent('fc:reload'));
-      } catch (e) { toast('error', 'Activation failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Activation failed', extractFineractError(e)); }
     });
     c.querySelector('#grp-close')?.addEventListener('click', () => openCloseGroupModal(id));
     c.querySelector('#grp-assign-staff')?.addEventListener('click', () => openAssignStaffModal(id, g));
     c.querySelector('#grp-collection')?.addEventListener('click', () => {
       import('../../../router.js').then(r => r.navigate('collections', { groupId: id }));
     });
+    c.querySelector('#grp-delete')?.addEventListener('click', async () => {
+      if (!await confirm({
+        title: 'Delete group?',
+        message: 'This permanently deletes the group. Only allowed if it has no members or associated accounts. Continue?',
+        danger: true, confirmText: 'Delete'
+      })) return;
+      try {
+        await api.groups.delete(id);
+        toast('success', 'Group deleted', '');
+        import('../../../router.js').then(r => r.navigate('groups'));
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
+    });
 
     c.querySelector('#grp-add-members')?.addEventListener('click', () => openAddMembersModal(id, g, () => loadMembers(c, id, g)));
     c.querySelector('#grp-transfer-members')?.addEventListener('click', () => openTransferMembersModal(id, g));
+    c.querySelector('#grp-assign-role')?.addEventListener('click', () => openAssignRoleModal(id, g, () => loadRoles(c, id)));
     c.querySelector('#grp-add-meeting')?.addEventListener('click', () => openScheduleMeetingModal(id, () => loadMeetings(c, id)));
-    c.querySelector('#grp-add-charge')?.addEventListener('click', () => openApplyChargeModal(id, () => loadCharges(c, id)));
 
     // -------- Notes --------
     c.querySelector('#grp-note-save')?.addEventListener('click', async () => {
@@ -203,7 +224,7 @@ function switchTab(name) {
         inp.value = '';
         loadNotes(c, id);
         toast('success', 'Note added', '');
-      } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
     });
 
     // -------- Documents --------
@@ -226,7 +247,7 @@ function switchTab(name) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load group</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }

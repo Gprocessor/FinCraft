@@ -7,6 +7,36 @@ import { escapeHtml } from '../../../utils.js';
 import { toast } from '../../../ui.js';
 import { openSimpleLoanCmdModal } from './closure.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
+export async function openModifyAvailableDisbursementAmountModal(loanId, currentAmount, onSuccess) {
+  const mid = `ln-modava-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Modify Available Disbursement Amount</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <label>New available disbursement amount * <input type="number" step="0.01" id="mava-amount" class="form-control" value="${currentAmount ?? ''}" required/></label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-primary" id="mava-save">Save</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#mava-save').addEventListener('click', async () => {
+    const availableDisbursementAmount = parseFloat(el.querySelector('#mava-amount').value);
+    if (!isFinite(availableDisbursementAmount) || availableDisbursementAmount < 0) {
+      toast('warn', 'Enter a valid amount', ''); return;
+    }
+    try {
+      await api.loans.updateAvailableDisbursementAmount(loanId, { availableDisbursementAmount, locale: LOCALE });
+      el.remove(); toast('success', 'Available disbursement amount updated', ''); onSuccess?.();
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
+  });
+}
+
 export async function openDisburseModal(id) {
   let paymentTypes = [];
   try { paymentTypes = await api.paymentTypes.list(); } catch {}
@@ -50,7 +80,7 @@ export async function openDisburseModal(id) {
       el.remove();
       toast('success', 'Loan disbursed', `#${id}`);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Disburse failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Disburse failed', extractFineractError(e)); }
   });
 }
 

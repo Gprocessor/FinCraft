@@ -5,7 +5,71 @@ import { api } from '../../../api.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
 import { openPayChargeModal } from '../actions.js';
-import { can } from '../shared.js';
+import { can, cvAvatar } from '../shared.js';
+
+import { extractFineractError } from '../../../ui/dom-helpers.js';
+/* Powers the Financial Summary panel on the redesigned Overview tab — a light read of the
+   same /clients/{id}/accounts payload used by the full Accounts tab, so it costs one extra
+   request rather than re-deriving anything server-side doesn't already give us. */
+export async function loadClientOverviewStats(c, id, cl) {
+  const wrap = c.querySelector('#cl-overview-stats');
+  if (!wrap) return;
+  try {
+    const acc = await api.clients.accounts(id);
+    const savings = acc?.savingsAccounts || [];
+    const loans   = acc?.loanAccounts    || [];
+    const savingsTotal = savings.reduce((sum, s) => sum + (s.accountBalance || 0), 0);
+    const loanTotal     = loans.reduce((sum, l) => sum + (l.loanBalance ?? l.originalLoan ?? 0), 0);
+    const activeLoans   = loans.filter(l => /active/i.test(l.status?.value || '')).length;
+
+    wrap.innerHTML = `
+      <div class="cv-stat-grid-2">
+        <div class="cv-stat-tile"><div class="cv-i-label">Savings Balance</div><div class="cv-stat-val">${fmt(savingsTotal)}</div></div>
+        <div class="cv-stat-tile"><div class="cv-i-label">Loan Balance</div><div class="cv-stat-val">${fmt(loanTotal)}</div></div>
+        <div class="cv-stat-tile"><div class="cv-i-label">Accounts</div><div class="cv-stat-val small">${savings.length}</div></div>
+        <div class="cv-stat-tile"><div class="cv-i-label">Active Loans</div><div class="cv-stat-val small">${activeLoans}</div></div>
+      </div>
+      ${cl.staffName ? `
+        <div class="cv-officer-row">
+          ${cvAvatar({ id: cl.staffId || cl.id, displayName: cl.staffName }, 'sm')}
+          <div>
+            <div class="cv-i-label">Account Officer</div>
+            <div class="cv-fval">${escapeHtml(cl.staffName)}</div>
+          </div>
+        </div>` : ''}`;
+  } catch (e) {
+    wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message || 'Could not load balances')}</div>`;
+  }
+}
+
+/* Dedicated "Loans" quick-tab — same underlying data as the Accounts tab's loan section,
+   surfaced on its own since that's how the client's loan book gets checked most often. */
+export async function loadClientLoansOnly(c, id) {
+  const wrap = c.querySelector('#cl-loans-only-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="empty-state-row">Loading…</div>';
+  try {
+    const acc = await api.clients.accounts(id);
+    const loans = acc?.loanAccounts || [];
+    wrap.innerHTML = loans.length ? `
+      <table class="table">
+        <thead><tr><th>Account</th><th>Product</th><th class="text-right">Balance</th><th>Status</th></tr></thead>
+        <tbody>${loans.map(l => `
+          <tr>
+            <td><a href="#" data-view-loan-only="${l.id}">${escapeHtml(l.accountNo || '')}</a></td>
+            <td>${escapeHtml(l.productName || '')}</td>
+            <td class="text-right">${fmt(l.loanBalance ?? l.originalLoan ?? 0)}</td>
+            <td>${sb(l.status?.value || '—')}</td>
+          </tr>`).join('')}</tbody>
+      </table>` : '<div class="empty-state-row">No loan accounts for this client yet</div>';
+    wrap.querySelectorAll('[data-view-loan-only]').forEach(b => b.addEventListener('click', (e) => {
+      e.preventDefault();
+      import('../../../router.js').then(r => r.navigate('loans', { id: b.dataset.viewLoanOnly }));
+    }));
+  } catch (e) {
+    wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`;
+  }
+}
 
 export async function loadClientAccounts(c, id) {
   const wrap = c.querySelector('#cl-accounts-wrap');
@@ -94,12 +158,12 @@ export async function loadClientCharges(c, id) {
     wrap.querySelectorAll('[data-waive-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Waive charge?', confirmText: 'Waive', danger: true })) return;
       try { await api.clients.waiveCharge(id, b.dataset.waiveCharge); toast('success', 'Charge waived', ''); loadClientCharges(c, id); }
-      catch (e) { toast('error', 'Waive failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Waive failed', extractFineractError(e)); }
     }));
     wrap.querySelectorAll('[data-del-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete charge?', danger: true, confirmText: 'Delete' })) return;
       try { await api.clients.deleteCharge(id, b.dataset.delCharge); toast('success', 'Charge deleted', ''); loadClientCharges(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -142,15 +206,10 @@ export async function loadClientStandingInstructions(c, id) {
             <td class="text-right">${fmt(si.amount ?? 0)}</td>
             <td>${sb(si.status?.value || '—')}</td>
             <td class="text-right">
-              ${can('DELETE_STANDINGINSTRUCTION') ? `<button class="btn-mini btn-danger" data-del-si="${si.id}">Delete</button>` : ''}
+              <!-- No delete: DELETE_STANDINGINSTRUCTION is a real permission code, but StandingInstructionApiResource
+                   has no DELETE method at all in Fineract (only template/create/update/retrieveAll/retrieveOne). -->
             </td>
           </tr>`).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No standing instructions</div>';
-
-    wrap.querySelectorAll('[data-del-si]').forEach(b => b.addEventListener('click', async () => {
-      if (!await confirm({ title: 'Delete standing instruction?', danger: true, confirmText: 'Delete' })) return;
-      try { await api.standingInstructions.delete(b.dataset.delSi); toast('success', 'Deleted', ''); loadClientStandingInstructions(c, id); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
-    }));
   } catch (e) { wrap.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

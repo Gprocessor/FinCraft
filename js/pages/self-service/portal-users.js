@@ -5,6 +5,7 @@ import { api } from '../../api.js';
 import { confirm as modalConfirm, toast } from '../../ui.js';
 import { escapeHtml, fmtDate, ini, num, sb } from '../../utils.js';
 import { can } from './shared.js';
+import { extractFineractError } from '../../ui/dom-helpers.js';
 
 export async function loadPortalUsers(c) {
   const el = c.querySelector('#ss-0');
@@ -37,7 +38,7 @@ export async function loadPortalUsers(c) {
             <option value="expired">Password Expired</option>
           </select>
         </div>
-        ${can('CREATE_USER') ? '<button class="btn-secondary" id="btn-ss-info"><i class="fa-solid fa-circle-info"></i> About Self-Service</button>' : ''}
+        <button class="btn-secondary" id="btn-ss-info"><i class="fa-solid fa-circle-info"></i> About Self-Service</button>
       </div>
 
       <div class="text-muted small mb-2">
@@ -75,7 +76,7 @@ export async function loadPortalUsers(c) {
                   </div>
                 </div>
               </td>
-              <td>${u.clientId ? `${u.clientId}">${escapeHtml(u.clientName || ('#' + u.clientId))}</a>` : '—'}</td>
+              <td>${u.clientId ? `<a href="#" data-ss-view-client="${u.clientId}">${escapeHtml(u.clientName || ('#' + u.clientId))}</a>` : '—'}</td>
               <td>${escapeHtml(u.email || '—')}</td>
               <td>${fmtDate(u.lastLogin) || fmtDate(u.lastTimePasswordUpdated) || '—'}</td>
               <td>
@@ -84,7 +85,7 @@ export async function loadPortalUsers(c) {
                 ${u.accountNonLocked !== false && !u.passwordExpired ? sb('Active') : ''}
               </td>
               <td class="text-right">
-                ${can('UPDATE_USER') ? `<button class="btn-mini" data-ss-reset="${u.id}" data-ss-username="${escapeHtml(u.username)}">Reset Password</button>` : ''}
+                ${can('CHANGEPWD_USER') ? `<button class="btn-mini" data-ss-reset="${u.id}" data-ss-username="${escapeHtml(u.username)}">Reset Password</button>` : ''}
                 ${can('UPDATE_USER') && u.accountNonLocked === false ? `<button class="btn-mini btn-success" data-ss-unlock="${u.id}">Unlock</button>` : ''}
                 ${u.clientId ? `<button class="btn-mini" data-ss-view-client="${u.clientId}">View Client</button>` : ''}
               </td>
@@ -101,7 +102,7 @@ export async function loadPortalUsers(c) {
           await api.users.update(b.dataset.ssUnlock, { accountNonLocked: true });
           toast('success', 'Account unlocked', '');
           loadPortalUsers(c);
-        } catch (e) { toast('error', 'Unlock failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Unlock failed', extractFineractError(e)); }
       }));
 
       tableWrap.querySelectorAll('[data-ss-view-client]').forEach(b => b.addEventListener('click', () =>
@@ -135,7 +136,7 @@ export async function loadPortalUsers(c) {
 
     draw(list);
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Self-service not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Self-service not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -179,10 +180,12 @@ function openResetPortalPasswordModal(userId, username) {
     if (modalEl.querySelector('#rpp-must-change').checked) payload.shouldRenewPassword = true;
 
     try {
-      await api.users.update(userId, payload);
+      // POST /users/{userId}/pwd (UsersApiResource#changePassword), not the
+      // generic PUT /users/{userId} update endpoint — see api/auth-account.js.
+      await api.password.change(userId, payload);
       modalEl.remove();
       toast('success', 'Password reset', 'User must log in with new password');
-    } catch (e) { toast('error', 'Reset failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Reset failed', extractFineractError(e)); }
   });
 }
 

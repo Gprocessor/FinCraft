@@ -11,6 +11,11 @@ export function makeGroupsAPI(self) {
     activate:       (id, body) => self._p(`/groups/${id}?command=activate`, body),
     close:          (id, body) => self._p(`/groups/${id}?command=close`, body),
     assignStaff:    (id, body) => self._p(`/groups/${id}?command=assignStaff`, body),
+    // Fineract's reference doc lists two ways to reach this action: a dedicated
+    // /groups/{groupId}/command/unassign_staff sub-path, and the same
+    // ?command=unassignStaff dispatch already used for every other group command
+    // (see the shared-command row in the doc). Keeping the original, already-working
+    // ?command= form rather than swapping to the alternate path on unverified footing.
     unassignStaff:  (id, body) => self._p(`/groups/${id}?command=unassignStaff`, body || {}),
     assignRole:     (id, body) => self._p(`/groups/${id}?command=assignRole`, body),
     updateRole:     (id, rid, body) => self._p(`/groups/${id}?command=updateRole&roleId=${rid}`, body),
@@ -23,12 +28,10 @@ export function makeGroupsAPI(self) {
     accounts:       (id)       => self._g(`/groups/${id}/accounts`),
     glimAccounts:   (id, parentLoanAccountNo) => self._g(`/groups/${id}/glimaccounts`, parentLoanAccountNo ? { parentLoanAccountNo } : undefined),
     gsimAccounts:   (id, params) => self._g(`/groups/${id}/gsimaccounts`, params),
-    // ---- Group charges ----
-    charges:        (id, params) => self._g(`/groups/${id}/charges`, params),
-    addCharge:      (id, body)   => self._p(`/groups/${id}/charges`, body),
-    payCharge:      (id, cid, body) => self._p(`/groups/${id}/charges/${cid}?command=paycharge`, body),
-    waiveCharge:    (id, cid, body) => self._p(`/groups/${id}/charges/${cid}?command=waive`, body || {}),
-    deleteCharge:   (id, cid)    => self._d(`/groups/${id}/charges/${cid}`),
+    // NOTE: charges/, addCharge/, payCharge/, waiveCharge/, deleteCharge/ were
+    // removed — GroupsApiResource has no /charges sub-path at all (confirmed
+    // by reading its full @Path list). Apply charges to the group's
+    // individual member clients (ClientChargesApiResource) instead.
     delete:         (id)       => self._d(`/groups/${id}`)
   };
 }
@@ -55,6 +58,7 @@ export function makeCalendarsAPI(self) {
   return {
     list:   (entityType, entityId, params) => self._g(`/${entityType}/${entityId}/calendars`, params),
     get:    (entityType, entityId, calendarId) => self._g(`/${entityType}/${entityId}/calendars/${calendarId}`),
+    template: (entityType, entityId, params) => self._g(`/${entityType}/${entityId}/calendars/template`, params),
     create: (entityType, entityId, body)   => self._p(`/${entityType}/${entityId}/calendars`, body),
     update: (entityType, entityId, calendarId, body) => self._u(`/${entityType}/${entityId}/calendars/${calendarId}`, body),
     delete: (entityType, entityId, calendarId)       => self._d(`/${entityType}/${entityId}/calendars/${calendarId}`)
@@ -65,6 +69,7 @@ export function makeMeetingsAPI(self) {
   return {
     list:   (entityType, entityId, params) => self._g(`/${entityType}/${entityId}/meetings`, params),
     get:    (entityType, entityId, meetingId) => self._g(`/${entityType}/${entityId}/meetings/${meetingId}`),
+    template: (entityType, entityId, params) => self._g(`/${entityType}/${entityId}/meetings/template`, params),
     create: (entityType, entityId, body)   => self._p(`/${entityType}/${entityId}/meetings`, body),
     update: (entityType, entityId, meetingId, body) => self._u(`/${entityType}/${entityId}/meetings/${meetingId}`, body),
     delete: (entityType, entityId, meetingId)       => self._d(`/${entityType}/${entityId}/meetings/${meetingId}`),

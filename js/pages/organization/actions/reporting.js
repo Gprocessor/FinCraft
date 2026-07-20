@@ -5,6 +5,7 @@ import { api } from '../../../api.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function openAdhocQueryModal(existing, onSuccess) {
   const isEdit = !!existing?.id;
   const mid = 'adhoc-' + Date.now();
@@ -66,7 +67,7 @@ export function openAdhocQueryModal(existing, onSuccess) {
       modalEl.remove();
       toast('success', isEdit ? 'Adhoc query updated' : 'Adhoc query created', name);
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }
 
@@ -166,7 +167,7 @@ export async function openEntityDatatableCheckModal(onSuccess) {
       toast('success', 'Check created', datatableName);
       onSuccess();
     } catch (e) {
-      toast('error', 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Create failed', extractFineractError(e));
     }
   });
 }

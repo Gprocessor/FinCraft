@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function openSavingsSimpleCmd({ id, command, label, dateField }) {
   // Default the date field name based on the command
   if (!dateField) {
@@ -49,7 +50,7 @@ export function openSavingsSimpleCmd({ id, command, label, dateField }) {
       toast('success', label + ' successful', '#' + id);
       document.dispatchEvent(new CustomEvent('fc:reload'));
     } catch (e) {
-      toast('error', label + ' failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', label + ' failed', extractFineractError(e));
     }
   });
 }
@@ -97,7 +98,7 @@ export function openSavingsCloseModal(id) {
       el.remove();
       toast('success', 'Account closed', `#${id}`);
       import('../../../router.js').then(r => r.navigate('savings'));
-    } catch (e) { toast('error', 'Close failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Close failed', extractFineractError(e)); }
   });
 }
 
@@ -154,7 +155,7 @@ export async function openEditSavingsModal(s) {
       el.remove();
       toast('success', 'Account updated', '');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Update failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Update failed', extractFineractError(e)); }
   });
 }
 
@@ -167,6 +168,7 @@ export function openApproveSavingsModal(id) {
         <div class="modal-body">
           <label>Approved on * <input type="date" id="ap-date" class="form-control" value="${today()}" required/></label>
           <label class="mt-2">Note <textarea id="ap-note" class="form-control" rows="2"></textarea></label>
+          <label class="form-check mt-2"><input type="checkbox" id="ap-auto-activate" checked/> Also activate immediately</label>
         </div>
         <div class="modal-footer">
           <button class="btn-secondary" data-close-modal>Cancel</button>
@@ -177,18 +179,31 @@ export function openApproveSavingsModal(id) {
   const el = document.getElementById(mid);
   el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
   el.querySelector('#ap-save').addEventListener('click', async () => {
+    const approvedOnDate = el.querySelector('#ap-date').value;
     const payload = {
-      approvedOnDate: el.querySelector('#ap-date').value,
+      approvedOnDate,
       dateFormat: DATE_FORMAT, locale: LOCALE
     };
     const note = el.querySelector('#ap-note').value.trim();
     if (note) payload.note = note;
+    const autoActivate = el.querySelector('#ap-auto-activate').checked;
     try {
       await api.savings.approve(id, payload);
+      let activated = false;
+      if (autoActivate) {
+        try {
+          await api.savings.activate(id, { activatedOnDate: approvedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+          activated = true;
+        } catch (actErr) {
+          // Approval already succeeded — surface the activation failure separately so the
+          // account isn't silently left in "Approved" state without explanation.
+          toast('warn', 'Approved, but activation failed', extractFineractError(actErr));
+        }
+      }
       el.remove();
-      toast('success', 'Account approved', `#${id}`);
+      toast('success', activated ? 'Account approved & activated' : 'Account approved', `#${id}`);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Approval failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Approval failed', extractFineractError(e)); }
   });
 }
 
@@ -244,6 +259,6 @@ export async function openSavingsAssignStaffModal(id, s) {
       el.remove();
       toast('success', 'Staff updated', '');
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }

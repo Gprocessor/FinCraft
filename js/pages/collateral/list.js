@@ -7,6 +7,7 @@ import { escapeHtml, fmt, num } from '../../utils.js';
 import { openCollateralFormModal } from './actions.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
     <div class="page-header mb-3">
@@ -95,7 +96,7 @@ export async function renderList(c) {
       draw(list);
     } catch (e) {
       c.querySelector('#col-rows').innerHTML =
-        `<tr><td colspan="7" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+        `<tr><td colspan="7" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 
@@ -129,7 +130,7 @@ export async function renderList(c) {
       try {
         const existing = await api.collateralManagement.get(b.dataset.colEdit);
         openCollateralFormModal(existing, load);
-      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Could not load', extractFineractError(e)); }
     }));
     c.querySelectorAll('[data-col-del]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({
@@ -141,7 +142,7 @@ export async function renderList(c) {
         await api.collateralManagement.delete(b.dataset.colDel);
         toast('success', 'Collateral deleted', '');
         load();
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   }
 

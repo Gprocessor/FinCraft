@@ -6,6 +6,7 @@ import { confirm as modalConfirm, toast } from '../../ui.js';
 import { escapeHtml, num } from '../../utils.js';
 import { ENTITY_ROUTES, _lastSeenNotifId, setLastSeenNotifId, timeAgo } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadNotifications(c) {
   const el = c.querySelector('#nt-0');
   el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin empty-state-icon"></i><h3>Loading…</h3></div>';
@@ -122,7 +123,9 @@ export async function loadNotifications(c) {
                   <td title="${escapeHtml(String(n.createdAt || ''))}">${timeAgo(n.createdAt)}</td>
                   <td class="text-right">
                     ${link ? `<button class="btn-ghost btn-xs" data-go-link="${link}" title="Open entity"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>` : ''}
-                    ${!n.isRead ? `<button class="btn-ghost btn-xs" data-mark-read="${n.id}" title="Mark as read"><i class="fa-solid fa-check"></i></button>` : ''}
+                    ${''/* FIXLOG #2: per-row "mark as read" removed — Fineract's NotificationApiResource
+                           has no per-notification endpoint, only list + mark-all-read. See
+                           js/api/integrations.js makeNotificationsAPI for details. */}
                   </td>
                 </tr>`;
               }).join('')}
@@ -130,18 +133,8 @@ export async function loadNotifications(c) {
           </table>
         </div>`;
 
-      // Mark individual as read
-      listEl.querySelectorAll('[data-mark-read]').forEach(b =>
-        b.addEventListener('click', async () => {
-          try {
-            await api.notifications.markRead(b.dataset.markRead);
-            toast('success', 'Marked as read', '');
-            loadNotifications(c);
-          } catch (e) {
-            toast('error', 'Failed', e.detail?.defaultUserMessage || e.message);
-          }
-        })
-      );
+      // FIXLOG #2: per-row mark-as-read handler removed along with the button above —
+      // Fineract has no per-notification mark-read endpoint (see makeNotificationsAPI).
 
       // Open entity link
       listEl.querySelectorAll('[data-go-link]').forEach(b =>
@@ -200,7 +193,7 @@ export async function loadNotifications(c) {
         if (dot) dot.hidden = true;
         loadNotifications(c);
       } catch (e) {
-        toast('error', 'Failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Failed', extractFineractError(e));
       }
     });
 
@@ -210,7 +203,7 @@ export async function loadNotifications(c) {
       <div class="empty-state">
         <i class="fa-solid fa-triangle-exclamation empty-state-icon"></i>
         <h3>Failed to load notifications</h3>
-        <p>${escapeHtml(e.detail?.defaultUserMessage || e.message || '')}</p>
+        <p>${escapeHtml(extractFineractError(e) || '')}</p>
       </div>`;
   }
 }

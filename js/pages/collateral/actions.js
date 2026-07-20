@@ -7,6 +7,7 @@ import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 import { can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function openCollateralFormModal(existing, onSuccess) {
   let tpl = {};
   try { tpl = await api.collateralManagement.template(); } catch {}
@@ -85,7 +86,7 @@ export async function openCollateralFormModal(existing, onSuccess) {
       toast('success', isEdit ? 'Collateral updated' : 'Collateral created', payload.name);
       onSuccess();
     } catch (e) {
-      toast('error', isEdit ? 'Update failed' : 'Create failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', isEdit ? 'Update failed' : 'Create failed', extractFineractError(e));
     }
   });
 }

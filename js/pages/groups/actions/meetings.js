@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function openScheduleMeetingModal(groupId, onSuccess, existingCal) {
   const mid = `grp-meet-${Date.now()}`;
   const isEdit = !!existingCal;
@@ -51,7 +52,7 @@ export async function openScheduleMeetingModal(groupId, onSuccess, existingCal) 
       el.remove();
       toast('success', isEdit ? 'Schedule updated' : 'Meeting scheduled', '');
       onSuccess();
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
@@ -105,6 +106,6 @@ export async function openAttendanceModal(groupId, meetingId, onSuccess) {
       el.remove();
       toast('success', 'Attendance saved', '');
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }

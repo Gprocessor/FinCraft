@@ -1,0 +1,182 @@
+<!-- FinCraft modal partials — savings-deposits domain. Fetched and concatenated at
+     runtime by js/ui/shell.js alongside the other views/modals/*.html files (mirrors
+     the js/api/savings-deposits.js domain split). All forms have name= attrs and
+     data-populate= hooks. -->
+
+<!-- New Savings -->
+<div id="newSavingsModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Savings Account</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newSavingsForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="savClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="savClientId"/>
+            <div id="savClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">Product *</span>
+          <select name="productId" class="form-control" data-populate="savingsProducts" required></select></label>
+        <label><span class="form-label">Field officer</span>
+          <select name="staffId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Nominal annual interest %</span>
+          <input name="nominalAnnualInterestRate" type="number" min="0" step="0.01" class="form-control" placeholder="Leave blank to use product rate"/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
+        <label class="full form-check" style="align-items:center">
+          <input type="checkbox" name="autoApproveActivate" checked/> <span>Also approve &amp; activate immediately</span></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-savings"><i class="fa-solid fa-check"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Fixed Deposit -->
+<div id="newFDModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Fixed Deposit</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newFDForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="fdClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="fdClientId"/>
+            <div id="fdClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">FD product *</span>
+          <select name="productId" class="form-control" data-populate="fdProducts" required></select></label>
+        <label><span class="form-label">Field officer</span>
+          <select name="fieldOfficerId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Deposit amount *</span>
+          <input name="depositAmount" type="number" min="0" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Deposit period *</span>
+          <input name="depositPeriod" type="number" min="1" value="12" class="form-control" required/></label>
+        <label><span class="form-label">Period frequency</span>
+          <select name="depositPeriodFrequencyId" class="form-control">
+            <option value="0">Days</option>
+            <option value="1">Weeks</option>
+            <option value="2" selected>Months</option>
+            <option value="3">Years</option>
+          </select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Expected first deposit on</span>
+          <input name="expectedFirstDepositOnDate" type="date" class="form-control"/></label>
+        <label class="full"><span class="form-label">Maturity instruction</span>
+          <select name="maturityInstructionId" class="form-control">
+            <option value="1">Withdraw deposit</option>
+            <option value="2">Reinvest principal &amp; interest</option>
+            <option value="3">Reinvest principal only</option>
+          </select></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
+        <label class="full form-check" style="align-items:center">
+          <input type="checkbox" name="autoApproveActivate" checked/> <span>Also approve &amp; activate immediately</span></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-fd"><i class="fa-solid fa-check"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Recurring Deposit -->
+<div id="newRDModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-lg">
+    <div class="modal-head"><h3 class="modal-title">New Recurring Deposit</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newRDForm">
+        <label class="full"><span class="form-label">Client *</span>
+          <div class="search-field">
+            <input id="rdClientSearch" placeholder="Type client name or account…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="rdClientId"/>
+            <div id="rdClientResults" class="search-dropdown" style="display:none"></div>
+          </div>
+        </label>
+        <label><span class="form-label">RD product *</span>
+          <select name="productId" class="form-control" data-populate="rdProducts" required></select></label>
+        <label><span class="form-label">Field officer</span>
+          <select name="fieldOfficerId" class="form-control" data-populate="staff"><option value="">— None —</option></select></label>
+        <label><span class="form-label">Deposit amount per period *</span>
+          <input name="mandatoryRecommendedDepositAmount" type="number" min="0" step="0.01" class="form-control" required/></label>
+        <label><span class="form-label">Recurring frequency *</span>
+          <input name="recurringDepositFrequency" type="number" min="1" value="1" class="form-control" required/></label>
+        <label><span class="form-label">Frequency type *</span>
+          <select name="recurringDepositFrequencyTypeId" class="form-control" required>
+            <option value="0">Days</option>
+            <option value="1">Weeks</option>
+            <option value="2" selected>Months</option>
+            <option value="3">Years</option>
+          </select></label>
+        <label><span class="form-label">Deposit period *</span>
+          <input name="depositPeriod" type="number" min="1" value="12" class="form-control" required/></label>
+        <label><span class="form-label">Deposit period frequency</span>
+          <select name="depositPeriodFrequencyId" class="form-control">
+            <option value="0">Days</option>
+            <option value="1">Weeks</option>
+            <option value="2" selected>Months</option>
+            <option value="3">Years</option>
+          </select></label>
+        <label><span class="form-label">Submitted on *</span>
+          <input name="submittedOnDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Expected first deposit on</span>
+          <input name="expectedFirstDepositOnDate" type="date" class="form-control"/></label>
+        <label><span class="form-label">External ID</span>
+          <input name="externalId" class="form-control"/></label>
+        <label class="full form-check" style="align-items:center">
+          <input type="checkbox" name="autoApproveActivate" checked/> <span>Also approve &amp; activate immediately</span></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-rd"><i class="fa-solid fa-check"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Savings Deposit / Withdrawal (opened from the savings account detail/list with data-account-id forwarded) -->
+<div id="savingsDepositModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title" id="sv-dep-title">Savings Transaction</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="savingsDepositForm">
+        <label><span class="form-label">Type *</span>
+          <select name="transactionType" class="form-control" required>
+            <option value="deposit">Deposit</option>
+            <option value="withdrawal">Withdrawal</option>
+          </select></label>
+        <label><span class="form-label">Amount *</span>
+          <input name="transactionAmount" type="number" min="0.01" step="0.01" required class="form-control"/></label>
+        <label><span class="form-label">Date *</span>
+          <input name="transactionDate" type="date" class="form-control" required/></label>
+        <label><span class="form-label">Payment Type</span>
+          <select name="paymentTypeId" id="sv-dep-paymenttype" class="form-control"><option value="">— Default —</option></select></label>
+        <label><span class="form-label">Account number</span>
+          <input name="accountNumber" class="form-control" placeholder="For cheque/bank ref"/></label>
+        <label><span class="form-label">Check number</span>
+          <input name="checkNumber" class="form-control"/></label>
+        <label><span class="form-label">Receipt number</span>
+          <input name="receiptNumber" class="form-control"/></label>
+        <label class="full"><span class="form-label">Note</span>
+          <textarea name="note" class="form-control" rows="2"></textarea></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-savings-deposit"><i class="fa-solid fa-check"></i> Post Transaction</button>
+    </div>
+  </div>
+</div>
+

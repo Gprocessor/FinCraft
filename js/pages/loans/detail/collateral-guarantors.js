@@ -5,8 +5,9 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { confirm, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
-import { openAddGuarantorModal, openAddLoanCollateralModal, openAttachOriginatorModal, openEAOTransferModal } from '../actions.js';
+import { openAddGuarantorModal, openAddLoanCollateralModal, openAttachOriginatorModal, openEAOTransferModal, openEditGuarantorModal, openEditLoanCollateralModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadLoanCollateral(c, loanId) {
   const wrap = c.querySelector('#ln-coll-wrap');
   wrap.innerHTML = `
@@ -48,6 +49,7 @@ export async function loadLoanCollateral(c, loanId) {
             <td class="text-right">${fmt(col.value || col.basePrice || 0)}</td>
             <td class="text-right">${fmt(col.pctToBase ? (col.value * col.pctToBase / 100) : 0)}</td>
             <td class="text-right">
+              ${can('UPDATE_COLLATERAL') ? `<button class="btn-mini" data-edit-col="${col.id}">Edit</button>` : ''}
               ${can('DELETE_COLLATERAL') ? `<button class="btn-mini btn-danger" data-del-col="${col.id}">Remove</button>` : ''}
             </td>
           </tr>`).join('')}</tbody>
@@ -56,13 +58,15 @@ export async function loadLoanCollateral(c, loanId) {
         <i class="fa-solid fa-circle-info"></i> Collateral is drawn from the client's pre-registered collateral pool.
       </div>` : '<div class="empty-state-row">No collateral pledged for this loan</div>';
 
+    listEl.querySelectorAll('[data-edit-col]').forEach(b => b.addEventListener('click', () =>
+      openEditLoanCollateralModal(loanId, b.dataset.editCol, () => loadLoanCollateral(c, loanId))));
     listEl.querySelectorAll('[data-del-col]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Remove collateral?', danger: true, confirmText: 'Remove' })) return;
       try {
         await api.loans.deleteCollateral(loanId, b.dataset.delCol);
         toast('success', 'Collateral removed', '');
         loadLoanCollateral(c, loanId);
-      } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -101,19 +105,22 @@ export async function loadLoanGuarantors(c, loanId) {
               <td class="text-right">${fmt(g.amount || 0)}</td>
               <td>${escapeHtml(g.mobileNumber || '—')}</td>
               <td class="text-right">
+                ${can('UPDATE_GUARANTOR') ? `<button class="btn-mini" data-edit-guar="${g.id}">Edit</button>` : ''}
                 ${can('DELETE_GUARANTOR') ? `<button class="btn-mini btn-danger" data-del-guar="${g.id}">Remove</button>` : ''}
               </td>
             </tr>`;
         }).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No guarantors on file</div>';
 
+    listEl.querySelectorAll('[data-edit-guar]').forEach(b => b.addEventListener('click', () =>
+      openEditGuarantorModal(loanId, b.dataset.editGuar, () => loadLoanGuarantors(c, loanId))));
     listEl.querySelectorAll('[data-del-guar]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Remove guarantor?', danger: true, confirmText: 'Remove' })) return;
       try {
         await api.loans.deleteGuarantor(loanId, b.dataset.delGuar);
         toast('success', 'Guarantor removed', '');
         loadLoanGuarantors(c, loanId);
-      } catch (e) { toast('error', 'Remove failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Remove failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -121,7 +128,7 @@ export async function loadLoanGuarantors(c, loanId) {
 export async function loadLoanOriginators(c, loanId) {
   const wrap = c.querySelector('#ln-orig-wrap');
   wrap.innerHTML = `
-    ${can('CREATE_LOANORIGINATOR') ? `
+    ${can('CREATE_LOAN_ORIGINATOR') ? `
       <div class="section-header mb-2">
         <h3>Loan Originators</h3>
         <button class="btn-primary btn-sm" id="ln-attach-orig"><i class="fa-solid fa-plus"></i> Attach Originator</button>
@@ -151,7 +158,7 @@ export async function loadLoanOriginators(c, loanId) {
             <td>${escapeHtml(o.externalId || '—')}</td>
             <td>${fmtDate(o.attachedOn || o.createdOn) || '—'}</td>
             <td class="text-right">
-              ${can('DELETE_LOANORIGINATOR') ? `<button class="btn-mini btn-danger" data-detach-orig="${o.originatorId || o.id}">Detach</button>` : ''}
+              ${can('DELETE_LOAN_ORIGINATOR') ? `<button class="btn-mini btn-danger" data-detach-orig="${o.originatorId || o.id}">Detach</button>` : ''}
             </td>
           </tr>`).join('')}</tbody>
       </table>` : '<div class="empty-state-row">No originators attached to this loan</div>';
@@ -162,7 +169,7 @@ export async function loadLoanOriginators(c, loanId) {
         await api.loans.detachOriginator(loanId, b.dataset.detachOrig);
         toast('success', 'Originator detached', '');
         loadLoanOriginators(c, loanId);
-      } catch (e) { toast('error', 'Detach failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Detach failed', extractFineractError(e)); }
     }));
   } catch {
     listEl.innerHTML = '<div class="empty-state-row text-muted">Originators feature not available on this tenant</div>';
@@ -175,8 +182,13 @@ export async function loadLoanEAO(c, loanId) {
     <div class="section-header mb-2">
       <h3>External Asset Owner Transfers</h3>
       <div>
-        ${can('CREATE_EXTERNAL_ASSET_OWNER_TRANSFER') ? `<button class="btn-primary btn-sm" id="ln-eao-transfer"><i class="fa-solid fa-arrow-right-from-bracket"></i> Transfer to Owner</button>` : ''}
-        ${can('CREATE_EXTERNAL_ASSET_OWNER_TRANSFER') ? `<button class="btn-secondary btn-sm" id="ln-eao-buyback"><i class="fa-solid fa-arrow-right-to-bracket"></i> Buy-back</button>` : ''}
+        ${can('CREATE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-primary btn-sm" id="ln-eao-transfer"><i class="fa-solid fa-arrow-right-from-bracket"></i> Transfer to Owner</button>` : ''}
+        ${can('BUYBACK_LOAN') ? `<button class="btn-secondary btn-sm" id="ln-eao-buyback"><i class="fa-solid fa-arrow-right-to-bracket"></i> Buy-back</button>` : ''}
+        <!-- FIXLOG #6: api.loans.eaoTransfer/eaoBuyBack now call the confirmed real route
+             /external-asset-owners/transfers/loans/{loanId} (see js/api/loans.js). The request
+             body shape (how Fineract distinguishes sale vs. buy-back, and the eaoList filter
+             param) is still NOT confirmed against a live server/OpenAPI spec — do not treat
+             this comment as fully resolved, only the URL is. -->
       </div>
     </div>
     <div class="text-muted small mb-2">

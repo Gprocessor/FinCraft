@@ -7,6 +7,7 @@ import { escapeHtml } from '../../../utils.js';
 import { toast } from '../../../ui.js';
 import { openSimpleLoanCmdModal } from './closure.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function openWaiveInterestModal(id) {
   const mid = `ln-waive-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -40,7 +41,7 @@ export function openWaiveInterestModal(id) {
       el.remove();
       toast('success', 'Interest waived', `${transactionAmount}`);
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Failed', extractFineractError(e)); }
   });
 }
 
@@ -83,7 +84,7 @@ export async function openAdjustTransactionModal(loanId, txId, onSuccess) {
       el.remove();
       toast('success', 'Transaction adjusted', `#${txId}`);
       onSuccess();
-    } catch (e) { toast('error', 'Adjust failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Adjust failed', extractFineractError(e)); }
   });
 }
 
@@ -128,7 +129,7 @@ export async function openChargebackModal(loanId, txId, onSuccess) {
       el.remove();
       toast('success', 'Chargeback posted', `#${txId}`);
       onSuccess();
-    } catch (e) { toast('error', 'Chargeback failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Chargeback failed', extractFineractError(e)); }
   });
 }
 
@@ -181,6 +182,6 @@ export function openSimpleTxModal({ loanId, label, apiCall, onSuccess }) {
       el.remove();
       toast('success', `${label} posted`, '');
       onSuccess();
-    } catch (e) { toast('error', `${label} failed`, e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', `${label} failed`, extractFineractError(e)); }
   });
 }

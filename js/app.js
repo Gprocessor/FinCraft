@@ -21,4 +21,24 @@ document.addEventListener('fc:reload', () => {
   navigate(page);
 });
 
-document.addEventListener('DOMContentLoaded', () => { initAuth(); });
+document.addEventListener('DOMContentLoaded', () => {
+  initAuth().catch(err => {
+    // If bootstrap itself throws (bad config, blocked/missing module, etc.)
+    // both #loginScreen and #appShell stay empty <div>s — a silent blank
+    // screen with the only trace in the console. Surface it instead.
+    console.error('[fc-fatal]', err);
+    const el = document.getElementById('loginScreen');
+    if (el) {
+      el.hidden = false;
+      el.innerHTML = `
+        <div style="max-width:32rem;margin:4rem auto;padding:1.5rem;
+                    font-family:system-ui,sans-serif;text-align:center;
+                    border:1px solid #e5b4b4;border-radius:8px;color:#7a1f1f;
+                    background:#fff5f5;">
+          <h2 style="margin:0 0 0.5rem;">FinCraft failed to start</h2>
+          <p style="margin:0 0 0.25rem;">${(err && err.message) ? String(err.message).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) : 'Unknown error'}</p>
+          <p style="margin:0.5rem 0 0;font-size:0.9em;opacity:0.8;">Open the browser console for details, then reload.</p>
+        </div>`;
+    }
+  });
+});

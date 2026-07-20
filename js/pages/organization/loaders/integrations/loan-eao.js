@@ -7,6 +7,7 @@ import { escapeHtml, num, sb } from '../../../../utils.js';
 import { openExternalAssetOwnerModal, openLoanOriginatorModal } from '../../actions.js';
 import { can } from '../../shared.js';
 
+import { extractFineractError } from '../../../../ui/dom-helpers.js';
 export async function loadLoanOriginators(c) {
   const el = c.querySelector('#og-10');
   try {
@@ -19,7 +20,7 @@ export async function loadLoanOriginators(c) {
           <h3>Loan Originators</h3>
           <span class="text-muted">${list.length} originator${list.length !== 1 ? 's' : ''}</span>
         </div>
-        ${can('CREATE_LOANORIGINATOR') ? `<button class="btn-primary" id="btn-new-orig"><i class="fa-solid fa-plus"></i> New Originator</button>` : ''}
+        ${can('CREATE_LOAN_ORIGINATOR') ? `<button class="btn-primary" id="btn-new-orig"><i class="fa-solid fa-plus"></i> New Originator</button>` : ''}
       </div>
       <div class="text-muted small mb-2">
         <i class="fa-solid fa-circle-info"></i>
@@ -37,15 +38,15 @@ export async function loadLoanOriginators(c) {
               <td>${escapeHtml(o.type?.value || o.originatorType || '—')}</td>
               <td>${o.active !== false ? sb('Active') : sb('Inactive')}</td>
               <td class="text-right">
-                ${can('UPDATE_LOANORIGINATOR') ? `<button class="btn-mini" data-edit-orig="${o.id}">Edit</button>` : ''}
-                ${can('DELETE_LOANORIGINATOR') ? `<button class="btn-mini btn-danger" data-del-orig="${o.id}">Delete</button>` : ''}
+                ${can('UPDATE_LOAN_ORIGINATOR') ? `<button class="btn-mini" data-edit-orig="${o.id}">Edit</button>` : ''}
+                ${can('DELETE_LOAN_ORIGINATOR') ? `<button class="btn-mini btn-danger" data-del-orig="${o.id}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
         </table>` : `
         <div class="empty-state">
           <i class="fa-solid fa-handshake"></i>
           <h3>No loan originators defined</h3>
-          ${can('CREATE_LOANORIGINATOR') ? `<div class="text-muted mt-2">Create your first originator using the button above.</div>` : ''}
+          ${can('CREATE_LOAN_ORIGINATOR') ? `<div class="text-muted mt-2">Create your first originator using the button above.</div>` : ''}
         </div>`}`;
 
     el.querySelector('#btn-new-orig')?.addEventListener('click', () =>
@@ -55,7 +56,7 @@ export async function loadLoanOriginators(c) {
       try {
         const existing = await api.loanOriginators.get(b.dataset.editOrig);
         openLoanOriginatorModal(existing, () => loadLoanOriginators(c));
-      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Could not load', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-del-orig]').forEach(b => b.addEventListener('click', async () => {
@@ -69,10 +70,10 @@ export async function loadLoanOriginators(c) {
         await api.loanOriginators.delete(b.dataset.delOrig);
         toast('success', 'Originator deleted', '');
         loadLoanOriginators(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Loan originators not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Loan originators not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -106,8 +107,9 @@ export async function loadExternalAssetOwners(c) {
               <td>${escapeHtml(o.type?.value || o.ownerType || '—')}</td>
               <td>${num(o.activeTransfers || 0)}</td>
               <td class="text-right">
-                ${can('UPDATE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-mini" data-edit-eao="${o.id || o.externalId}">Edit</button>` : ''}
-                ${can('DELETE_EXTERNAL_ASSET_OWNER') ? `<button class="btn-mini btn-danger" data-del-eao="${o.id || o.externalId}">Delete</button>` : ''}
+                <!-- No Edit/Delete: ExternalAssetOwnersApiResource has no GET-by-id, PUT, or DELETE at all —
+                     confirmed via the source-derived API map (only bare list/create/search and the transfer
+                     sub-paths exist). These always 404'd; removed rather than left as a dead end. -->
               </td>
             </tr>`).join('')}</tbody>
         </table>
@@ -123,28 +125,7 @@ export async function loadExternalAssetOwners(c) {
 
     el.querySelector('#btn-new-eao')?.addEventListener('click', () =>
       openExternalAssetOwnerModal(null, () => loadExternalAssetOwners(c)));
-
-    el.querySelectorAll('[data-edit-eao]').forEach(b => b.addEventListener('click', async () => {
-      try {
-        const existing = await api.externalAssetOwners.get(b.dataset.editEao);
-        openExternalAssetOwnerModal(existing, () => loadExternalAssetOwners(c));
-      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
-    }));
-
-    el.querySelectorAll('[data-del-eao]').forEach(b => b.addEventListener('click', async () => {
-      if (!await modalConfirm({
-        title: 'Delete external asset owner?',
-        message: 'This will fail if any active loan transfers reference this owner.',
-        danger: true,
-        confirmText: 'Delete'
-      })) return;
-      try {
-        await api.externalAssetOwners.delete(b.dataset.delEao);
-        toast('success', 'Owner deleted', '');
-        loadExternalAssetOwners(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
-    }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">External Asset Owners not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">External Asset Owners not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

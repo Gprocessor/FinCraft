@@ -5,8 +5,9 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { escapeHtml, fmtDate, num, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
-import { openAuditDetail } from '../actions.js';
+import { openAuditDetail, openEditJobModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadAuditTrails(c) {
   const el = c.querySelector('#sy-1');
   el.innerHTML = '<div class="empty-state-row">Loading audit trails…</div>';
@@ -50,7 +51,7 @@ export async function loadAuditTrails(c) {
       openAuditDetail(b.dataset.auditId)
     ));
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -61,7 +62,7 @@ export async function loadJobs(c) {
     const jobs = await api.jobs.list();
     const list = Array.isArray(jobs) ? jobs : [];
 
-    const canRun = can('EXECUTEJOB_JOB') || can('UPDATE_JOB');
+    const canRun = can('EXECUTEJOB_SCHEDULER') || can('UPDATE_SCHEDULER');
 
     el.innerHTML = `
       <div class="section-header mb-2">
@@ -84,6 +85,7 @@ export async function loadJobs(c) {
                 <td class="text-right">
                   <button class="btn-mini" data-job-history="${jobId}" data-job-name="${escapeHtml(j.displayName || j.name || '')}">History</button>
                   ${canRun ? `<button class="btn-mini btn-success" data-run-job="${jobId}">Run</button>` : ''}
+                  ${can('UPDATE_SCHEDULER') ? `<button class="btn-mini" data-edit-job="${jobId}">Edit</button>` : ''}
                 </td>
               </tr>
               <tr id="job-hist-${jobId}" style="display:none">
@@ -106,9 +108,12 @@ export async function loadJobs(c) {
         await api.jobs.runJob(b.dataset.runJob);
         toast('success', 'Job triggered', 'Job #' + b.dataset.runJob + ' scheduled');
       } catch (e) {
-        toast('error', 'Job failed', e.detail?.defaultUserMessage || e.message);
+        toast('error', 'Job failed', extractFineractError(e));
       }
     }));
+
+    el.querySelectorAll('[data-edit-job]').forEach(b => b.addEventListener('click', () =>
+      openEditJobModal(b.dataset.editJob, () => loadJobs(c))));
 
     el.querySelectorAll('[data-job-history]').forEach(b => b.addEventListener('click', async () => {
       const jid = b.dataset.jobHistory;
@@ -133,10 +138,10 @@ export async function loadJobs(c) {
               </tr>`).join('')}</tbody>
           </table>` : '<div class="empty-state-row">No run history</div>';
       } catch (e) {
-        body.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+        body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
       }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

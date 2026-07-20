@@ -7,6 +7,7 @@ import { escapeHtml } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openCurrencyEditModal, openFundModal, openPaymentTypeModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadCurrencies(c) {
   const el = c.querySelector('#og-5');
   try {
@@ -76,7 +77,7 @@ export async function loadPaymentTypes(c) {
         await api.paymentTypes.delete(b.dataset.delPt);
         toast('success', 'Deleted', '');
         loadPaymentTypes(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }

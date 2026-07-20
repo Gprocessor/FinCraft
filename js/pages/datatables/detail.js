@@ -4,9 +4,10 @@
 import { api } from '../../api.js';
 import { confirm as modalConfirm, toast } from '../../ui.js';
 import { escapeHtml, sb } from '../../utils.js';
-import { openAddColumnModal, openRegisterModal } from './actions.js';
+import { openAddColumnModal, openDatatableEntryModal, openRegisterModal } from './actions.js';
 import { APP_TABLES, can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderDetail(c, name) {
   c.innerHTML = `<div class="empty-state-row">Loading data table…</div>`;
   try {
@@ -59,6 +60,22 @@ export async function renderDetail(c, name) {
           </table>` : '<div class="empty-state-row">No columns defined</div>'}
       </div>
 
+      <div class="card mb-3">
+        <h3>Entries</h3>
+        <div class="text-muted small mb-2">
+          <i class="fa-solid fa-circle-info"></i>
+          Datatable rows are keyed by the id of the entity they're registered to
+          (e.g. a client id, if this table is registered to ${escapeHtml(appName)}).
+          Enter that id to view or manage its row(s).
+        </div>
+        <div class="filter-bar mb-2">
+          <input id="dt-entity-id" class="form-control" placeholder="Entity ID" style="max-width:160px" type="number"/>
+          <button class="btn-secondary" id="dt-entity-load"><i class="fa-solid fa-magnifying-glass"></i> Load Entries</button>
+          <button class="btn-primary" id="dt-entity-add" style="display:none"><i class="fa-solid fa-plus"></i> Add Entry</button>
+        </div>
+        <div id="dt-entries-list"></div>
+      </div>
+
       <div class="card">
         <div class="section-header">
           <h3>Cross-Links</h3>
@@ -67,15 +84,6 @@ export async function renderDetail(c, name) {
           <i class="fa-solid fa-circle-info"></i>
           Manage this datatable's enforcement workflow on the <b>Entity Datatable Checks</b> tab under Organization → Module 14.
         </div>
-        ${detail.applicationTableName ? `
-          <div class="msg-banner b-info mt-2">
-            <i class="fa-solid fa-circle-info"></i>
-            Per-entity rows for this datatable are accessible on each
-            ${detail.applicationTableName === 'm_client' ? 'client' :
-              detail.applicationTableName === 'm_loan' ? 'loan' :
-              detail.applicationTableName === 'm_savings_account' ? 'savings account' :
-              'entity'}'s detail page under the <b>Datatables</b> tab.
-          </div>` : ''}
       </div>`;
 
     c.querySelector('[data-back-datatables]').addEventListener('click', () =>
@@ -97,7 +105,7 @@ export async function renderDetail(c, name) {
         await api.dataTables.deregister(name);
         toast('success', 'Deregistered', '');
         renderDetail(c, name);
-      } catch (e) { toast('error', 'Deregister failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Deregister failed', extractFineractError(e)); }
     });
 
     c.querySelector('#btn-drop')?.addEventListener('click', async () => {
@@ -110,7 +118,7 @@ export async function renderDetail(c, name) {
         await api.dataTables.deleteTable(name);
         toast('success', 'Table dropped', '');
         import('../../router.js').then(r => r.navigate('datatables'));
-      } catch (e) { toast('error', 'Drop failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Drop failed', extractFineractError(e)); }
     });
 
     c.querySelectorAll('[data-drop-col]').forEach(b => b.addEventListener('click', async () => {
@@ -126,13 +134,76 @@ export async function renderDetail(c, name) {
         await api.dataTables.updateSchema(name, payload);
         toast('success', 'Column dropped', colName);
         renderDetail(c, name);
-      } catch (e) { toast('error', 'Drop column failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Drop column failed', extractFineractError(e)); }
     }));
+
+    // ---- Entries (rows) management ----
+    // Fineract doesn't document, in the reference available here, whether a
+    // given datatable is one-to-one or one-to-many — handled defensively by
+    // checking whether the response is a single object or an array.
+    const entriesList = c.querySelector('#dt-entries-list');
+    const addBtn = c.querySelector('#dt-entity-add');
+    let currentEntityId = null;
+
+    function renderEntryRows(rows) {
+      if (!rows.length) {
+        entriesList.innerHTML = '<div class="empty-state-row">No entries for this entity yet</div>';
+        return;
+      }
+      const cols = columns.map(c2 => c2.columnName);
+      entriesList.innerHTML = `
+        <table class="table">
+          <thead><tr>${cols.map(cn => `<th>${escapeHtml(cn)}</th>`).join('')}<th></th></tr></thead>
+          <tbody>${rows.map((row, i) => `
+            <tr data-row-idx="${i}">
+              ${cols.map(cn => `<td>${escapeHtml(row[cn] != null ? String(row[cn]) : '—')}</td>`).join('')}
+              <td class="text-right">
+                ${can('UPDATE_DATATABLE') ? `<button class="btn-mini" data-edit-row="${i}">Edit</button>` : ''}
+                ${can('DELETE_DATATABLE') ? `<button class="btn-mini btn-danger" data-del-row="${i}">Delete</button>` : ''}
+              </td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+      entriesList.querySelectorAll('[data-edit-row]').forEach(b => b.addEventListener('click', () =>
+        openDatatableEntryModal(name, currentEntityId, columns, rows[parseInt(b.dataset.editRow)], () => loadEntries())));
+      entriesList.querySelectorAll('[data-del-row]').forEach(b => b.addEventListener('click', async () => {
+        const row = rows[parseInt(b.dataset.delRow)];
+        if (!await modalConfirm({ title: 'Delete this entry?', danger: true, confirmText: 'Delete' })) return;
+        try {
+          if (row.id != null) await api.dataTables.deleteEntry(name, currentEntityId, row.id);
+          else await api.dataTables.delete(name, currentEntityId);
+          toast('success', 'Entry deleted', '');
+          loadEntries();
+        } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
+      }));
+    }
+
+    async function loadEntries() {
+      entriesList.innerHTML = '<div class="empty-state-row">Loading…</div>';
+      try {
+        const res = await api.dataTables.query(name, currentEntityId);
+        const rows = Array.isArray(res) ? res : (res ? [res] : []);
+        renderEntryRows(rows);
+      } catch (e) {
+        entriesList.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
+      }
+    }
+
+    c.querySelector('#dt-entity-load').addEventListener('click', () => {
+      const val = parseInt(c.querySelector('#dt-entity-id').value);
+      if (!isFinite(val)) { toast('warn', 'Enter a valid entity id', ''); return; }
+      currentEntityId = val;
+      addBtn.style.display = can('CREATE_DATATABLE') ? '' : 'none';
+      loadEntries();
+    });
+    addBtn.addEventListener('click', () => {
+      if (currentEntityId == null) { toast('warn', 'Load an entity id first', ''); return; }
+      openDatatableEntryModal(name, currentEntityId, columns, null, () => loadEntries());
+    });
   } catch (e) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load data table</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }

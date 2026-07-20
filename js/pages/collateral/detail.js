@@ -8,6 +8,7 @@ import { openCollateralFormModal } from './actions.js';
 import { can } from './shared.js';
 import { enhanceScrollableTabs } from '../../ui/scrollable-tabs.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderDetail(c, id, initialTab = 'overview') {
   c.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading collateral…</div></div>`;
   if (!id) { c.innerHTML = '<div class="empty-state">No collateral selected</div>'; return; }
@@ -128,14 +129,14 @@ export async function renderDetail(c, id, initialTab = 'overview') {
         await api.collateralManagement.delete(id);
         toast('success', 'Collateral deleted', '');
         import('../../router.js').then(r => r.navigate('collaterals'));
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     });
 
   } catch (e) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load collateral</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }
@@ -253,6 +254,6 @@ async function loadCollateralUsage(c, col) {
       import('../../router.js').then(r => r.navigate('loans', { id: b.dataset.viewLoan }));
     }));
   } catch (e) {
-    listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    listEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

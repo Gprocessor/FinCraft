@@ -7,6 +7,7 @@ import { escapeHtml, num } from '../../utils.js';
 import { render } from './index.js';
 import { CATS, ICONS, OUTPUT_TYPES, buildParamField, can, exportCSV } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function loadRunReports(c) {
   const el = c.querySelector('#rep-0');
 
@@ -31,7 +32,7 @@ export async function loadRunReports(c) {
     el.querySelector('#rep-loading').style.display = 'none';
     el.querySelector('#rep-grid').style.display = 'grid';
   } catch (e) {
-    el.querySelector('#rep-loading').innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.querySelector('#rep-loading').innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
     return;
   }
 
@@ -186,7 +187,7 @@ async function runReport(modalEl, reportName) {
         </div>`;
     }
   } catch (e) {
-    const msg = e.detail?.defaultUserMessage || e?.errors?.[0]?.defaultUserMessage || e.message || String(e);
+    const msg = extractFineractError(e);
     resultEl.innerHTML = `<div class="text-error mt-3">${escapeHtml(msg)}</div>`;
   }
 

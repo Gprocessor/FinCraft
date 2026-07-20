@@ -6,8 +6,9 @@ import { api } from '../../../api.js';
 import { can } from '../shared.js';
 import { confirm, openModal, toast } from '../../../ui.js';
 import { escapeHtml, fmt, fmtDate, sb } from '../../../utils.js';
-import { openAdjustLoanChargeModal, openAdjustTransactionModal, openApplyLoanChargeModal, openChargeRefundModal, openChargebackModal, openGoodwillModal, openPayLoanChargeModal, openTrancheEditorModal } from '../actions.js';
+import { openAdjustLoanChargeModal, openAdjustTransactionModal, openApplyLoanChargeModal, openBulkTrancheEditorModal, openChargeRefundModal, openChargebackModal, openEditLoanChargeModal, openGoodwillModal, openPayLoanChargeModal, openTrancheEditorModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadLoanTransactions(c, loanId) {
   const wrap = c.querySelector('#ln-tx-list');
   wrap.innerHTML = `
@@ -73,9 +74,9 @@ export async function loadLoanTransactions(c, loanId) {
                 <td class="text-right">
                   ${!reversed && !accrual && can('ADJUST_LOAN') ?
                     `<button class="btn-mini" data-adjust-tx="${tx.id}" title="Adjust">Adjust</button>` : ''}
-                  ${!reversed && !accrual && can('UNDO_LOANTRANSACTION') ?
+                  ${!reversed && !accrual && can('UPDATE_LOAN') ?
                     `<button class="btn-mini btn-warning" data-reverse-tx="${tx.id}" title="Reverse">Reverse</button>` : ''}
-                  ${(tx.type?.value || '').toLowerCase() === 'repayment' && can('CHARGEBACK_LOANTRANSACTION') ?
+                  ${(tx.type?.value || '').toLowerCase() === 'repayment' && can('CHARGEBACK_LOAN') ?
                     `<button class="btn-mini btn-warning" data-chargeback-tx="${tx.id}" title="Chargeback">Chargeback</button>` : ''}
                 </td>
               </tr>`;
@@ -95,14 +96,14 @@ export async function loadLoanTransactions(c, loanId) {
           });
           toast('success', 'Transaction reversed', `#${b.dataset.reverseTx}`);
           reload();
-        } catch (e) { toast('error', 'Reversal failed', e.detail?.defaultUserMessage || e.message); }
+        } catch (e) { toast('error', 'Reversal failed', extractFineractError(e)); }
       }));
       tableWrap.querySelectorAll('[data-adjust-tx]').forEach(b => b.addEventListener('click', () =>
         openAdjustTransactionModal(loanId, b.dataset.adjustTx, reload)));
       tableWrap.querySelectorAll('[data-chargeback-tx]').forEach(b => b.addEventListener('click', () =>
         openChargebackModal(loanId, b.dataset.chargebackTx, reload)));
     } catch (e) {
-      tableWrap.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+      tableWrap.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
     }
   }
 
@@ -160,6 +161,8 @@ export async function loadLoanCharges(c, loanId) {
               ${!ch.paid && !ch.waived && can('WAIVE_LOANCHARGE') ?
                 `<button class="btn-mini btn-warning" data-waive-charge="${ch.id}">Waive</button>` : ''}
               ${can('UPDATE_LOANCHARGE') ?
+                `<button class="btn-mini" data-edit-charge="${ch.id}">Edit</button>` : ''}
+              ${can('UPDATE_LOANCHARGE') ?
                 `<button class="btn-mini" data-adjust-charge="${ch.id}">Adjust</button>` : ''}
               ${can('DELETE_LOANCHARGE') ?
                 `<button class="btn-mini btn-danger" data-del-charge="${ch.id}">Delete</button>` : ''}
@@ -170,16 +173,18 @@ export async function loadLoanCharges(c, loanId) {
     listEl.querySelectorAll('[data-waive-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Waive charge?', confirmText: 'Waive' })) return;
       try { await api.loans.waiveCharge(loanId, b.dataset.waiveCharge); toast('success', 'Charge waived', ''); loadLoanCharges(c, loanId); }
-      catch (e) { toast('error', 'Waive failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Waive failed', extractFineractError(e)); }
     }));
     listEl.querySelectorAll('[data-pay-charge]').forEach(b => b.addEventListener('click', () =>
       openPayLoanChargeModal(loanId, b.dataset.payCharge, () => loadLoanCharges(c, loanId))));
+    listEl.querySelectorAll('[data-edit-charge]').forEach(b => b.addEventListener('click', () =>
+      openEditLoanChargeModal(loanId, b.dataset.editCharge, () => loadLoanCharges(c, loanId))));
     listEl.querySelectorAll('[data-adjust-charge]').forEach(b => b.addEventListener('click', () =>
       openAdjustLoanChargeModal(loanId, b.dataset.adjustCharge, () => loadLoanCharges(c, loanId))));
     listEl.querySelectorAll('[data-del-charge]').forEach(b => b.addEventListener('click', async () => {
       if (!await confirm({ title: 'Delete charge?', danger: true, confirmText: 'Delete' })) return;
       try { await api.loans.deleteCharge(loanId, b.dataset.delCharge); toast('success', 'Charge deleted', ''); loadLoanCharges(c, loanId); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -187,27 +192,28 @@ export async function loadLoanCharges(c, loanId) {
 export async function loadLoanDisbursements(c, loanId) {
   const wrap = c.querySelector('#ln-disb-wrap');
   wrap.innerHTML = `
-    ${can('UPDATE_DISBURSEMENT') ? `
+    ${can('UPDATE_LOAN') ? `
       <div class="section-header mb-2">
         <h3>Tranches / Disbursements</h3>
-        <button class="btn-primary btn-sm" id="ln-add-tranche"><i class="fa-solid fa-plus"></i> Add Tranche</button>
+        <div>
+          <button class="btn-secondary btn-sm" id="ln-edit-all-tranches"><i class="fa-solid fa-list-check"></i> Edit All</button>
+          <button class="btn-primary btn-sm" id="ln-add-tranche"><i class="fa-solid fa-plus"></i> Add Tranche</button>
+        </div>
       </div>` : '<h3>Tranches / Disbursements</h3>'}
     <div id="ln-disb-list"><div class="empty-state-row">Loading…</div></div>`;
 
   wrap.querySelector('#ln-add-tranche')?.addEventListener('click', () =>
     openTrancheEditorModal(loanId, null, () => loadLoanDisbursements(c, loanId)));
+  wrap.querySelector('#ln-edit-all-tranches')?.addEventListener('click', () =>
+    openBulkTrancheEditorModal(loanId, () => loadLoanDisbursements(c, loanId)));
 
   const listEl = wrap.querySelector('#ln-disb-list');
   try {
-    let list = [];
-    try {
-      const r = await api.loans.disbursements(loanId);
-      list = Array.isArray(r) ? r : [];
-    } catch {
-      // Some loans don't expose disbursements endpoint — fall back to embedded data
-      const l = await api.loans.get(loanId, 'disbursementDetails');
-      list = l.disbursementDetails || [];
-    }
+    // LoanDisbursementDetailApiResource has no GET on the bare /loans/{id}/disbursements collection path per
+    // Fineract source (only per-id GET/PUT and the editDisbursements PUT exist) — go straight to the real source
+    // of this data: disbursementDetails embedded in the loan account via the associations query param.
+    const l = await api.loans.get(loanId, 'disbursementDetails');
+    const list = l.disbursementDetails || [];
     listEl.innerHTML = list.length ? `
       <table class="table">
         <thead><tr>
@@ -227,7 +233,7 @@ export async function loadLoanDisbursements(c, loanId) {
             <td class="text-right">${fmt(d.netDisbursalAmount || 0)}</td>
             <td>${d.actualDisbursementDate ? sb('Disbursed') : sb('Pending')}</td>
             <td class="text-right">
-              ${!d.actualDisbursementDate && can('UPDATE_DISBURSEMENT') ?
+              ${!d.actualDisbursementDate && can('UPDATE_LOAN') ?
                 `<button class="btn-mini" data-edit-tranche="${d.id}">Edit</button>` : ''}
             </td>
           </tr>`).join('')}</tbody>
@@ -240,5 +246,5 @@ export async function loadLoanDisbursements(c, loanId) {
       const disb = list.find(d => String(d.id) === b.dataset.editTranche);
       openTrancheEditorModal(loanId, disb, () => loadLoanDisbursements(c, loanId));
     }));
-  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`; }
+  } catch (e) { listEl.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`; }
 }

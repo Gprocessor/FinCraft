@@ -1,0 +1,41 @@
+# FinCraft · deploy/reporting/Dockerfile.fineract-birt
+#
+# Extends the base Fineract image with the Mifos BIRT Reporting Plugin
+# (openMF/mifos-reporting-plugin), using Fineract's own plugin-JAR loading
+# mechanism (FINERACT-1177): drop JARs into /app/libs/, Fineract's
+# entrypoint already launches with -Dloader.path=libs/.
+#
+# UNVERIFIED AT BUILD TIME — see setup-birt-reporting.sh's printed warnings:
+#   - The plugin's own README lists its Fineract-version compatibility
+#     table as "TBD" as of this writing. There is no confirmed pinned
+#     pairing of plugin version <-> Fineract version. Building both
+#     against "latest"/"develop" is what the plugin's own docs test
+#     against — pin both to a known-good commit once you've verified a
+#     report actually renders (see the curl smoke test the setup script
+#     prints), and re-verify after every FINERACT_IMAGE bump.
+#
+# Build with:
+#   docker build -f deploy/reporting/Dockerfile.fineract-birt \
+#     --build-arg BASE_IMAGE=${FINERACT_IMAGE:-apache/fineract:latest} \
+#     -t fincraft-fineract-birt deploy/reporting
+
+ARG BASE_IMAGE=apache/fineract:latest
+FROM ${BASE_IMAGE}
+
+# The plugin jar + its bundled BIRT engine libs, built by build-birt-plugin.sh
+# into deploy/reporting/plugin-libs/ before this Dockerfile is built. COPY
+# (unlike RUN) isn't affected by a USER instruction and creates /app/libs/
+# if it doesn't already exist, so no USER switch is needed here — the final
+# image still runs as whatever USER the base apache/fineract image set.
+# Copied jars default to root:root ownership but standard world-readable
+# file perms (COPY preserves the source files' mode bits, and build-birt-
+# plugin.sh's jars come out as normal 644 files), so Fineract's own non-root
+# FINERACT_USER can still read them at runtime. The separately-mounted
+# report/font/config directories (deploy/reporting/data/*) are bind mounts,
+# not baked into this image — those are made world-readable by
+# build-birt-plugin.sh on the host side, since Fineract's docker image runs
+# as a non-root, configurable FINERACT_USER/FINERACT_GROUP and would
+# otherwise be unable to read root-owned bind-mount directories (confirmed
+# via Fineract's own docs, which warn about exactly this class of Docker
+# Compose permission issue).
+COPY plugin-libs/*.jar /app/libs/

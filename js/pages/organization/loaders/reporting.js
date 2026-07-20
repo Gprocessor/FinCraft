@@ -7,6 +7,7 @@ import { escapeHtml, sb } from '../../../utils.js';
 import { confirm as modalConfirm, toast } from '../../../ui.js';
 import { openAdhocQueryModal, openEntityDatatableCheckModal } from '../actions.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export async function loadAdhocQueries(c) {
   const el = c.querySelector('#og-9');
   try {
@@ -20,8 +21,12 @@ export async function loadAdhocQueries(c) {
           <span class="text-muted">${list.length} quer${list.length !== 1 ? 'ies' : 'y'}</span>
         </div>
         <div>
-          ${list.length && can('EXECUTE_ADHOCQUERY') ? `<button class="btn-secondary mr-2" id="btn-run-all-adhoc"><i class="fa-solid fa-bolt"></i> Run All</button>` : ''}
-          ${can('CREATE_ADHOCQUERY') ? `<button class="btn-primary" id="btn-new-adhoc"><i class="fa-solid fa-plus"></i> New Query</button>` : ''}
+          <!-- FLAGGED, NOT VERIFIED: no EXECUTE_ADHOC(QUERY) permission exists in the 961-code set, and
+               AdHocApiResource's parsed methods show no "execute" command either — api.adhocQueries.runAll()
+               posts ?command=execute to a resource that may not support command dispatch at all. Gating on
+               CREATE_ADHOC as the closest real code; confirm against a live server. -->
+          ${list.length && can('CREATE_ADHOC') ? `<button class="btn-secondary mr-2" id="btn-run-all-adhoc"><i class="fa-solid fa-bolt"></i> Run All</button>` : ''}
+          ${can('CREATE_ADHOC') ? `<button class="btn-primary" id="btn-new-adhoc"><i class="fa-solid fa-plus"></i> New Query</button>` : ''}
         </div>
       </div>
       <div class="text-muted small mb-2">
@@ -40,8 +45,8 @@ export async function loadAdhocQueries(c) {
               <td>${escapeHtml(q.tableFields || '—')}</td>
               <td>${q.isActive ? sb('Active') : sb('Inactive')}</td>
               <td class="text-right">
-                ${can('UPDATE_ADHOCQUERY') ? `<button class="btn-mini" data-edit-adhoc="${q.id}">Edit</button>` : ''}
-                ${can('DELETE_ADHOCQUERY') ? `<button class="btn-mini btn-danger" data-del-adhoc="${q.id}">Delete</button>` : ''}
+                ${can('UPDATE_ADHOC') ? `<button class="btn-mini" data-edit-adhoc="${q.id}">Edit</button>` : ''}
+                ${can('DELETE_ADHOC') ? `<button class="btn-mini btn-danger" data-del-adhoc="${q.id}">Delete</button>` : ''}
               </td>
             </tr>`).join('')}</tbody>
         </table>` : '<div class="empty-state-row">No adhoc queries defined</div>'}`;
@@ -52,13 +57,13 @@ export async function loadAdhocQueries(c) {
       try {
         await api.adhocQueries.runAll();
         toast('success', 'All adhoc queries queued', 'Check job history for status');
-      } catch (e) { toast('error', 'Run failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Run failed', extractFineractError(e)); }
     });
     el.querySelectorAll('[data-edit-adhoc]').forEach(b => b.addEventListener('click', async () => {
       try {
         const existing = await api.adhocQueries.get(b.dataset.editAdhoc);
         openAdhocQueryModal(existing, () => loadAdhocQueries(c));
-      } catch (e) { toast('error', 'Could not load', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Could not load', extractFineractError(e)); }
     }));
     el.querySelectorAll('[data-del-adhoc]').forEach(b => b.addEventListener('click', async () => {
       if (!await modalConfirm({ title: 'Delete adhoc query?', danger: true, confirmText: 'Delete' })) return;
@@ -66,7 +71,7 @@ export async function loadAdhocQueries(c) {
         await api.adhocQueries.delete(b.dataset.delAdhoc);
         toast('success', 'Deleted', '');
         loadAdhocQueries(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) { el.innerHTML = `<div class="text-error">${escapeHtml(e.message)}</div>`; }
 }
@@ -125,9 +130,9 @@ export async function loadEntityDatatableChecks(c) {
         await api.entityDatatableChecks.delete(b.dataset.delEdc);
         toast('success', 'Check deleted', '');
         loadEntityDatatableChecks(c);
-      } catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="empty-state-row text-muted">Entity datatable checks not enabled on this tenant: ${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="empty-state-row text-muted">Entity datatable checks not enabled on this tenant: ${escapeHtml(extractFineractError(e))}</div>`;
   }
 }

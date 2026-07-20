@@ -6,6 +6,40 @@ import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml, fmt } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
+export async function openSavingsTransactionDetailModal(savingsId, transactionId) {
+  const mid = `sv-txview-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Transaction Detail</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body" id="${mid}-body"><div class="empty-state-row">Loading…</div></div>
+        <div class="modal-footer"><button class="btn-secondary" data-close-modal>Close</button></div>
+      </div>
+    </div>`);
+  const m = document.getElementById(mid);
+  m.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => m.remove()));
+  const body = m.querySelector(`#${mid}-body`);
+  try {
+    const t = await api.savings.getTransaction(savingsId, transactionId);
+    body.innerHTML = `
+      <dl class="dl-grid">
+        <dt>ID</dt><dd>${escapeHtml(String(t.id ?? '—'))}</dd>
+        <dt>Date</dt><dd>${escapeHtml(Array.isArray(t.date) ? t.date.join('-') : (t.date || '—'))}</dd>
+        <dt>Type</dt><dd>${escapeHtml(t.transactionType?.value || '—')}</dd>
+        <dt>Amount</dt><dd>${fmt(t.amount || 0)}</dd>
+        <dt>Running Balance</dt><dd>${fmt(t.runningBalance || 0)}</dd>
+        <dt>Currency</dt><dd>${escapeHtml(t.currency?.code || '—')}</dd>
+        <dt>Payment Type</dt><dd>${escapeHtml(t.paymentDetail?.paymentType?.name || '—')}</dd>
+        <dt>Receipt No</dt><dd>${escapeHtml(t.paymentDetail?.receiptNumber || '—')}</dd>
+        <dt>Reversed</dt><dd>${(t.reversed || t.manuallyReversed) ? 'Yes' : 'No'}</dd>
+        <dt>Submitted By</dt><dd>${escapeHtml(t.submittedByUsername || '—')}</dd>
+      </dl>`;
+  } catch (e) {
+    body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
+  }
+}
+
 export function openSavingsTransactionModal({ id, type, label }) {
   const mid = `sv-tx-modal-${Date.now()}`;
   document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
@@ -58,7 +92,7 @@ export function openSavingsTransactionModal({ id, type, label }) {
       el.remove();
       toast('success', `${label} successful`, fmt(transactionAmount));
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', `${label} failed`, e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', `${label} failed`, extractFineractError(e)); }
   });
 }
 
@@ -94,7 +128,7 @@ export function openHoldModal(id) {
       el.remove();
       toast('success', 'Amount held', fmt(amount));
       document.dispatchEvent(new CustomEvent('fc:reload'));
-    } catch (e) { toast('error', 'Hold failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Hold failed', extractFineractError(e)); }
   });
 }
 
@@ -130,6 +164,6 @@ export function openAdjustSavingsTxModal(id, txId, onSuccess) {
       el.remove();
       toast('success', 'Transaction adjusted', '');
       onSuccess();
-    } catch (e) { toast('error', 'Adjust failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Adjust failed', extractFineractError(e)); }
   });
 }

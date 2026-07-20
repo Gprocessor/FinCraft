@@ -1,0 +1,94 @@
+<!-- FinCraft modal partials — admin domain. Fetched and concatenated at
+     runtime by js/ui/shell.js alongside the other views/modals/*.html files (mirrors
+     the js/api/admin.js domain split). All forms have name= attrs and
+     data-populate= hooks. -->
+
+<!-- New User (staff/admin login, not self-service portal) -->
+<div id="newUserModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">New User</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <form class="form-grid" id="newUserForm">
+        <label><span class="form-label">Username *</span>
+          <input name="username" required class="form-control"/></label>
+        <label><span class="form-label">Email *</span>
+          <input name="email" type="email" required class="form-control"/></label>
+        <label><span class="form-label">First name *</span>
+          <input name="firstname" required class="form-control"/></label>
+        <label><span class="form-label">Last name *</span>
+          <input name="lastname" required class="form-control"/></label>
+        <label class="full"><span class="form-label">Office *</span>
+          <select name="officeId" class="form-control" data-populate="offices" required></select></label>
+        <label class="full"><span class="form-label">Role(s) *</span>
+          <select name="roles" id="newuser-roles" class="form-control" multiple size="4" required></select></label>
+        <label class="full"><span class="form-check"><input type="checkbox" name="sendPasswordToEmail" id="nu-sendemail" checked/> Email the user a link to set their own password</span></label>
+        <label><span class="form-label">Password</span>
+          <input name="password" type="password" class="form-control" id="nu-pw" disabled/></label>
+        <label><span class="form-label">Confirm</span>
+          <input name="repeatPassword" type="password" class="form-control" id="nu-pw2" disabled/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-user"><i class="fa-solid fa-check"></i> Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Self-Service User -->
+<div id="selfServiceUserModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">Create Portal User</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="msg-banner b-info mb-4" style="font-size:13px"><i class="fa-solid fa-circle-info"></i> Creates a self-service login for an existing client to access their accounts online.</div>
+      <form class="form-grid" id="selfServiceUserForm">
+        <label class="full"><span class="form-label">Client ID *</span>
+          <div class="search-field">
+            <input id="ssClientSearch" placeholder="Type client name…" class="form-control" autocomplete="off"/>
+            <input type="hidden" name="clientId" id="ssClientId" required/>
+            <div id="ssClientResults" class="search-dropdown" style="display:none"></div>
+          </div></label>
+        <label class="full"><span class="form-label">Username *</span>
+          <input name="username" required class="form-control"/></label>
+        <label class="full"><span class="form-label">Email *</span>
+          <input name="email" type="email" required class="form-control"/></label>
+        <label><span class="form-label">Password *</span>
+          <input name="password" type="password" required class="form-control"/></label>
+        <label><span class="form-label">Confirm password *</span>
+          <input name="passwordRepeat" type="password" required class="form-control"/></label>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-ss-user"><i class="fa-solid fa-check"></i> Register</button>
+    </div>
+  </div>
+</div>
+
+<!-- Configuration Wizard — submits as ONE atomic Batch API transaction -->
+<div id="configWizardModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal modal-md">
+    <div class="modal-head"><h3 class="modal-title">Organization Setup</h3>
+      <button class="icon-btn" data-close-modal><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <p class="text-muted mb-4">These settings are submitted together as one atomic transaction — if anything fails, nothing is changed.</p>
+      <form id="configWizardForm">
+        <h4 class="mb-2">Working Days</h4>
+        <div class="flex gap-3 flex-wrap mb-4" id="cw-days">
+          ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `
+            <label class="form-check"><input type="checkbox" data-cw-day="${d}" ${['Mon','Tue','Wed','Thu','Fri'].includes(d) ? 'checked' : ''}/> ${d}</label>`).join('')}
+        </div>
+        <h4 class="mb-2">Enabled Currencies</h4>
+        <select id="cw-currencies" class="form-control" multiple size="6"><option value="">Loading…</option></select>
+        <div class="text-muted mt-2" style="font-size:12px">Ctrl/Cmd-click to select multiple.</div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn-primary" data-action="submit-wizard"><i class="fa-solid fa-check"></i> Save All</button>
+    </div>
+  </div>
+</div>
+

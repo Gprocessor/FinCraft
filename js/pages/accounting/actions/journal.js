@@ -4,8 +4,47 @@
 import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { toast } from '../../../ui.js';
-import { escapeHtml } from '../../../utils.js';
+import { escapeHtml, fmt, fmtDate } from '../../../utils.js';
 import { dynModal, glList, v, vi } from '../shared.js';
+
+import { extractFineractError } from '../../../ui/dom-helpers.js';
+export async function openJournalEntryDetailModal(entryId) {
+  const mid = 'je-view-' + Date.now();
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Journal Entry Detail</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body" id="${mid}-body"><div class="empty-state-row">Loading…</div></div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Close</button>
+        </div>
+      </div>
+    </div>`);
+  const m = document.getElementById(mid);
+  m.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => m.remove()));
+  const body = m.querySelector(`#${mid}-body`);
+  try {
+    const je = await api.journalEntries.get(entryId);
+    body.innerHTML = `
+      <dl class="dl-grid">
+        <dt>Transaction ID</dt><dd>${escapeHtml(je.transactionId || '—')}</dd>
+        <dt>Date</dt><dd>${fmtDate(je.transactionDate) || '—'}</dd>
+        <dt>Office</dt><dd>${escapeHtml(je.officeName || '—')}</dd>
+        <dt>GL Account</dt><dd>${escapeHtml(je.glAccountName || je.glAccount?.name || '—')} (${escapeHtml(je.glAccountCode || je.glAccount?.glCode || '—')})</dd>
+        <dt>Type</dt><dd>${escapeHtml(je.entryType?.value || je.type?.value || '—')}</dd>
+        <dt>Amount</dt><dd>${fmt(je.amount || 0)}</dd>
+        <dt>Currency</dt><dd>${escapeHtml(je.currency?.code || '—')}</dd>
+        <dt>Manual Entry</dt><dd>${je.manualEntry ? 'Yes' : 'No'}</dd>
+        <dt>Reversed</dt><dd>${je.reversed ? 'Yes' : 'No'}</dd>
+        ${je.reversalId ? `<dt>Reversal Entry ID</dt><dd>${escapeHtml(String(je.reversalId))}</dd>` : ''}
+        <dt>Created By</dt><dd>${escapeHtml(je.createdByUserName || '—')}</dd>
+        <dt>Reference</dt><dd>${escapeHtml(je.comments || je.referenceNumber || '—')}</dd>
+        ${je.transactionDetails?.transactionEntityType ? `<dt>Source</dt><dd>${escapeHtml(je.transactionDetails.transactionEntityType)} #${escapeHtml(String(je.transactionDetails.transactionEntityId || ''))}</dd>` : ''}
+      </dl>`;
+  } catch (e) {
+    body.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
+  }
+}
 
 export function openReverseJEModal(transactionId, onSuccess) {
   const mid = 'je-rev-' + Date.now();
@@ -40,7 +79,7 @@ export function openReverseJEModal(transactionId, onSuccess) {
       m.remove();
       toast('success', 'Entry reversed', String(transactionId));
       onSuccess?.();
-    } catch (e) { toast('error', 'Reversal failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Reversal failed', extractFineractError(e)); }
   });
 }
 
@@ -107,7 +146,7 @@ export async function openFrequentPostingModal(ruleId, rule, onSuccess) {
       toast('success', 'Posted via rule', rule?.name || '');
       onSuccess();
     } catch (e) {
-      toast('error', 'Posting failed', e.detail?.defaultUserMessage || e.message);
+      toast('error', 'Posting failed', extractFineractError(e));
     }
   });
 }
@@ -209,6 +248,6 @@ export async function openJournalEntryModal(onSuccess) {
       el.remove();
       toast('success', 'Journal entry created', '');
       onSuccess();
-    } catch (e) { toast('error', 'Create failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Create failed', extractFineractError(e)); }
   });
 }

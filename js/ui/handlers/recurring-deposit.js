@@ -27,10 +27,30 @@ export const RecurringDepositHandlers = {
       if (f.expectedFirstDepositOnDate) payload.expectedFirstDepositOnDate = f.expectedFirstDepositOnDate;
       if (f.externalId) payload.externalId = f.externalId;
 
+      const autoApproveActivate = f.autoApproveActivate === 'on' || f.autoApproveActivate === 'true';
+
       setSubmitting(btn, true);
       try {
         const r = await api.recurringDeposits.create(payload);
-        toast('success', 'RD application submitted', `#${r.savingsId || r.resourceId}`);
+        const id = r.savingsId || r.resourceId;
+        let statusMsg = 'RD application submitted';
+        if (autoApproveActivate && id) {
+          try {
+            await api.recurringDeposits.approve(id, { approvedOnDate: f.submittedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+            try {
+              await api.recurringDeposits.activate(id, { activatedOnDate: f.submittedOnDate, dateFormat: DATE_FORMAT, locale: LOCALE });
+              statusMsg = 'RD created, approved & activated';
+            } catch (actErr) {
+              statusMsg = 'Created & approved, but activation failed';
+              toast('warn', statusMsg, extractFineractError(actErr));
+              statusMsg = null;
+            }
+          } catch (appErr) {
+            toast('warn', 'Created, but approval failed', extractFineractError(appErr));
+            statusMsg = null;
+          }
+        }
+        if (statusMsg) toast('success', statusMsg, `#${id}`);
         closeModal('newRDModal');
         document.dispatchEvent(new CustomEvent('fc:reload'));
       } catch (e) {

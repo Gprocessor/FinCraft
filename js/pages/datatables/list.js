@@ -7,6 +7,7 @@ import { escapeHtml, num, sb } from '../../utils.js';
 import { openCreateDataTableModal, openRegisterModal } from './actions.js';
 import { APP_TABLES, can } from './shared.js';
 
+import { extractFineractError } from '../../ui/dom-helpers.js';
 export async function renderList(c) {
   c.innerHTML = `
     <div class="page-header mb-3">
@@ -66,7 +67,7 @@ export async function renderList(c) {
       applyFilters();
     } catch (e) {
       c.querySelector('#dt-rows').innerHTML =
-        `<tr><td colspan="5" class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</td></tr>`;
+        `<tr><td colspan="5" class="text-error">${escapeHtml(extractFineractError(e))}</td></tr>`;
     }
   }
 
@@ -119,7 +120,7 @@ export async function renderList(c) {
         await api.dataTables.deregister(b.dataset.deregisterDt);
         toast('success', 'Deregistered', '');
         load();
-      } catch (e) { toast('error', 'Deregister failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Deregister failed', extractFineractError(e)); }
     }));
 
     c.querySelectorAll('[data-drop-dt]').forEach(b => b.addEventListener('click', async () => {
@@ -132,7 +133,7 @@ export async function renderList(c) {
         await api.dataTables.deleteTable(b.dataset.dropDt);
         toast('success', 'Table dropped', '');
         load();
-      } catch (e) { toast('error', 'Drop failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Drop failed', extractFineractError(e)); }
     }));
   }
 

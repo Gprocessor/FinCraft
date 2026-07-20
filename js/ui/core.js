@@ -16,9 +16,14 @@ export function setActiveNav(page) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.nav === page));
 }
 
-export function toast(type, title, msg, durationMs = 4500) {
+export function toast(type, title, msg, durationMs) {
   const c = document.getElementById('toastContainer');
   if (!c) return;
+  if (durationMs == null) {
+    const lines = msg ? String(msg).split('\n').length : 1;
+    const base = type === 'error' ? 6000 : 4500;
+    durationMs = base + Math.max(0, lines - 1) * 1500;
+  }
   const t = document.createElement('div');
   const iconMap = {
     success: 'fa-circle-check',

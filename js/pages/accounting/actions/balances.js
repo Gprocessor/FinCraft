@@ -6,6 +6,7 @@ import { DATE_FORMAT, LOCALE } from '../../../config.js';
 import { toast } from '../../../ui.js';
 import { escapeHtml } from '../../../utils.js';
 
+import { extractFineractError } from '../../../ui/dom-helpers.js';
 export function openingBalanceRow(accounts, prefix, idx) {
   const opts = accounts.map(g => `<option value="${g.id}">${escapeHtml(g.name)} (${g.glCode})</option>`).join('');
   return `
@@ -50,6 +51,6 @@ export async function submitOpeningBalances(el) {
     await api.openingBalances.define(officeId, payload);
     toast('success', 'Opening balances submitted', credits.length + ' credits, ' + debits.length + ' debits');
   } catch (e) {
-    toast('error', 'Submission failed', e.detail?.defaultUserMessage || e.message);
+    toast('error', 'Submission failed', extractFineractError(e));
   }
 }

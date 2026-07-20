@@ -5,6 +5,7 @@ import { api } from '../../api.js';
 import { confirm as modalConfirm, toast } from '../../ui.js';
 import { escapeHtml, num, sb } from '../../utils.js';
 import { can } from './shared.js';
+import { extractFineractError } from '../../ui/dom-helpers.js';
 
 export async function loadRoles(c) {
   const el = c.querySelector('#usr-1');
@@ -61,12 +62,12 @@ export async function loadRoles(c) {
     el.querySelectorAll('[data-disable-role]').forEach(b => b.addEventListener('click', async () => {
       if (!await modalConfirm({ title: 'Disable role?', message: 'Users with this role will lose access immediately.', danger: true, confirmText: 'Disable' })) return;
       try { await api.roles.disable(b.dataset.disableRole); toast('success', 'Role disabled', ''); loadRoles(c); }
-      catch (e) { toast('error', 'Disable failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Disable failed', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-enable-role]').forEach(b => b.addEventListener('click', async () => {
       try { await api.roles.enable(b.dataset.enableRole); toast('success', 'Role enabled', ''); loadRoles(c); }
-      catch (e) { toast('error', 'Enable failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Enable failed', extractFineractError(e)); }
     }));
 
     el.querySelectorAll('[data-del-role]').forEach(b => b.addEventListener('click', async () => {
@@ -76,10 +77,10 @@ export async function loadRoles(c) {
         danger: true, confirmText: 'Delete'
       })) return;
       try { await api.roles.delete(b.dataset.delRole); toast('success', 'Role deleted', ''); loadRoles(c); }
-      catch (e) { toast('error', 'Delete failed', e.detail?.defaultUserMessage || e.message); }
+      catch (e) { toast('error', 'Delete failed', extractFineractError(e)); }
     }));
   } catch (e) {
-    el.innerHTML = `<div class="text-error">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>`;
+    el.innerHTML = `<div class="text-error">${escapeHtml(extractFineractError(e))}</div>`;
   }
 }
 
@@ -133,7 +134,7 @@ async function openRoleFormModal(roleId, onSuccess) {
       modalEl.remove();
       toast('success', isEdit ? 'Role updated' : 'Role created', name);
       onSuccess();
-    } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+    } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
   });
 }
 
@@ -165,14 +166,14 @@ export async function renderRoleDetail(c, roleId) {
         </div>
         <div class="page-actions">
           <button class="btn-secondary" data-back-roles><i class="fa-solid fa-arrow-left"></i> Back</button>
-          ${can('UPDATE_ROLE') ? `<button class="btn-primary" id="btn-save-perms"><i class="fa-solid fa-save"></i> Save Permissions</button>` : ''}
+          ${can('PERMISSIONS_ROLE') ? `<button class="btn-primary" id="btn-save-perms"><i class="fa-solid fa-save"></i> Save Permissions</button>` : ''}
         </div>
       </div>
 
       <div class="card">
         <div class="filter-bar mb-3">
           <input id="perm-search" class="form-control" placeholder="Filter permissions…" autocomplete="off"/>
-          ${can('UPDATE_ROLE') ? `
+          ${can('PERMISSIONS_ROLE') ? `
             <button class="btn-secondary" id="perm-select-all">Select All</button>
             <button class="btn-secondary" id="perm-clear-all">Clear All</button>
             <button class="btn-secondary" id="perm-select-readonly">Read-only Only</button>` : ''}
@@ -188,13 +189,13 @@ export async function renderRoleDetail(c, roleId) {
                   <h4><i class="fa-solid fa-chevron-down"></i> ${escapeHtml(g)}</h4>
                   <div>
                     <span class="text-muted">${groupSelected}/${perms.length}</span>
-                    ${can('UPDATE_ROLE') ? `<button class="btn-mini" data-group-toggle="${escapeHtml(g)}">Toggle All</button>` : ''}
+                    ${can('PERMISSIONS_ROLE') ? `<button class="btn-mini" data-group-toggle="${escapeHtml(g)}">Toggle All</button>` : ''}
                   </div>
                 </div>
                 <div class="perm-list" style="padding:8px 12px">
                   ${perms.map(p => `
                     <label class="checkbox-row" style="display:flex; align-items:center; padding:3px 0">
-                      <input type="checkbox" class="perm-chk" data-code="${escapeHtml(p.code)}" data-group="${escapeHtml(g)}" ${p.selected ? 'checked' : ''} ${can('UPDATE_ROLE') ? '' : 'disabled'}/>
+                      <input type="checkbox" class="perm-chk" data-code="${escapeHtml(p.code)}" data-group="${escapeHtml(g)}" ${p.selected ? 'checked' : ''} ${can('PERMISSIONS_ROLE') ? '' : 'disabled'}/>
                       <code style="margin-left:8px">${escapeHtml(p.code)}</code>
                       ${p.actionName && p.entityName ? `<span class="text-muted small" style="margin-left:auto">${escapeHtml(p.actionName)} ${escapeHtml(p.entityName)}</span>` : ''}
                     </label>`).join('')}
@@ -278,13 +279,13 @@ export async function renderRoleDetail(c, roleId) {
       try {
         await api.roles.updatePermissions(roleId, { permissions });
         toast('success', 'Permissions saved', `${Object.values(permissions).filter(Boolean).length} granted`);
-      } catch (e) { toast('error', 'Save failed', e.detail?.defaultUserMessage || e.message); }
+      } catch (e) { toast('error', 'Save failed', extractFineractError(e)); }
     });
   } catch (e) {
     c.innerHTML = `<div class="card"><div class="empty-state">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div><b>Failed to load role</b></div>
-      <div class="text-muted mt-2">${escapeHtml(e.detail?.defaultUserMessage || e.message)}</div>
+      <div class="text-muted mt-2">${escapeHtml(extractFineractError(e))}</div>
     </div></div>`;
   }
 }
