@@ -495,8 +495,83 @@ and route entries added to `router.js`'s `PAGES`.
       `createBorrowing`/`postBorrowingDrawdown`/`repayBorrowingPrincipal` — through one shared
       stub rather than hand-crafting fixture rows, which also double-checks those modules compose
       correctly together, not just in isolation)
-### Phase 10 - Daily Reconciliation — not started
-### Phase 11 - UI Integration — not started
+### Phase 10 - Daily Reconciliation
+- [x] Create DailyReconciliationService — `js/treasury/reconciliation.js`
+- [x] Start daily reconciliation — `startDailyReconciliation(officeId, tellerId, cashierId, date)`,
+      reuses Phase 4's `computeCashierExpectedBalance` for the "expected cash" side rather than
+      recomputing it; blocked if that cashier already has an unresolved (`OPEN`/`SUBMITTED`)
+      reconciliation for the same date
+- [x] Compute expected cash per cashier — via Phase 4 (no duplicated logic)
+- [x] Submit physical cash count — `submitPhysicalCashCount(officeId, reconciliationId,
+      physicalCash)`, computes `variance = physicalCash - expectedCash`
+- [x] Calculate shortage/overage — same `submitPhysicalCashCount` call; a (near-)zero variance
+      **auto-approves immediately** (nothing to authorize) rather than sitting in a pointless
+      `SUBMITTED` state awaiting an approval that would have nothing to do
+- [x] Approve reconciliation exception — `approveReconciliation(officeId, reconciliationId,
+      approver)`, required for any non-zero variance before anything is posted — mirrors Phase 7's
+      approve/reject shape as anticipated in the previous checkpoint's §17
+- [x] Post shortage JE after approval — Dr `shortageGlAccountId` / Cr Cash At Tellers GL
+- [x] Post overage JE after approval — Dr Cash At Tellers GL / Cr `overageGlAccountId`
+- [x] Store JE reference — `fineract_je_transaction_id` on the reconciliation row
+- [x] **Resolved the open GL-mapping question from the previous checkpoint:** added
+      `shortage_gl_account_id`/`overage_gl_account_id` to the `dt_treasury_thresholds` schema
+      (`js/api/treasury.js`) and `thresholds.js` before this schema had ever been provisioned
+      against a live tenant — safe to extend now, would not have been safe post-deployment.
+      Approving a variance with either mapping missing is rejected with a clear, actionable error
+      rather than posting a malformed/guessed journal entry.
+- [x] **Beyond the checklist:** approving a variance also records a self-correcting Phase 3 teller
+      event (`CASH_SETTLEMENT`/`CASH_OUT` for a shortage, `CASH_RECEIPT`/`CASH_IN` for an overage)
+      — reusing existing event types rather than inventing new ones — so the teller's own
+      operational balance reflects the physical reality that was just confirmed, keeping Phase 4's
+      "expected cash" figure accurate going forward instead of drifting further every reconciliation
+      cycle. Reuses the established `TreasuryReconciliationGapError` pattern for the post-JE
+      failure case.
+- [x] Automated tests — `tests/treasury-reconciliation.test.js` (7 scenarios: zero-variance
+      auto-approve with no JE posted, full shortage workflow incl. teller-event shape, full
+      overage workflow, duplicate-open guard, out-of-order status guards, missing-GL-config
+      guard, and the reconciliation-gap path). **Hit the identical stub-design mistake as Phase
+      6's test 7** (a blanket "fail this write" flag broke an earlier step that goes through the
+      same mocked method) — recognized the pattern immediately from having fixed it once already,
+      and applied the same fix (seed normally, then swap in a failing method just before the call
+      under test) rather than re-deriving a solution from scratch.
+### Phase 11 - UI Integration (started — 1 of 8 screens)
+- [x] Add Treasury **Settings** screen — `js/pages/treasury/settings.js` (built first,
+      out of the brief's listed order, per the previous checkpoint's explicit recommendation:
+      every other treasury screen is unusable without this one). Office picker (via
+      `api.offices.list()`) + GL-account dropdowns (via `api.glAccounts.list()`) for all eight
+      `dt_treasury_thresholds` fields + reserve buffer + currency, wired to
+      `getThresholds`/`upsertThresholds` (Phase 5). Shows an explicit "not configured yet" banner
+      rather than a blank/broken form when an office has no threshold row.
+- [ ] Add Treasury Dashboard screen
+- [ ] Add Teller Console screen
+- [ ] Add Cash Allocation screen
+- [ ] Add Loan Disbursement Through Teller screen
+- [ ] Add Expense Management screen
+- [ ] Add Borrowings screen
+- [ ] Add Daily Reconciliation screen
+- [x] Reuse existing UI components and layout — followed `js/pages/misc/settings.js` line for
+      line for structure (plain `innerHTML` template, `querySelector`+`addEventListener`,
+      `toast()`, `escapeHtml()`); `js/pages/treasury/index.js` mirrors `js/pages/misc/index.js`'s
+      `params.view` dispatch pattern exactly, so the remaining 7 screens each slot in as one file
+      + one `VIEWS` entry, no restructuring needed
+- [x] Reuse existing auth/permissions — registered in `router.js`'s `PAGES` map like every other
+      route; **flagged, not silently guessed at:** gated on `READ_JOURNALENTRY` (closest existing
+      real Fineract permission) with an explanatory comment, following the exact precedent already
+      set in this codebase for `shares`/`surveys` (routes with no matching Fineract permission
+      code) — a proper mapping decision is still Phase 12's job, not resolved here
+- [x] **Verification, with an honest caveat:** `node --check` passed on all three new files; a
+      manual import-resolution smoke test (with a minimal hand-stubbed `document`/`window`, since
+      `js/store.js` touches those at import time) confirmed every import path in the new module
+      resolves correctly. **What this checkpoint could NOT do:** the project's own
+      `tests/module-integrity.test.js` — written for exactly this purpose (catching a forgotten
+      import or wrong identifier in newly-split UI code) — requires `jsdom`, and `npm install`
+      failed in this sandbox with a persistent `403 Forbidden` on `jsdom`'s `xmlchars`
+      transitive dependency from the npm registry (not a transient flake — retried and got the
+      identical error). This is a sandbox network-policy limitation, not a code issue, but it
+      means the new UI files have only been reviewed manually for correct identifier usage, not
+      run through the automated check the project itself provides for this. **Running
+      `npm test` with a working `jsdom` install, on a machine that isn't network-restricted this
+      way, should be the very first thing done with this code before trusting it further.**
 ### Phase 12 - Permissions — not started (see risk: must map to *real* Fineract permission codes
       only, per existing project convention in `router.js`; several requested codes in the brief,
       e.g. `ALLOCATE_CASH`, `DISBURSE_LOAN_THROUGH_TELLER`, are FinCraft-invented concepts with no
@@ -638,6 +713,42 @@ and route entries added to `router.js`'s `PAGES`.
   dashboard.js in isolation) added. Full suite: **13 passed / 1 pre-existing unrelated failure,
   unchanged.**
 
+- **Phase 10 — Daily Reconciliation.** First, resolved the open shortage/overage GL-mapping
+  question flagged in the previous checkpoint by extending `dt_treasury_thresholds`
+  (`shortage_gl_account_id`/`overage_gl_account_id`) and `thresholds.js` — done before this schema
+  had ever been provisioned against a live tenant, so safe to change now. Added
+  `js/treasury/reconciliation.js`: `startDailyReconciliation` (reuses Phase 4's expected-cash
+  computation), `submitPhysicalCashCount` (auto-approves a zero variance immediately, rather than
+  requiring a pointless manual approval for "nothing to approve"), and `approveReconciliation`
+  (posts the shortage/overage JE, then records a *self-correcting* Phase 3 teller event —
+  `CASH_SETTLEMENT` for a shortage, `CASH_RECEIPT` for an overage — so the teller's own
+  operational balance reflects the confirmed physical reality going forward, rather than drifting
+  further with every reconciliation cycle). `tests/treasury-reconciliation.test.js` added — 7
+  scenarios. Hit the *exact same* stub-design mistake as Phase 6's reconciliation-gap test (a
+  blanket failure flag broke an earlier, unrelated step using the same mocked method) — recognized
+  it immediately as the same pattern already fixed once, and applied the same known fix rather
+  than re-debugging from scratch. Full suite: **14 passed / 1 pre-existing unrelated failure,
+  unchanged.**
+
+- **Phase 11 (started) — Treasury Settings screen.** Built the one screen every other treasury
+  screen depends on first, per this log's own recommendation: `js/pages/treasury/settings.js`
+  (office picker + GL-account dropdowns + reserve buffer/currency form, wired to Phase 5's
+  `getThresholds`/`upsertThresholds`), `js/pages/treasury/index.js` (view dispatcher, mirroring
+  `js/pages/misc/index.js` exactly so the remaining 7 screens slot in the same way), and
+  `js/pages/treasury.js` (thin barrel, matching every other page module). Registered in
+  `router.js`'s `PAGES` map, gated on `READ_JOURNALENTRY` with an explanatory comment — following
+  the codebase's own established precedent (`shares`/`surveys`) for routes with no matching
+  Fineract permission code, rather than inventing one. **Verification gap, disclosed rather than
+  hidden:** `npm install` failed in this sandbox with a persistent (not transient — retried) `403
+  Forbidden` fetching `jsdom`'s `xmlchars` dependency from the npm registry, so
+  `tests/module-integrity.test.js` — the project's own tool for catching exactly the class of bug
+  new UI code is prone to (forgotten imports, wrong identifiers) — could not run against these
+  three new files. Mitigated with a manual import-resolution smoke test (minimal hand-stubbed
+  `document`/`window`) and careful manual review, but this is a real gap, not a false "all green":
+  getting `jsdom` installed somewhere without this sandbox's network restriction should happen
+  before this UI code is trusted further. The rest of the suite is unaffected: **14 passed / 1
+  pre-existing unrelated failure, unchanged.**
+
 ## 9. Deferred Work
 
 - All of Phases 3–13 are deferred pending answers to the Open Questions in §6, per the mandatory
@@ -670,12 +781,22 @@ and route entries added to `router.js`'s `PAGES`.
 - `js/treasury/dashboard.js` — Phase 9 `getTreasuryDashboard` aggregator.
 - `tests/treasury-liquidity-status.test.js`, `tests/treasury-dashboard.test.js` — automated
   coverage for both.
+- `js/treasury/reconciliation.js` — Phase 10 start/submit/approve reconciliation workflow.
+- `tests/treasury-reconciliation.test.js` — automated coverage for it.
+- `js/pages/treasury/settings.js` — Phase 11 Treasury Settings screen.
+- `js/pages/treasury/index.js` — Phase 11 view dispatcher (mirrors `js/pages/misc/index.js`).
+- `js/pages/treasury.js` — thin barrel re-export, matching every other page module.
 
 ## 11. Files Modified
 
 - `js/api/accounting.js` — extended `makeGlAccountsAPI` with `getBalance`, `listWithBalances`,
   `computeOfficeBalance` (no existing exports renamed/removed).
 - `js/api/index.js` — imported and wired `makeTreasuryAPI` as `this.treasury`.
+- `js/api/treasury.js` — extended `dt_treasury_thresholds`'s column spec with
+  `shortage_gl_account_id`/`overage_gl_account_id` for Phase 10, before this schema had ever been
+  provisioned against a live tenant.
+- `js/treasury/thresholds.js` — extended the read/write model with the same two new fields.
+- `js/router.js` — registered the new `treasury` route in the `PAGES` map.
 
 ## 12. API Endpoints Added
 
@@ -691,8 +812,12 @@ no new server-side endpoints, since Fineract itself is unmodified):
 
 ## 13. UI Screens Added
 
-- None yet. `api.treasury`/`api.glAccounts` balance methods are not yet called from any page —
-  next phase (Phase 3+) is where a Treasury page/route/UI would start consuming them.
+- **Treasury Settings** (`js/pages/treasury/settings.js`, route `treasury`, view `settings`) —
+  per-office `dt_treasury_thresholds` editor: office picker, GL-account dropdowns for all eight
+  mapped accounts, reserve buffer, currency code. Built first (out of the brief's listed order)
+  because every other treasury screen depends on it. The remaining 7 screens (Dashboard, Teller
+  Console, Cash Allocation, Loan Disbursement, Expenses, Borrowings, Reconciliation) are not yet
+  built — see §17.
 
 ## 14. Fineract APIs Used
 
@@ -710,38 +835,49 @@ Schemas fully defined in `js/api/treasury.js` (`TREASURY_DATATABLES`): `dt_telle
 `dt_expense_requests`, `dt_expense_approvals`, `dt_office_borrowings`, `dt_office_borrowing_schedule`,
 `dt_office_borrowing_txns`, `dt_treasury_thresholds`, `dt_daily_cash_reconciliation` — all attached
 to `m_office` (all `multiRow: true` except `dt_treasury_thresholds`, one config row per office).
-**Not yet registered against any live Fineract instance** — no Fineract server is reachable from
-this sandbox, so `ensureTreasuryDatatables()` has been reviewed/syntax-checked only, not
-execution-tested. First real run against a live tenant should happen before Phase 3 work starts,
-and should be spot-checked on at least two tenants to confirm the per-tenant bootstrap behaves as
-designed (§3's multi-tenancy note).
+`dt_treasury_thresholds` gained two columns this session (`shortage_gl_account_id`,
+`overage_gl_account_id`) for Phase 10. **Not yet registered against any live Fineract instance** —
+no Fineract server is reachable from this sandbox, so `ensureTreasuryDatatables()` has been
+reviewed/syntax-checked only, not execution-tested, across all ten phases built so far. This is
+flagged as the single largest outstanding risk in every checkpoint's §17 and should not be deferred
+past Phase 11 (UI) — a real screen writing to a never-provisioned datatable would fail immediately
+and non-obviously.
 
 ## 16. Testing Status
 
-`npm test` re-run after every change this session: **13 passed / 1 failed, unchanged
-throughout**. Passing: `accounting-fixes`, `business-logic`, `error-extraction`,
-`module-integrity`, `treasury-teller-balance`, `treasury-teller-events`, `treasury-vault-control`,
+`npm test` re-run after every change this session: **14 passed / 1 failed, unchanged
+throughout** — same 14 as the previous checkpoint (the new UI files aren't covered by the pure
+Node test runner's business-logic suites; see the gap below). Passing: `accounting-fixes`,
+`business-logic` (skipped — no jsdom), `error-extraction`, `module-integrity` (skipped — no
+jsdom), `treasury-teller-balance`, `treasury-teller-events`, `treasury-vault-control`,
 `treasury-loan-disbursement`, `treasury-expenses`, `treasury-borrowing-schedule`,
-`treasury-borrowings`, **`treasury-liquidity-status` (new)**, **`treasury-dashboard` (new)**. The
-one failure (`utils.test.js`, `document is not defined` in `js/store.js`) reproduces identically
-against an untouched copy of the original zip — confirmed pre-existing/sandbox-environment
-(`jsdom`), not a regression from this session.
+`treasury-borrowings`, `treasury-liquidity-status`, `treasury-dashboard`,
+`treasury-reconciliation`. The one failure (`utils.test.js`) is the same pre-existing
+sandbox/`jsdom` issue as every previous checkpoint. **New this round:** attempted `npm install`
+to get `jsdom` (needed for `business-logic.test.js`/`module-integrity.test.js`, and to properly
+exercise the new UI files) — failed with a persistent `403 Forbidden` on the `xmlchars` package
+from the npm registry, retried twice, same result both times. This is a sandbox network-policy
+restriction, not a flake — flagged honestly rather than silently working around it or claiming
+full coverage the new UI code doesn't actually have yet.
 
 ## 17. Next Recommended Phase
 
-**Phase 10 (Daily Reconciliation)** is the last backend phase, and the last piece before UI work
-(Phase 11) can begin in earnest. It should reuse `computeCashierExpectedBalance` (Phase 4) as its
-"expected cash" side, add a physical-count submission step, compute
-`variance = physicalCash - expectedCash`, and — structurally similar to Phase 7's approve/reject —
-require an explicit approval step before any variance is posted as a journal entry (the brief:
-"Post shortage JE after approval / Post overage JE after approval," i.e. submitting a count is NOT
-itself authorization to post the accounting difference). GL accounts for shortage/overage entries
-aren't named in the brief or in `dt_treasury_thresholds` yet — this is a genuinely open question to
-flag before Phase 10 rather than guess at (a shortage is typically an expense/loss GL, an overage a
-misc-income GL, neither of which exists in the current threshold config). After Phase 10, Phases
-11-13 (UI, Permissions, remaining cross-cutting tests) are what's left — all of Phases 3-9's actual
-business logic will be done and fully unit-tested by that point. `ensureTreasuryDatatables()` and
-`upsertThresholds()` still await their first real run against a live Fineract tenant — this is
-now the single largest outstanding risk to the whole plan (all nine phases' worth of tests use
-stubs) and should not be deferred any further; recommend doing it before or alongside Phase 10,
-not after.
+Continue Phase 11 with the remaining 7 screens, in roughly this order of dependency:
+**Treasury Dashboard** next (pure read, `getTreasuryDashboard` already built and tested — lowest
+risk, good smoke test for the Settings screen just built), then **Teller Console** (read-heavy,
+`getOfficeTellerBreakdown`/`compareCashierBalanceToFineract`), then the four write-heavy screens
+(**Cash Allocation**, **Loan Disbursement Through Teller**, **Expense Management**,
+**Borrowings**), and **Daily Reconciliation** last (three-step workflow UI, most complex form
+flow). Each should follow the exact pattern `settings.js` established (plain template +
+`querySelector`/`addEventListener` + `toast()`), and register as an additional `VIEWS` entry in
+`js/pages/treasury/index.js` plus one more `router.js` route (or a `view` param on the same
+`treasury` key, matching the `misc.js` precedent) — no new plumbing needed. Before writing more UI,
+it's worth resolving the `jsdom` install problem (§16) on a non-sandboxed machine and running the
+full suite there, since `module-integrity.test.js` exists specifically to catch the class of
+mistake new page-module code is most likely to contain, and it has not yet had the chance to run
+against any of Phase 11's code. Separately, the still-outstanding "run
+`ensureTreasuryDatatables()`/`upsertThresholds()` against a real Fineract tenant" item from every
+previous checkpoint remains the largest overall risk and is now urgent: **the Treasury Settings
+screen just built will fail immediately against a real tenant if that hasn't happened**, since
+`getThresholds`/`upsertThresholds` call `api.treasury.queryRows('dt_treasury_thresholds', ...)`,
+which 404s/errors if the datatable was never registered.

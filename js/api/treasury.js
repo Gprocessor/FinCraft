@@ -134,7 +134,13 @@ export const TREASURY_DATATABLES = [
       { name: 'interest_payable_gl_account_id',     type: T.NUMBER,  mandatory: false },
       { name: 'interest_expense_gl_account_id',     type: T.NUMBER,  mandatory: false },
       { name: 'reserve_buffer_amount',              type: T.DECIMAL, mandatory: true },
-      { name: 'currency_code',                      type: T.STRING,  length: 3, mandatory: true }
+      { name: 'currency_code',                      type: T.STRING,  length: 3, mandatory: true },
+      // Added for Phase 10 (Daily Reconciliation) — a cash shortage found at physical count is
+      // booked as a loss/expense; an overage as miscellaneous income. Both optional: a
+      // reconciliation with zero variance never needs either, and offices that haven't decided
+      // where these should post yet can configure everything else first.
+      { name: 'shortage_gl_account_id',             type: T.NUMBER,  mandatory: false },
+      { name: 'overage_gl_account_id',               type: T.NUMBER,  mandatory: false }
     ]
   },
   {

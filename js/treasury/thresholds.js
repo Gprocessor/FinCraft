@@ -36,7 +36,9 @@ function fromRow(row) {
     interestPayableGlAccountId: row.interest_payable_gl_account_id ?? null,
     interestExpenseGlAccountId: row.interest_expense_gl_account_id ?? null,
     reserveBufferAmount: Number(row.reserve_buffer_amount) || 0,
-    currencyCode: row.currency_code
+    currencyCode: row.currency_code,
+    shortageGlAccountId: row.shortage_gl_account_id ?? null,
+    overageGlAccountId: row.overage_gl_account_id ?? null
   };
 }
 
@@ -73,6 +75,8 @@ export async function upsertThresholds(officeId, thresholds) {
     interest_expense_gl_account_id: thresholds.interestExpenseGlAccountId ?? null,
     reserve_buffer_amount: Number(thresholds.reserveBufferAmount),
     currency_code: thresholds.currencyCode,
+    shortage_gl_account_id: thresholds.shortageGlAccountId ?? null,
+    overage_gl_account_id: thresholds.overageGlAccountId ?? null,
     locale: 'en', dateFormat: 'yyyy-MM-dd'
   };
 
