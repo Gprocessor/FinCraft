@@ -5,10 +5,12 @@
    added the same way `settings` was, one file + one VIEWS entry each, without restructuring. */
 
 import { settings } from './settings.js';
+import { dashboard } from './dashboard.js';
+import { tellerConsole } from './teller-console.js';
 
 export async function render(c, params = {}) {
   const view = params.view || 'settings';
-  const VIEWS = { settings };
+  const VIEWS = { settings, dashboard, 'teller-console': tellerConsole };
   const fn = VIEWS[view] || settings;
   await fn(c);
 }

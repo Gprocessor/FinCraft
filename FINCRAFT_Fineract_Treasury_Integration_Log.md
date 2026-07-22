@@ -534,7 +534,7 @@ and route entries added to `router.js`'s `PAGES`.
       same mocked method) — recognized the pattern immediately from having fixed it once already,
       and applied the same fix (seed normally, then swap in a failing method just before the call
       under test) rather than re-deriving a solution from scratch.
-### Phase 11 - UI Integration (started — 1 of 8 screens)
+### Phase 11 - UI Integration (started — 3 of 8 screens)
 - [x] Add Treasury **Settings** screen — `js/pages/treasury/settings.js` (built first,
       out of the brief's listed order, per the previous checkpoint's explicit recommendation:
       every other treasury screen is unusable without this one). Office picker (via
@@ -542,8 +542,22 @@ and route entries added to `router.js`'s `PAGES`.
       `dt_treasury_thresholds` fields + reserve buffer + currency, wired to
       `getThresholds`/`upsertThresholds` (Phase 5). Shows an explicit "not configured yet" banner
       rather than a blank/broken form when an office has no threshold row.
-- [ ] Add Treasury Dashboard screen
-- [ ] Add Teller Console screen
+- [x] Add Treasury **Dashboard** screen — `js/pages/treasury/dashboard.js`, pure read-only view
+      over Phase 9's `getTreasuryDashboard`, reusing the app's own existing `.stat-card` tile
+      markup (copied from `js/pages/dashboard/index.js`, not invented). Shows a clear "go to
+      Treasury Settings" pointer instead of a raw error when the selected office isn't configured
+      yet (`requireThresholds` throwing a recognizable message), and correctly distinguishes
+      "not configured" (`null`) from an actual `0` for the optional Interest Payable / Cash At
+      Tellers GL tiles.
+- [x] Add **Teller Console** screen — `js/pages/treasury/teller-console.js`. Lists every
+      teller/cashier at an office (via `api.tellers.list()` filtered client-side by `officeId`,
+      then `api.tellers.cashiers(tellerId)` per teller — Fineract has no single "all cashiers for
+      this office" endpoint, matching the same limitation already documented for Phase 4's
+      `getOfficeTellerBreakdown`), FinCraft's expected cash (Phase 4) next to Fineract's own
+      `cashierSummary` net cash (Phase 4's `compareCashierBalanceToFineract`), a
+      Reconciled/Mismatch/Unknown status badge per row, and an expandable per-cashier events
+      drill-down (Phase 3's `getCashierEvents`) so a mismatch can actually be traced rather than
+      just flagged. Read-only, like the Dashboard — no write actions live here.
 - [ ] Add Cash Allocation screen
 - [ ] Add Loan Disbursement Through Teller screen
 - [ ] Add Expense Management screen
@@ -552,26 +566,27 @@ and route entries added to `router.js`'s `PAGES`.
 - [x] Reuse existing UI components and layout — followed `js/pages/misc/settings.js` line for
       line for structure (plain `innerHTML` template, `querySelector`+`addEventListener`,
       `toast()`, `escapeHtml()`); `js/pages/treasury/index.js` mirrors `js/pages/misc/index.js`'s
-      `params.view` dispatch pattern exactly, so the remaining 7 screens each slot in as one file
-      + one `VIEWS` entry, no restructuring needed
+      `params.view` dispatch pattern exactly, so the remaining 5 screens each slot in as one file
+      + one `VIEWS` entry, no restructuring needed. `js/pages/treasury/shared.js` has grown to
+      three helpers used by two-or-more screens (office picker, money formatter, two badge-class
+      mappers) — checked for an existing helper before writing new markup each time, per the
+      previous checkpoint's own note to do so.
 - [x] Reuse existing auth/permissions — registered in `router.js`'s `PAGES` map like every other
-      route; **flagged, not silently guessed at:** gated on `READ_JOURNALENTRY` (closest existing
-      real Fineract permission) with an explanatory comment, following the exact precedent already
-      set in this codebase for `shares`/`surveys` (routes with no matching Fineract permission
-      code) — a proper mapping decision is still Phase 12's job, not resolved here
-- [x] **Verification, with an honest caveat:** `node --check` passed on all three new files; a
-      manual import-resolution smoke test (with a minimal hand-stubbed `document`/`window`, since
-      `js/store.js` touches those at import time) confirmed every import path in the new module
-      resolves correctly. **What this checkpoint could NOT do:** the project's own
-      `tests/module-integrity.test.js` — written for exactly this purpose (catching a forgotten
-      import or wrong identifier in newly-split UI code) — requires `jsdom`, and `npm install`
-      failed in this sandbox with a persistent `403 Forbidden` on `jsdom`'s `xmlchars`
-      transitive dependency from the npm registry (not a transient flake — retried and got the
-      identical error). This is a sandbox network-policy limitation, not a code issue, but it
-      means the new UI files have only been reviewed manually for correct identifier usage, not
-      run through the automated check the project itself provides for this. **Running
-      `npm test` with a working `jsdom` install, on a machine that isn't network-restricted this
-      way, should be the very first thing done with this code before trusting it further.**
+      route (now three entries — `treasury`, `treasury-dashboard`, `teller-console` — sharing one
+      module file, matching the `misc.js` precedent); **flagged, not silently guessed at:** gated
+      on `READ_JOURNALENTRY` (closest existing real Fineract permission) with an explanatory
+      comment on each entry, following the exact precedent already set in this codebase for
+      `shares`/`surveys` — a proper mapping decision is still Phase 12's job, not resolved here
+- [x] **CSS discipline, continued:** grepped `css/*.css` for every new class name before using it
+      in the Teller Console markup (`hidden`, `btn-sm`, `text-danger`, `text-success`,
+      `empty-state-row`) — all confirmed real this time, no repeat of the previous checkpoint's
+      invented-class mistakes.
+- [x] **Verification, with the same honest caveat as the previous checkpoint:** `node --check`
+      passed on all files; the same minimal hand-stubbed `document`/`window` import-resolution
+      smoke test passed for the dashboard view too. `tests/module-integrity.test.js` still could
+      not run against any Phase 11 code — `npm install`'s `jsdom` failure (§16) has not been
+      re-attempted this round since it was already confirmed non-transient last time; re-checking
+      it is not expected to change without a different network environment.
 ### Phase 12 - Permissions — not started (see risk: must map to *real* Fineract permission codes
       only, per existing project convention in `router.js`; several requested codes in the brief,
       e.g. `ALLOCATE_CASH`, `DISBURSE_LOAN_THROUGH_TELLER`, are FinCraft-invented concepts with no
@@ -749,6 +764,34 @@ and route entries added to `router.js`'s `PAGES`.
   before this UI code is trusted further. The rest of the suite is unaffected: **14 passed / 1
   pre-existing unrelated failure, unchanged.**
 
+- **Phase 11 (continued) — Treasury Dashboard screen.** Added `js/pages/treasury/dashboard.js`
+  (pure read-only aggregation view over Phase 9's `getTreasuryDashboard`, reusing the app's real
+  `.stat-card` tile markup copied from `js/pages/dashboard/index.js`), wired into the `VIEWS`
+  dispatcher and a second `router.js` entry (`treasury-dashboard`) sharing the same module file —
+  matching the `misc.js` precedent of one file backing several distinct nav entries. Extracted
+  `js/pages/treasury/shared.js` (office-picker markup, liquidity badge/accent CSS-class mapping,
+  a money formatter) once a second screen needed the same office picker as Settings, and refactored
+  `settings.js` to use it rather than letting two copies exist. **Caught two invented-class-name
+  mistakes in the dashboard's first draft** (`.data-table` and `.form-inline` — neither exists
+  anywhere in this codebase's CSS) by grepping `css/*.css` before trusting any class name used in
+  the new markup, and fixed both before this checkpoint rather than shipping silently-broken
+  styling. Same `jsdom`/`module-integrity.test.js` verification gap as the Settings screen applies
+  here too — not re-attempted this round since the network restriction was already confirmed
+  non-transient. Full suite: **14 passed / 1 pre-existing unrelated failure, unchanged.**
+
+- **Phase 11 (continued) — Teller Console screen.** Added `js/pages/treasury/teller-console.js`:
+  per-office teller/cashier list (assembled client-side from `api.tellers.list()` +
+  `api.tellers.cashiers(tellerId)` per teller, since Fineract has no single "all cashiers for this
+  office" call), FinCraft's expected cash next to Fineract's own `cashierSummary` figure with a
+  Reconciled/Mismatch/Unknown badge (Phase 4's `compareCashierBalanceToFineract`), and an
+  expandable per-row events drill-down (Phase 3's `getCashierEvents`) so a flagged mismatch can
+  actually be traced. Added a fourth `shared.js` helper (`matchBadgeClass`) for the badge mapping,
+  continuing the same growing-shared-module discipline as the Dashboard screen. Verified every new
+  CSS class against `css/*.css` before use this time — no repeat of the previous checkpoint's two
+  invented-class mistakes. Same `jsdom` verification gap as both earlier screens; not
+  re-attempted, still non-transient. Full suite: **14 passed / 1 pre-existing unrelated failure,
+  unchanged.**
+
 ## 9. Deferred Work
 
 - All of Phases 3–13 are deferred pending answers to the Open Questions in §6, per the mandatory
@@ -786,6 +829,10 @@ and route entries added to `router.js`'s `PAGES`.
 - `js/pages/treasury/settings.js` — Phase 11 Treasury Settings screen.
 - `js/pages/treasury/index.js` — Phase 11 view dispatcher (mirrors `js/pages/misc/index.js`).
 - `js/pages/treasury.js` — thin barrel re-export, matching every other page module.
+- `js/pages/treasury/dashboard.js` — Phase 11 Treasury Dashboard screen.
+- `js/pages/treasury/shared.js` — office-picker markup, liquidity badge/accent classes, money
+  formatter, shared by both screens above (and by every screen still to come).
+- `js/pages/treasury/teller-console.js` — Phase 11 Teller Console screen.
 
 ## 11. Files Modified
 
@@ -796,7 +843,10 @@ and route entries added to `router.js`'s `PAGES`.
   `shortage_gl_account_id`/`overage_gl_account_id` for Phase 10, before this schema had ever been
   provisioned against a live tenant.
 - `js/treasury/thresholds.js` — extended the read/write model with the same two new fields.
-- `js/router.js` — registered the new `treasury` route in the `PAGES` map.
+- `js/router.js` — registered the new `treasury` route in the `PAGES` map, then two more entries
+  (`treasury-dashboard`, `teller-console`) sharing the same module file.
+- `js/pages/treasury/settings.js` — refactored to use the new `shared.js#officeOptionsHtml`
+  instead of its own local copy, once `dashboard.js` needed the identical markup.
 
 ## 12. API Endpoints Added
 
@@ -815,9 +865,16 @@ no new server-side endpoints, since Fineract itself is unmodified):
 - **Treasury Settings** (`js/pages/treasury/settings.js`, route `treasury`, view `settings`) —
   per-office `dt_treasury_thresholds` editor: office picker, GL-account dropdowns for all eight
   mapped accounts, reserve buffer, currency code. Built first (out of the brief's listed order)
-  because every other treasury screen depends on it. The remaining 7 screens (Dashboard, Teller
-  Console, Cash Allocation, Loan Disbursement, Expenses, Borrowings, Reconciliation) are not yet
-  built — see §17.
+  because every other treasury screen depends on it.
+- **Treasury Dashboard** (`js/pages/treasury/dashboard.js`, route `treasury-dashboard`, view
+  `dashboard`) — read-only tiles (bank/vault/available-vault-with-liquidity-badge/teller-total/
+  borrowings/pending-expenses/interest-payable/pooled-GL) plus a per-cashier breakdown table,
+  over Phase 9's `getTreasuryDashboard`.
+- **Teller Console** (`js/pages/treasury/teller-console.js`, route `teller-console`, view
+  `teller-console`) — per-office teller/cashier list with FinCraft-vs-Fineract reconciliation
+  status per row and an expandable recent-events drill-down.
+- The remaining 5 screens (Cash Allocation, Loan Disbursement, Expenses, Borrowings,
+  Reconciliation) are not yet built — see §17.
 
 ## 14. Fineract APIs Used
 
@@ -862,22 +919,23 @@ full coverage the new UI code doesn't actually have yet.
 
 ## 17. Next Recommended Phase
 
-Continue Phase 11 with the remaining 7 screens, in roughly this order of dependency:
-**Treasury Dashboard** next (pure read, `getTreasuryDashboard` already built and tested — lowest
-risk, good smoke test for the Settings screen just built), then **Teller Console** (read-heavy,
-`getOfficeTellerBreakdown`/`compareCashierBalanceToFineract`), then the four write-heavy screens
-(**Cash Allocation**, **Loan Disbursement Through Teller**, **Expense Management**,
-**Borrowings**), and **Daily Reconciliation** last (three-step workflow UI, most complex form
-flow). Each should follow the exact pattern `settings.js` established (plain template +
-`querySelector`/`addEventListener` + `toast()`), and register as an additional `VIEWS` entry in
-`js/pages/treasury/index.js` plus one more `router.js` route (or a `view` param on the same
-`treasury` key, matching the `misc.js` precedent) — no new plumbing needed. Before writing more UI,
-it's worth resolving the `jsdom` install problem (§16) on a non-sandboxed machine and running the
-full suite there, since `module-integrity.test.js` exists specifically to catch the class of
-mistake new page-module code is most likely to contain, and it has not yet had the chance to run
-against any of Phase 11's code. Separately, the still-outstanding "run
-`ensureTreasuryDatatables()`/`upsertThresholds()` against a real Fineract tenant" item from every
-previous checkpoint remains the largest overall risk and is now urgent: **the Treasury Settings
-screen just built will fail immediately against a real tenant if that hasn't happened**, since
-`getThresholds`/`upsertThresholds` call `api.treasury.queryRows('dt_treasury_thresholds', ...)`,
-which 404s/errors if the datatable was never registered.
+Continue Phase 11 with the remaining 5 screens. **Cash Allocation** next — the first write screen,
+a simple form over Phase 5's `allocateCashToCashier` (office/teller/cashier pickers this project's
+Teller Console just proved out via `loadOfficeTellerCashierList`, worth extracting into
+`shared.js` as a fourth helper rather than re-deriving it a third time), showing the
+`validateVaultCanAllocate` error message directly if the buffer would be breached. Then **Loan
+Disbursement Through Teller** and **Expense Management** (both similarly form-plus-submit over
+already-tested services), then **Borrowings** (more fields, but no new UI pattern — a create form
+plus a drawdown/accrue/pay/repay action list per borrowing), and **Daily Reconciliation** last,
+since its three-step workflow (start → submit count → approve) is the most complex remaining form
+flow. Keep growing `js/pages/treasury/shared.js` before writing new markup, and keep grepping
+`css/*.css` before trusting any new class name — both practices caught real mistakes in the last
+two screens and should stay standard, not be treated as one-off cleanup.
+
+The two standing risks are unchanged and now cover five UI files' worth of unverified code:
+(1) `ensureTreasuryDatatables()`/`upsertThresholds()` have never run against a live Fineract
+tenant — every screen built so far will fail immediately against a real tenant until this happens;
+and (2) `jsdom` still cannot be installed in this sandbox, so `module-integrity.test.js` has not
+run against any Phase 11 file. Recommend resolving (1) specifically before adding the four
+remaining write-heavy screens, since a write screen failing silently against a misconfigured or
+unprovisioned backend is a materially worse failure mode than a read screen doing the same.

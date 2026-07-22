@@ -13,6 +13,7 @@ import { api } from '../../api.js';
 import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 import { getThresholds, upsertThresholds } from '../../treasury/thresholds.js';
+import { officeOptionsHtml } from './shared.js';
 
 const GL_FIELDS = [
   { key: 'vaultGlAccountId',                label: 'Vault GL Account',                required: true },
@@ -32,10 +33,6 @@ function glOptionsHtml(glAccounts, selectedId) {
     opts.push(`<option value="${g.id}" ${sel}>${escapeHtml(g.glCode || '')} — ${escapeHtml(g.name || '')}</option>`);
   }
   return opts.join('');
-}
-
-function officeOptionsHtml(offices, selectedId) {
-  return offices.map(o => `<option value="${o.id}" ${Number(selectedId) === o.id ? 'selected' : ''}>${escapeHtml(o.name || '')}</option>`).join('');
 }
 
 async function loadFormForOffice(c, officeId, glAccounts) {
