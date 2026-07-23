@@ -13,7 +13,7 @@ import { api } from '../../api.js';
 import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 import { getThresholds, upsertThresholds } from '../../treasury/thresholds.js';
-import { officeOptionsHtml } from './shared.js';
+import { officeOptionsHtml, glOptionsHtml } from './shared.js';
 
 const GL_FIELDS = [
   { key: 'vaultGlAccountId',                label: 'Vault GL Account',                required: true },
@@ -25,15 +25,6 @@ const GL_FIELDS = [
   { key: 'shortageGlAccountId',             label: 'Cash Shortage GL Account',        required: false },
   { key: 'overageGlAccountId',              label: 'Cash Overage GL Account',         required: false }
 ];
-
-function glOptionsHtml(glAccounts, selectedId) {
-  const opts = ['<option value="">— none —</option>'];
-  for (const g of glAccounts) {
-    const sel = Number(selectedId) === g.id ? 'selected' : '';
-    opts.push(`<option value="${g.id}" ${sel}>${escapeHtml(g.glCode || '')} — ${escapeHtml(g.name || '')}</option>`);
-  }
-  return opts.join('');
-}
 
 async function loadFormForOffice(c, officeId, glAccounts) {
   const t = await getThresholds(officeId).catch(err => { toast('error', 'Load failed', err?.message || String(err)); return null; });

@@ -9,10 +9,19 @@ import { dashboard } from './dashboard.js';
 import { tellerConsole } from './teller-console.js';
 import { cashAllocation } from './cash-allocation.js';
 import { loanDisbursement } from './loan-disbursement.js';
+import { expenses } from './expenses.js';
+import { borrowings } from './borrowings.js';
+import { reconciliation } from './reconciliation.js';
 
 export async function render(c, params = {}) {
   const view = params.view || 'settings';
-  const VIEWS = { settings, dashboard, 'teller-console': tellerConsole, 'cash-allocation': cashAllocation, 'loan-disbursement': loanDisbursement };
+  const VIEWS = {
+    settings, dashboard,
+    'teller-console': tellerConsole,
+    'cash-allocation': cashAllocation,
+    'loan-disbursement': loanDisbursement,
+    expenses, borrowings, reconciliation
+  };
   const fn = VIEWS[view] || settings;
   await fn(c);
 }

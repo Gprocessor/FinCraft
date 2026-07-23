@@ -32,6 +32,36 @@ export function matchBadgeClass(matches) {
   return matches === true ? 'b-success' : matches === false ? 'b-danger' : 'b-warning';
 }
 
+/** GL-account <option> markup, shared by every treasury screen that needs a GL-account picker
+ *  (Settings' eight mapping dropdowns, Expenses' expense-account dropdown). Extracted out of
+ *  settings.js once expenses.js needed the identical `glCode — name` option shape a second time,
+ *  per this module's own \"extend shared.js before duplicating\" discipline. `includeNone` adds a
+ *  leading \"— none —\" blank option (Settings' optional mappings want it; a mandatory expense
+ *  account picker passes false). */
+export function glOptionsHtml(glAccounts, selectedId, includeNone = true) {
+  const opts = includeNone ? ['<option value="">— none —</option>'] : [];
+  for (const g of (Array.isArray(glAccounts) ? glAccounts : [])) {
+    const sel = Number(selectedId) === g.id ? 'selected' : '';
+    opts.push(`<option value="${g.id}" ${sel}>${escapeHtml(g.glCode || '')} — ${escapeHtml(g.name || '')}</option>`);
+  }
+  return opts.join('');
+}
+
+/** Maps the treasury workflow status strings (expenses: PENDING/APPROVED/REJECTED/PAID;
+ *  borrowings: PENDING/ACTIVE/CLOSED; reconciliation: OPEN/SUBMITTED/APPROVED; schedule rows:
+ *  SCHEDULED/PARTIALLY_PAID/PAID) onto the app's existing .badge modifier classes, so every
+ *  treasury status pill reads consistently with the rest of FinCraft rather than introducing new
+ *  CSS. Unknown/unmapped statuses fall back to the neutral info badge rather than throwing. */
+export function statusBadgeClass(status) {
+  switch (status) {
+    case 'PAID': case 'ACTIVE': case 'APPROVED': return 'b-success';
+    case 'REJECTED': return 'b-danger';
+    case 'PENDING': case 'SUBMITTED': case 'OPEN': case 'PARTIALLY_PAID': return 'b-warning';
+    case 'CLOSED': case 'SCHEDULED': return 'b-info';
+    default: return 'b-info';
+  }
+}
+
 export function fmtMoney(amount, currencyCode) {
   if (amount === null || amount === undefined) return '—';
   const n = Number(amount);
