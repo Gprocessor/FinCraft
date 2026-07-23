@@ -45,6 +45,11 @@ export function fmtMoney(amount, currencyCode) {
  *  tellers client-side by their own `officeId` field, then fetches each teller's cashiers
  *  individually. Extracted here (originally written inline in teller-console.js) once
  *  cash-allocation.js needed the identical assembly a second time. */
+export function tellerCashierOptionsHtml(list) {
+  if (!list.length) return '<option value="">No tellers/cashiers configured</option>';
+  return list.map(tc => `<option value="${tc.tellerId}:${tc.cashierId}">${escapeHtml(tc.tellerName || `Teller ${tc.tellerId}`)} — ${escapeHtml(tc.cashierName)}</option>`).join('');
+}
+
 export async function loadOfficeTellerCashierList(officeId) {
   const allTellers = await api.tellers.list().catch(() => []);
   const officeTellers = (Array.isArray(allTellers) ? allTellers : []).filter(t => t.officeId === officeId);

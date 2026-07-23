@@ -10,14 +10,9 @@ import { store } from '../../store.js';
 import { toast } from '../../ui.js';
 import { getVaultBalance, getReserveBuffer, allocateCashToCashier } from '../../treasury/vault-control.js';
 import { TreasuryReconciliationGapError } from '../../treasury/errors.js';
-import { officeOptionsHtml, loadOfficeTellerCashierList, fmtMoney } from './shared.js';
+import { officeOptionsHtml, loadOfficeTellerCashierList, tellerCashierOptionsHtml, fmtMoney } from './shared.js';
 
 function today() { return new Date().toISOString().slice(0, 10); }
-
-function tellerCashierOptionsHtml(list) {
-  if (!list.length) return '<option value="">No tellers/cashiers configured</option>';
-  return list.map(tc => `<option value="${tc.tellerId}:${tc.cashierId}">${tc.tellerName || `Teller ${tc.tellerId}`} — ${tc.cashierName}</option>`).join('');
-}
 
 async function loadVaultStatus(c, officeId) {
   const statusEl = c.querySelector('#tca-vault-status');

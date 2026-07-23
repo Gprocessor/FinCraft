@@ -814,11 +814,28 @@ and route entries added to `router.js`'s `PAGES`.
   re-attempted, still non-transient. Full suite: **14 passed / 1 pre-existing unrelated failure,
   unchanged.**
 
+- **Phase 11 (continued) — Loan Disbursement Through Teller screen.** Added
+  `js/pages/treasury/loan-disbursement.js` — the second WRITE screen, same office-picker shape as
+  Cash Allocation plus one new concern: a loan picker. Loans are sourced from
+  `api.loans.list({ officeId, status: 'approved' })` — reusing the exact status filter
+  `pages/loans/list.js` already uses for "approved" (Fineract's own semantics already mean
+  "awaiting disbursal," so no new filter concept was invented), with principal/currency read
+  straight off the list response rather than an extra per-loan detail round trip. Selecting a
+  loan prefills (not locks) the amount field from its principal, since Fineract's disburse API
+  itself allows a `transactionAmount` override (e.g. tranche disbursal) and this screen shouldn't
+  be stricter than the API it wraps. Wraps Phase 6's `disburseLoanThroughCashier` unchanged; same
+  `TreasuryReconciliationGapError` "action required" toast treatment as Cash Allocation. Extracted
+  `tellerCashierOptionsHtml` out of `cash-allocation.js` into `shared.js` (now six helpers) before
+  writing the duplicate a second time, per this project's own running discipline — see §11. Full
+  suite: **14 passed / 1 pre-existing unrelated failure, unchanged.** Not exercised against a live
+  Fineract tenant, for the same reason as every prior screen (see §15/§17).
+
 ## 9. Deferred Work
 
-- Phases 3-10 (all backend business logic) and 3 of Phase 11's 8 UI screens are now complete —
-  see §7/§8 for what's actually done. What remains deferred: 5 of Phase 11's screens (Loan
-  Disbursement, Expenses, Borrowings, Reconciliation — Cash Allocation is done), all of Phase 12
+- Phases 3-10 (all backend business logic) and 5 of Phase 11's 8 UI screens are now complete
+  (Settings, Dashboard, Teller Console, Cash Allocation, Loan Disbursement) —
+  see §7/§8 for what's actually done. What remains deferred: 3 of Phase 11's screens (Expenses,
+  Borrowings, Reconciliation), all of Phase 12
   (Permissions — a mapping-strategy decision is flagged but not resolved, see §17), and most of
   Phase 13 (only the treasury-specific unit/integration tests written alongside each backend
   phase exist; no dedicated cross-cutting test pass has been done). This note originally said "all
@@ -863,7 +880,10 @@ and route entries added to `router.js`'s `PAGES`.
   formatter, shared by both screens above (and by every screen still to come).
 - `js/pages/treasury/teller-console.js` — Phase 11 Teller Console screen.
 - `js/pages/treasury/cash-allocation.js` — Phase 11 Cash Allocation screen (first write screen).
-- `js/pages/treasury/cash-allocation.js` — Phase 11 Cash Allocation screen (first write screen).
+  *(Correction: this file was accidentally listed twice in the previous checkpoint; de-duplicated
+  here rather than left as a copy-paste artifact.)*
+- `js/pages/treasury/loan-disbursement.js` — Phase 11 Loan Disbursement Through Teller screen
+  (second write screen), wrapping Phase 6's `disburseLoanThroughCashier`.
 
 ## 11. Files Modified
 
@@ -880,6 +900,15 @@ and route entries added to `router.js`'s `PAGES`.
   instead of its own local copy, once `dashboard.js` needed the identical markup.
 - `js/pages/treasury/teller-console.js` — refactored to use `shared.js#loadOfficeTellerCashierList`
   instead of its own local copy, once `cash-allocation.js` needed the identical assembly.
+- `js/pages/treasury/shared.js` — added a sixth helper, `tellerCashierOptionsHtml`, extracted out
+  of `cash-allocation.js` before `loan-disbursement.js` needed the identical `<option>` markup a
+  second time (same "extend shared.js before duplicating" discipline as every prior screen).
+- `js/pages/treasury/cash-allocation.js` — refactored to use the newly-shared
+  `tellerCashierOptionsHtml` instead of its own local copy.
+- `js/pages/treasury/index.js` — registered the new `loan-disbursement` view.
+- `js/router.js` — registered the new `loan-disbursement` route, sharing `pages/treasury.js` with
+  the other four treasury routes and the same under-gated `READ_JOURNALENTRY` placeholder
+  permission (see §17) as `cash-allocation`.
 
 ## 12. API Endpoints Added
 
@@ -909,8 +938,11 @@ no new server-side endpoints, since Fineract itself is unmodified):
 - **Cash Allocation** (`js/pages/treasury/cash-allocation.js`, route `cash-allocation`, view
   `cash-allocation`) — the first write screen: vault status preview + form wrapping Phase 5's
   `allocateCashToCashier`.
-- The remaining 4 screens (Loan Disbursement, Expenses, Borrowings, Reconciliation) are not yet
-  built — see §17.
+- **Loan Disbursement Through Teller** (`js/pages/treasury/loan-disbursement.js`, route
+  `loan-disbursement`, view `loan-disbursement`) — the second write screen: office picker feeding
+  a loan picker (loans awaiting disbursal, sourced from `api.loans.list({status:'approved'})`) and
+  a teller/cashier picker, wrapping Phase 6's `disburseLoanThroughCashier`.
+- The remaining 3 screens (Expenses, Borrowings, Reconciliation) are not yet built — see §17.
 
 ## 14. Fineract APIs Used
 
@@ -938,43 +970,50 @@ and non-obviously.
 
 ## 16. Testing Status
 
-`npm test` re-run after every change this session: **14 passed / 1 failed, unchanged
-throughout** — same 14 as the previous checkpoint (the new UI files aren't covered by the pure
-Node test runner's business-logic suites; see the gap below). Passing: `accounting-fixes`,
+`npm test` (`node test-runner/run-tests.js`) re-run after this session's change: **14 passed / 1
+failed, unchanged** — identical pass/fail set to the previous checkpoint (`loan-disbursement.js`
+and the `shared.js` addition aren't covered by the pure Node test runner's business-logic suites;
+same coverage gap as every other UI file so far — see below). Passing: `accounting-fixes`,
 `business-logic` (skipped — no jsdom), `error-extraction`, `module-integrity` (skipped — no
 jsdom), `treasury-teller-balance`, `treasury-teller-events`, `treasury-vault-control`,
-`treasury-loan-disbursement`, `treasury-expenses`, `treasury-borrowing-schedule`,
-`treasury-borrowings`, `treasury-liquidity-status`, `treasury-dashboard`,
-`treasury-reconciliation`. The one failure (`utils.test.js`) is the same pre-existing
-sandbox/`jsdom` issue as every previous checkpoint. **New this round:** attempted `npm install`
-to get `jsdom` (needed for `business-logic.test.js`/`module-integrity.test.js`, and to properly
-exercise the new UI files) — failed with a persistent `403 Forbidden` on the `xmlchars` package
-from the npm registry, retried twice, same result both times. This is a sandbox network-policy
-restriction, not a flake — flagged honestly rather than silently working around it or claiming
-full coverage the new UI code doesn't actually have yet.
+`treasury-loan-disbursement` (the *service* test, unaffected — it stubs `api.loans`/`api.tellers`/
+`api.treasury` directly and never imports the new UI file), `treasury-expenses`,
+`treasury-borrowing-schedule`, `treasury-borrowings`, `treasury-liquidity-status`,
+`treasury-dashboard`, `treasury-reconciliation`. The one failure (`utils.test.js`) is the same
+pre-existing sandbox/`jsdom` issue as every previous checkpoint — not re-investigated this round,
+`npm install` was not re-attempted since the prior checkpoint's `403 Forbidden` on `xmlchars` was
+already confirmed a non-transient sandbox network-policy restriction rather than a flake. All five
+Phase 11 files touched this session (`loan-disbursement.js` new; `shared.js`, `cash-allocation.js`,
+`index.js`, `router.js` modified) were syntax-checked with `node --check` — passed — which is the
+extent of verification possible for browser-DOM UI code without jsdom in this sandbox.
 
 ## 17. Next Recommended Phase
 
-Continue Phase 11 with the remaining 4 screens. **Loan Disbursement Through Teller** next —
-structurally almost identical to Cash Allocation just built (office/teller/cashier picker + amount
-+ date + note + submit, wrapping a single already-tested Phase 6 service function,
-`disburseLoanThroughCashier`), so should be fast, plus it needs a loan picker (a new concern —
-likely `api.loans.list()` or a per-client search, not yet needed by any treasury screen so far).
-Then **Expense Management** (a genuine multi-step lifecycle UI — request/approve/reject/pay,
-closer in shape to Daily Reconciliation than to the simple forms built so far) and **Borrowings**
-(a create form plus a per-borrowing action list for drawdown/accrue/pay/repay). **Daily
-Reconciliation** last, unchanged reasoning from previous checkpoints: three-step workflow, most
-complex remaining form flow. Keep extending `shared.js` before duplicating markup — it now has
-five reusable helpers and three screens have each added to it rather than working around it.
+Continue Phase 11 with the remaining 3 screens. **Expense Management** next — a genuine
+multi-step lifecycle UI (request/approve/reject/pay, wrapping Phase 7's `js/treasury/expenses.js`),
+closer in shape to Daily Reconciliation than to the three simple forms built so far (Cash
+Allocation, Loan Disbursement), so budget more time for it than the last two screens took. Then
+**Borrowings** (a create form plus a per-borrowing action list for drawdown/accrue/pay/repay,
+wrapping Phase 8's `borrowings.js`/`borrowing-schedule.js`). **Daily Reconciliation** last,
+unchanged reasoning from every previous checkpoint: three-step workflow, most complex remaining
+form flow, wraps Phase 10's `reconciliation.js`. Keep extending `shared.js` before duplicating
+markup — it now has six reusable helpers and four screens have each added to it rather than
+working around it (most recently `tellerCashierOptionsHtml`, this session).
 
-Two standing risks, both now covering four UI files' worth of code and getting more expensive to
+Two standing risks, both now covering five UI files' worth of code and getting more expensive to
 discover late: (1) `ensureTreasuryDatatables()`/`upsertThresholds()` have never run against a live
-Fineract tenant — a genuine write action (Cash Allocation) now exists that will fail against an
-unprovisioned backend, not just a read screen; and (2) `jsdom` still cannot be installed in this
-sandbox, so `module-integrity.test.js` has not run against any Phase 11 file. Also newly relevant:
-**Phase 12 now has a second concrete example of the write-permission gap**, not just a theoretical
-one — `cash-allocation`'s route comment documents exactly why `READ_JOURNALENTRY` is a placeholder
-for a write action, and every remaining write screen (Loan Disbursement, Expenses, Borrowings,
-Reconciliation) will accumulate the same unresolved gap unless Phase 12 is tackled before, not
-after, Phase 11 finishes — recommend deciding the write-permission mapping strategy now rather
-than repeating the same placeholder-with-a-comment four more times.
+Fineract tenant — two genuine write actions (Cash Allocation, and now Loan Disbursement) exist
+that will fail against an unprovisioned backend, not just a read screen, and Loan Disbursement
+specifically also calls the real `/loans/{id}?command=disburse` endpoint, so an untested run
+against a live tenant risks a **real loan disbursement** compounding with a datatable-write
+failure into a `TreasuryReconciliationGapError` the very first time this screen is used for real —
+provisioning `ensureTreasuryDatatables()` against a real sandbox tenant before this screen is
+demoed or handed to a user is now materially more urgent than it was at the Cash Allocation
+checkpoint, not just "still open"; and (2) `jsdom` still cannot be installed in this sandbox, so
+`module-integrity.test.js` has not run against any Phase 11 file, including this session's.
+**Phase 12's write-permission gap now has a third accumulated instance** (`loan-disbursement`
+joins `cash-allocation`) with the identical `READ_JOURNALENTRY`-placeholder comment repeated
+rather than resolved — every remaining write screen (Expenses, Borrowings, Reconciliation) will
+add a fourth, fifth, and sixth unless Phase 12 is tackled before, not after, Phase 11 finishes;
+this recommendation has now been repeated at every Phase-11 checkpoint since Cash Allocation and
+should not need repeating a third time.
