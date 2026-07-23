@@ -4,6 +4,7 @@
    within the same page module. */
 
 import { escapeHtml } from '../../utils.js';
+import { api } from '../../api.js';
 
 export function officeOptionsHtml(offices, selectedId) {
   return offices.map(o => `<option value="${o.id}" ${Number(selectedId) === o.id ? 'selected' : ''}>${escapeHtml(o.name || '')}</option>`).join('');
@@ -36,4 +37,25 @@ export function fmtMoney(amount, currencyCode) {
   const n = Number(amount);
   const formatted = n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return currencyCode ? `${currencyCode} ${formatted}` : formatted;
+}
+
+/** Assembles a flat [{tellerId, tellerName, cashierId, cashierName}] list for one office.
+ *  Fineract's `GET /tellers` list isn't guaranteed office-filterable via a query param across all
+ *  versions, and there is no single "all cashiers for this office" endpoint — so this filters
+ *  tellers client-side by their own `officeId` field, then fetches each teller's cashiers
+ *  individually. Extracted here (originally written inline in teller-console.js) once
+ *  cash-allocation.js needed the identical assembly a second time. */
+export async function loadOfficeTellerCashierList(officeId) {
+  const allTellers = await api.tellers.list().catch(() => []);
+  const officeTellers = (Array.isArray(allTellers) ? allTellers : []).filter(t => t.officeId === officeId);
+
+  const rows = [];
+  for (const teller of officeTellers) {
+    const result = await api.tellers.cashiers(teller.id).catch(() => null);
+    const cashiers = result?.cashiers || [];
+    for (const cashier of cashiers) {
+      rows.push({ tellerId: teller.id, tellerName: teller.name, cashierId: cashier.id, cashierName: cashier.staffName || cashier.description || `Cashier ${cashier.id}` });
+    }
+  }
+  return rows;
 }

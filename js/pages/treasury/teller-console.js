@@ -11,25 +11,7 @@ import { toast } from '../../ui.js';
 import { escapeHtml } from '../../utils.js';
 import { getOfficeTellerBreakdown, compareCashierBalanceToFineract } from '../../treasury/teller-balance.js';
 import { getCashierEvents } from '../../treasury/teller-events.js';
-import { officeOptionsHtml, matchBadgeClass, fmtMoney } from './shared.js';
-
-/** Fineract's `GET /tellers` list isn't guaranteed office-filterable via a query param across all
- *  versions (see integration log's API notes) — filter client-side on the officeId field that's
- *  always present in each teller's own record instead of relying on server-side filtering. */
-async function loadOfficeTellerCashierList(officeId) {
-  const allTellers = await api.tellers.list().catch(() => []);
-  const officeTellers = (Array.isArray(allTellers) ? allTellers : []).filter(t => t.officeId === officeId);
-
-  const rows = [];
-  for (const teller of officeTellers) {
-    const result = await api.tellers.cashiers(teller.id).catch(() => null);
-    const cashiers = result?.cashiers || [];
-    for (const cashier of cashiers) {
-      rows.push({ tellerId: teller.id, tellerName: teller.name, cashierId: cashier.id, cashierName: cashier.staffName || cashier.description || `Cashier ${cashier.id}` });
-    }
-  }
-  return rows;
-}
+import { officeOptionsHtml, matchBadgeClass, fmtMoney, loadOfficeTellerCashierList } from './shared.js';
 
 function eventRowsHtml(events) {
   if (!events.length) return '<tr><td colspan="4" class="text-muted text-center">No events recorded</td></tr>';

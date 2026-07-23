@@ -7,10 +7,11 @@
 import { settings } from './settings.js';
 import { dashboard } from './dashboard.js';
 import { tellerConsole } from './teller-console.js';
+import { cashAllocation } from './cash-allocation.js';
 
 export async function render(c, params = {}) {
   const view = params.view || 'settings';
-  const VIEWS = { settings, dashboard, 'teller-console': tellerConsole };
+  const VIEWS = { settings, dashboard, 'teller-console': tellerConsole, 'cash-allocation': cashAllocation };
   const fn = VIEWS[view] || settings;
   await fn(c);
 }

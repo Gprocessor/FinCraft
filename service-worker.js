@@ -1,4 +1,4 @@
-const CACHE = 'fincraft-v12'; // bumped: this session touched several core files (chart loader,
+const CACHE = 'fincraft-v11'; // bumped: this session touched several core files (chart loader,
 // create->approve->activate handlers, group/center/client modals+wiring) — bumping forces the
 // activate-phase cache cleanup below to run and guarantees no stale mix of old/new assets.
 const ASSETS = [

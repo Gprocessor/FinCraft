@@ -534,7 +534,7 @@ and route entries added to `router.js`'s `PAGES`.
       same mocked method) — recognized the pattern immediately from having fixed it once already,
       and applied the same fix (seed normally, then swap in a failing method just before the call
       under test) rather than re-deriving a solution from scratch.
-### Phase 11 - UI Integration (started — 3 of 8 screens)
+### Phase 11 - UI Integration (started — 4 of 8 screens)
 - [x] Add Treasury **Settings** screen — `js/pages/treasury/settings.js` (built first,
       out of the brief's listed order, per the previous checkpoint's explicit recommendation:
       every other treasury screen is unusable without this one). Office picker (via
@@ -558,29 +558,36 @@ and route entries added to `router.js`'s `PAGES`.
       Reconciled/Mismatch/Unknown status badge per row, and an expandable per-cashier events
       drill-down (Phase 3's `getCashierEvents`) so a mismatch can actually be traced rather than
       just flagged. Read-only, like the Dashboard — no write actions live here.
-- [ ] Add Cash Allocation screen
+- [x] Add **Cash Allocation** screen — `js/pages/treasury/cash-allocation.js`, the **first write
+      screen** in Phase 11 (everything before this was read-only). Office/teller/cashier pickers
+      reuse `loadOfficeTellerCashierList`, extracted out of `teller-console.js` into `shared.js`
+      this round rather than re-derived a second time (per the previous checkpoint's own note to
+      do exactly this). Shows current vault balance/reserve buffer/available-to-allocate *before*
+      submission, so a request that would be blocked is visible up front, not just after a failed
+      attempt. Wraps Phase 5's `allocateCashToCashier`; distinguishes an ordinary validation
+      failure from a `TreasuryReconciliationGapError` in the toast shown to the user (the latter
+      gets a visibly different "action required" framing, matching the seriousness `errors.js`'s
+      own documentation assigns it — real cash already moved in Fineract even though the screen
+      is reporting a failure).
 - [ ] Add Loan Disbursement Through Teller screen
 - [ ] Add Expense Management screen
 - [ ] Add Borrowings screen
 - [ ] Add Daily Reconciliation screen
 - [x] Reuse existing UI components and layout — followed `js/pages/misc/settings.js` line for
-      line for structure (plain `innerHTML` template, `querySelector`+`addEventListener`,
-      `toast()`, `escapeHtml()`); `js/pages/treasury/index.js` mirrors `js/pages/misc/index.js`'s
-      `params.view` dispatch pattern exactly, so the remaining 5 screens each slot in as one file
-      + one `VIEWS` entry, no restructuring needed. `js/pages/treasury/shared.js` has grown to
-      three helpers used by two-or-more screens (office picker, money formatter, two badge-class
-      mappers) — checked for an existing helper before writing new markup each time, per the
-      previous checkpoint's own note to do so.
+      line for structure throughout; `js/pages/treasury/shared.js` now has five helpers used by
+      two-or-more screens (office picker, teller/cashier-list assembly, money formatter, two
+      badge-class mappers) — checked for an existing helper before writing new markup each time.
 - [x] Reuse existing auth/permissions — registered in `router.js`'s `PAGES` map like every other
-      route (now three entries — `treasury`, `treasury-dashboard`, `teller-console` — sharing one
-      module file, matching the `misc.js` precedent); **flagged, not silently guessed at:** gated
-      on `READ_JOURNALENTRY` (closest existing real Fineract permission) with an explanatory
-      comment on each entry, following the exact precedent already set in this codebase for
-      `shares`/`surveys` — a proper mapping decision is still Phase 12's job, not resolved here
-- [x] **CSS discipline, continued:** grepped `css/*.css` for every new class name before using it
-      in the Teller Console markup (`hidden`, `btn-sm`, `text-danger`, `text-success`,
-      `empty-state-row`) — all confirmed real this time, no repeat of the previous checkpoint's
-      invented-class mistakes.
+      route (now four entries sharing one module file, matching the `misc.js` precedent).
+      **Permission-code honesty, not just precedent-following this time:** `cash-allocation` is
+      the first *write* route, and rather than guess a plausible-sounding write permission code
+      (e.g. `CREATE_JOURNALENTRY`) that could not be confirmed real from this sandbox (no live
+      Fineract instance to check its permission list against), it is temporarily gated on the
+      same `READ_JOURNALENTRY` already confirmed real elsewhere in this codebase — an explicit
+      under-gating, called out in the route's own comment as something Phase 12 MUST revisit, not
+      a real Fineract write-permission mapping presented as settled.
+- [x] **CSS discipline, continued:** grepped `css/*.css` for `mt-2`/`mt-3`/`btn-primary` before
+      use — all confirmed real.
 - [x] **Verification, with the same honest caveat as the previous checkpoint:** `node --check`
       passed on all files; the same minimal hand-stubbed `document`/`window` import-resolution
       smoke test passed for the dashboard view too. `tests/module-integrity.test.js` still could
@@ -779,6 +786,21 @@ and route entries added to `router.js`'s `PAGES`.
   here too — not re-attempted this round since the network restriction was already confirmed
   non-transient. Full suite: **14 passed / 1 pre-existing unrelated failure, unchanged.**
 
+- **Phase 11 (continued) — Cash Allocation screen.** Added `js/pages/treasury/cash-allocation.js`
+  — the first WRITE screen in Phase 11. Extracted `loadOfficeTellerCashierList` out of
+  `teller-console.js` into `shared.js` (per that checkpoint's own recommendation to do this before
+  a third screen needed the identical assembly, rather than after) and refactored
+  `teller-console.js` to use the shared version. The screen previews vault balance/buffer/
+  available-to-allocate before the operator submits, wraps Phase 5's `allocateCashToCashier`, and
+  gives a `TreasuryReconciliationGapError` a visibly different "action required" toast rather than
+  presenting it the same way as an ordinary validation failure. **Permission-code decision, made
+  deliberately rather than by default:** rather than invent a write-permission code
+  (`CREATE_JOURNALENTRY`) that could not be verified real from this sandbox, this route reuses the
+  already-confirmed `READ_JOURNALENTRY` code and says so explicitly in its own comment as a known
+  under-gating Phase 12 must fix — consistent with this project's existing discipline (seen in the
+  `shares`/`surveys` routes) of never presenting a guessed permission code as a settled one. Full
+  suite: **14 passed / 1 pre-existing unrelated failure, unchanged.**
+
 - **Phase 11 (continued) — Teller Console screen.** Added `js/pages/treasury/teller-console.js`:
   per-office teller/cashier list (assembled client-side from `api.tellers.list()` +
   `api.tellers.cashiers(tellerId)` per teller, since Fineract has no single "all cashiers for this
@@ -794,8 +816,15 @@ and route entries added to `router.js`'s `PAGES`.
 
 ## 9. Deferred Work
 
-- All of Phases 3–13 are deferred pending answers to the Open Questions in §6, per the mandatory
-  instruction to inspect/document before implementing feature logic.
+- Phases 3-10 (all backend business logic) and 3 of Phase 11's 8 UI screens are now complete —
+  see §7/§8 for what's actually done. What remains deferred: 5 of Phase 11's screens (Loan
+  Disbursement, Expenses, Borrowings, Reconciliation — Cash Allocation is done), all of Phase 12
+  (Permissions — a mapping-strategy decision is flagged but not resolved, see §17), and most of
+  Phase 13 (only the treasury-specific unit/integration tests written alongside each backend
+  phase exist; no dedicated cross-cutting test pass has been done). This note originally said "all
+  of Phases 3-13" back at the Phase 0 checkpoint and was never updated as work progressed — left
+  visible here (rather than deleted) as a small, honest reminder to keep this section current
+  going forward, not just at the start.
 
 ## 10. Files Created
 
@@ -833,6 +862,8 @@ and route entries added to `router.js`'s `PAGES`.
 - `js/pages/treasury/shared.js` — office-picker markup, liquidity badge/accent classes, money
   formatter, shared by both screens above (and by every screen still to come).
 - `js/pages/treasury/teller-console.js` — Phase 11 Teller Console screen.
+- `js/pages/treasury/cash-allocation.js` — Phase 11 Cash Allocation screen (first write screen).
+- `js/pages/treasury/cash-allocation.js` — Phase 11 Cash Allocation screen (first write screen).
 
 ## 11. Files Modified
 
@@ -843,10 +874,12 @@ and route entries added to `router.js`'s `PAGES`.
   `shortage_gl_account_id`/`overage_gl_account_id` for Phase 10, before this schema had ever been
   provisioned against a live tenant.
 - `js/treasury/thresholds.js` — extended the read/write model with the same two new fields.
-- `js/router.js` — registered the new `treasury` route in the `PAGES` map, then two more entries
-  (`treasury-dashboard`, `teller-console`) sharing the same module file.
+- `js/router.js` — registered the new `treasury` route in the `PAGES` map, then three more entries
+  (`treasury-dashboard`, `teller-console`, `cash-allocation`) sharing the same module file.
 - `js/pages/treasury/settings.js` — refactored to use the new `shared.js#officeOptionsHtml`
   instead of its own local copy, once `dashboard.js` needed the identical markup.
+- `js/pages/treasury/teller-console.js` — refactored to use `shared.js#loadOfficeTellerCashierList`
+  instead of its own local copy, once `cash-allocation.js` needed the identical assembly.
 
 ## 12. API Endpoints Added
 
@@ -873,8 +906,11 @@ no new server-side endpoints, since Fineract itself is unmodified):
 - **Teller Console** (`js/pages/treasury/teller-console.js`, route `teller-console`, view
   `teller-console`) — per-office teller/cashier list with FinCraft-vs-Fineract reconciliation
   status per row and an expandable recent-events drill-down.
-- The remaining 5 screens (Cash Allocation, Loan Disbursement, Expenses, Borrowings,
-  Reconciliation) are not yet built — see §17.
+- **Cash Allocation** (`js/pages/treasury/cash-allocation.js`, route `cash-allocation`, view
+  `cash-allocation`) — the first write screen: vault status preview + form wrapping Phase 5's
+  `allocateCashToCashier`.
+- The remaining 4 screens (Loan Disbursement, Expenses, Borrowings, Reconciliation) are not yet
+  built — see §17.
 
 ## 14. Fineract APIs Used
 
@@ -919,23 +955,26 @@ full coverage the new UI code doesn't actually have yet.
 
 ## 17. Next Recommended Phase
 
-Continue Phase 11 with the remaining 5 screens. **Cash Allocation** next — the first write screen,
-a simple form over Phase 5's `allocateCashToCashier` (office/teller/cashier pickers this project's
-Teller Console just proved out via `loadOfficeTellerCashierList`, worth extracting into
-`shared.js` as a fourth helper rather than re-deriving it a third time), showing the
-`validateVaultCanAllocate` error message directly if the buffer would be breached. Then **Loan
-Disbursement Through Teller** and **Expense Management** (both similarly form-plus-submit over
-already-tested services), then **Borrowings** (more fields, but no new UI pattern — a create form
-plus a drawdown/accrue/pay/repay action list per borrowing), and **Daily Reconciliation** last,
-since its three-step workflow (start → submit count → approve) is the most complex remaining form
-flow. Keep growing `js/pages/treasury/shared.js` before writing new markup, and keep grepping
-`css/*.css` before trusting any new class name — both practices caught real mistakes in the last
-two screens and should stay standard, not be treated as one-off cleanup.
+Continue Phase 11 with the remaining 4 screens. **Loan Disbursement Through Teller** next —
+structurally almost identical to Cash Allocation just built (office/teller/cashier picker + amount
++ date + note + submit, wrapping a single already-tested Phase 6 service function,
+`disburseLoanThroughCashier`), so should be fast, plus it needs a loan picker (a new concern —
+likely `api.loans.list()` or a per-client search, not yet needed by any treasury screen so far).
+Then **Expense Management** (a genuine multi-step lifecycle UI — request/approve/reject/pay,
+closer in shape to Daily Reconciliation than to the simple forms built so far) and **Borrowings**
+(a create form plus a per-borrowing action list for drawdown/accrue/pay/repay). **Daily
+Reconciliation** last, unchanged reasoning from previous checkpoints: three-step workflow, most
+complex remaining form flow. Keep extending `shared.js` before duplicating markup — it now has
+five reusable helpers and three screens have each added to it rather than working around it.
 
-The two standing risks are unchanged and now cover five UI files' worth of unverified code:
-(1) `ensureTreasuryDatatables()`/`upsertThresholds()` have never run against a live Fineract
-tenant — every screen built so far will fail immediately against a real tenant until this happens;
-and (2) `jsdom` still cannot be installed in this sandbox, so `module-integrity.test.js` has not
-run against any Phase 11 file. Recommend resolving (1) specifically before adding the four
-remaining write-heavy screens, since a write screen failing silently against a misconfigured or
-unprovisioned backend is a materially worse failure mode than a read screen doing the same.
+Two standing risks, both now covering four UI files' worth of code and getting more expensive to
+discover late: (1) `ensureTreasuryDatatables()`/`upsertThresholds()` have never run against a live
+Fineract tenant — a genuine write action (Cash Allocation) now exists that will fail against an
+unprovisioned backend, not just a read screen; and (2) `jsdom` still cannot be installed in this
+sandbox, so `module-integrity.test.js` has not run against any Phase 11 file. Also newly relevant:
+**Phase 12 now has a second concrete example of the write-permission gap**, not just a theoretical
+one — `cash-allocation`'s route comment documents exactly why `READ_JOURNALENTRY` is a placeholder
+for a write action, and every remaining write screen (Loan Disbursement, Expenses, Borrowings,
+Reconciliation) will accumulate the same unresolved gap unless Phase 12 is tackled before, not
+after, Phase 11 finishes — recommend deciding the write-permission mapping strategy now rather
+than repeating the same placeholder-with-a-comment four more times.
