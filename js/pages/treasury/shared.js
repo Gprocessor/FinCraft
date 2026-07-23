@@ -35,8 +35,8 @@ export function matchBadgeClass(matches) {
 /** GL-account <option> markup, shared by every treasury screen that needs a GL-account picker
  *  (Settings' eight mapping dropdowns, Expenses' expense-account dropdown). Extracted out of
  *  settings.js once expenses.js needed the identical `glCode — name` option shape a second time,
- *  per this module's own \"extend shared.js before duplicating\" discipline. `includeNone` adds a
- *  leading \"— none —\" blank option (Settings' optional mappings want it; a mandatory expense
+ *  per this module's own "extend shared.js before duplicating" discipline. `includeNone` adds a
+ *  leading "— none —" blank option (Settings' optional mappings want it; a mandatory expense
  *  account picker passes false). */
 export function glOptionsHtml(glAccounts, selectedId, includeNone = true) {
   const opts = includeNone ? ['<option value="">— none —</option>'] : [];

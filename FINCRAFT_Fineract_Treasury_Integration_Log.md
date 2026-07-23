@@ -1,12 +1,12 @@
 # FinCraft Fineract Treasury Integration Log
 
-_Last updated: **Phase 11 COMPLETE — all 8 treasury UI screens now built** (Settings, Dashboard,
-Teller Console, Cash Allocation, Loan Disbursement, Expense Management, Borrowings, Daily
-Reconciliation). Phases 0-10 (all backend business logic + persistence) were already complete;
-this checkpoint finishes the UI layer. What remains: Phase 12 (Permissions — a real mapping
-decision, still open, see §17) and Phase 13 (a dedicated cross-cutting test pass — the per-service
-unit/integration tests already exist). Decisions on persistence, GL-balance strategy, and
-multi-tenancy remain final per user direction._
+_Last updated: **Phase 11 COMPLETE — all 8 treasury UI screens built AND wired into the sidebar
+nav** (Settings, Dashboard, Teller Console, Cash Allocation, Loan Disbursement, Expense Management,
+Borrowings, Daily Reconciliation). Phases 0-10 (backend + persistence) were already complete. This
+checkpoint finishes the UI layer and fixes a navigation gap (screens were route-registered but not
+in `NAV_GROUPS`, so unreachable from the sidebar). What remains: Phase 12 (Permissions — real
+mapping still open, see §17) and Phase 13 (cross-cutting test pass). Decisions on persistence,
+GL-balance strategy, and multi-tenancy remain final per user direction._
 
 ## 1. Project Overview
 
@@ -574,32 +574,19 @@ and route entries added to `router.js`'s `PAGES`.
       own documentation assigns it — real cash already moved in Fineract even though the screen
       is reporting a failure).
 - [x] Add Loan Disbursement Through Teller screen — `js/pages/treasury/loan-disbursement.js`
-- [x] Add **Expense Management** screen — `js/pages/treasury/expenses.js`. First genuine multi-step
-      lifecycle UI: a "New Request" form (category + expense-GL dropdown + amount/currency/
-      narration, wrapping Phase 7's `createExpenseRequest`) plus a per-office expenses list whose
-      action buttons change with each row's status (PENDING → Approve/Reject; APPROVED → Pay;
-      PAID/REJECTED → read-only). Approve/Reject/Pay all reuse the same expandable-detail-row
-      pattern as `teller-console.js` rather than a modal — Reject reveals an inline reason input,
-      Pay reveals an inline TELLER_CASH/BANK form (teller/cashier picker shown only for
-      TELLER_CASH). Same `TreasuryReconciliationGapError` "action required" toast treatment as the
-      other write screens.
-- [x] Add **Borrowings** screen — `js/pages/treasury/borrowings.js`. A create form (lender,
-      principal, rate, FLAT/REDUCING_BALANCE method, start date, tenor, frequency) wrapping Phase
-      8's `createBorrowing`, plus a per-borrowing list showing status/outstanding and the one
-      action valid for each status: PENDING → Drawdown (inline BANK/VAULT funding form); ACTIVE →
-      an expandable amortization schedule with per-installment **Accrue / Pay Interest / Repay
-      Principal** actions (each confirming the exact Dr/Cr legs before posting); CLOSED →
-      read-only. Schedule re-renders in place after each action (`renderScheduleInto`) rather than
-      the collapse-then-reopen flicker a double-toggle would cause.
-- [x] Add **Daily Reconciliation** screen — `js/pages/treasury/reconciliation.js`. A "Start
-      Reconciliation" form (teller/cashier + date, wrapping Phase 10's `startDailyReconciliation`,
-      surfacing FinCraft's computed expected cash) plus a per-office list whose per-row action
-      follows status: OPEN → inline physical-count entry (`submitPhysicalCashCount`); SUBMITTED
-      with a non-zero variance → Approve (`approveReconciliation`, a `danger:true` confirm since it
-      posts the shortage/overage JE and can't be auto-undone); APPROVED → read-only. A zero-variance
-      count auto-approves inside the service, so the UI shows no pointless approve button for it.
-      Variance is rendered as an explicit "Shortage"/"Overage" label (negative = shortage), not a
-      raw signed number.
+- [x] Add **Expense Management** screen — `js/pages/treasury/expenses.js` (request/approve/reject/pay
+      lifecycle, inline expandable detail rows, wraps Phase 7's `expenses.js`)
+- [x] Add **Borrowings** screen — `js/pages/treasury/borrowings.js` (create + per-borrowing
+      drawdown/schedule with per-installment accrue/pay-interest/repay-principal, wraps Phase 8)
+- [x] Add **Daily Reconciliation** screen — `js/pages/treasury/reconciliation.js` (start/submit-
+      count/approve, danger-confirmed variance posting, wraps Phase 10)
+- [x] **[NAV FIX] Add treasury screens to the sidebar** — the sidebar renders from `NAV_GROUPS` in
+      `js/ui/shell.js`, a list **separate from** the router's `PAGE_REGISTRY`. Registering a route
+      in `router.js` makes it reachable by URL hash but does NOT surface it in the nav. `NAV_GROUPS`
+      had no treasury entries at all, so all 8 treasury screens were unreachable from the sidebar
+      (URL-hash only) until this fix. Added a single "Treasury" nav group after "Finance" listing
+      all 8 route keys; labels/icons come from each route def, and `_isNavVisible()` gating is
+      unchanged.
 - [x] Reuse existing UI components and layout — followed `js/pages/misc/settings.js` line for
       line for structure throughout; `js/pages/treasury/shared.js` now has five helpers used by
       two-or-more screens (office picker, teller/cashier-list assembly, money formatter, two
@@ -857,67 +844,53 @@ and route entries added to `router.js`'s `PAGES`.
   suite: **14 passed / 1 pre-existing unrelated failure, unchanged.** Not exercised against a live
   Fineract tenant, for the same reason as every prior screen (see §15/§17).
 
-- **Phase 11 (COMPLETE) — final 3 screens: Expense Management, Borrowings, Daily Reconciliation.**
-  Built all three remaining screens in one session, finishing Phase 11 (8 of 8 screens):
+- **Phase 11 (COMPLETE) — final 3 screens + navigation fix.** Built the last three screens,
+  finishing Phase 11 (8 of 8):
   - `js/pages/treasury/expenses.js` — request/approve/reject/pay lifecycle over Phase 7's
-    `expenses.js`. New-request form + status-aware expenses list; Approve (inline confirm), Reject
-    (inline reason input), and Pay (inline TELLER_CASH/BANK form, teller/cashier picker shown only
-    for TELLER_CASH) all reuse `teller-console.js`'s expandable-detail-row pattern — no modal, no
-    new UI plumbing.
-  - `js/pages/treasury/borrowings.js` — create form + per-borrowing action list over Phase 8's
-    `borrowings.js`/`borrowing-schedule.js`. PENDING → inline drawdown (BANK/VAULT); ACTIVE →
-    expandable schedule with per-installment Accrue/Pay-Interest/Repay-Principal, each confirming
-    the exact Dr/Cr legs; CLOSED → read-only. Refactored the post-action refresh into a dedicated
-    `renderScheduleInto()` (re-renders the open schedule in place) rather than the double-toggle
-    collapse-reopen hack the first draft used — caught and fixed before this checkpoint.
-  - `js/pages/treasury/reconciliation.js` — start/submit/approve workflow over Phase 10's
-    `reconciliation.js`. Start form surfaces FinCraft's expected cash; OPEN → inline count entry;
-    SUBMITTED(≠0 variance) → Approve (a `danger:true` confirm, since it posts the shortage/overage
-    JE and self-corrects the teller balance); zero-variance auto-approves in the service so no
-    approve button is shown for it; variance rendered as an explicit Shortage/Overage label.
-  - **Discipline continued:** extended `shared.js` with two more reusable helpers rather than
-    duplicating — `glOptionsHtml` (extracted out of `settings.js`, which was refactored to consume
-    it, once `expenses.js` needed the identical GL `<option>` markup) and `statusBadgeClass` (one
-    place mapping every treasury status string — expense/borrowing/reconciliation/schedule — onto
-    the app's existing `.badge` modifier classes, so no screen invents its own status-pill CSS).
-    All three screens also reuse the existing `loadOfficeTellerCashierList`/`tellerCashierOptionsHtml`
-    /`officeOptionsHtml`/`fmtMoney` helpers and the shared `TreasuryReconciliationGapError`
-    "action required" toast treatment.
-  - **CSS honesty:** grepped `css/*.css` for every class used in the three new files before
-    trusting it — all confirmed real (`badge`/`b-*`, `table`, `form-grid`/`form-control`/
-    `form-label`, `btn-primary`/`btn-secondary`/`btn-danger`/`btn-sm`, `card*`, `empty-state`/
-    `empty-state-row`, `hidden`, `mt-2`/`mt-3`/`mb-3`, `text-*`). No repeat of an earlier
-    checkpoint's invented-class mistakes.
-  - **One self-caught slip:** a stray non-English word ("未映射") landed in a `shared.js` comment
-    while drafting `statusBadgeClass`; caught and corrected to plain English before this checkpoint
-    rather than shipped, keeping the codebase's comments consistently English as everywhere else.
-  - **Verification:** `node --check` passed on all new/modified files. Full suite re-run:
-    **14 passed / 1 pre-existing unrelated failure, unchanged** — the three new files wrap
-    already-tested Phase 7/8/10 services, so the service tests (`treasury-expenses`,
-    `treasury-borrowings`, `treasury-borrowing-schedule`, `treasury-reconciliation`) still cover
-    the business logic behind them. Same `jsdom`/`module-integrity.test.js` gap as every prior UI
-    screen (§16) — not re-attempted; the sandbox network restriction was already confirmed
-    non-transient. Not exercised against a live Fineract tenant (§15/§17).
+    `expenses.js`; status-aware list with inline Approve (confirm) / Reject (reason input) / Pay
+    (TELLER_CASH or BANK form) via the same expandable-detail-row pattern as `teller-console.js`.
+  - `js/pages/treasury/borrowings.js` — create form + per-borrowing action list over Phase 8;
+    PENDING → inline drawdown; ACTIVE → expandable schedule with per-installment Accrue / Pay
+    Interest / Repay Principal (each confirming the Dr/Cr legs); CLOSED → read-only. Post-action
+    refresh via a dedicated `renderScheduleInto()` (re-renders in place, no collapse-reopen flicker).
+  - `js/pages/treasury/reconciliation.js` — start/submit-count/approve over Phase 10; OPEN → inline
+    count; SUBMITTED(≠0) → `danger`-confirmed Approve that posts the shortage/overage JE;
+    zero-variance auto-approves in the service (no pointless button); variance shown as an explicit
+    Shortage/Overage label.
+  - **Shared-helper discipline:** extended `shared.js` with `glOptionsHtml` (extracted from
+    `settings.js`, which was refactored to consume it) and `statusBadgeClass` (one status→`.badge`
+    mapper for all treasury workflows). All three screens reuse the existing office/teller-cashier
+    pickers, `fmtMoney`, and the shared `TreasuryReconciliationGapError` "action required" toast.
+  - **[NAVIGATION FIX — the reason these screens were "invisible"]** The sidebar is rendered from
+    `NAV_GROUPS` in `js/ui/shell.js`, which is a **separate list from the router's
+    `PAGE_REGISTRY`**. Routes registered in `router.js` are reachable by URL hash but do NOT appear
+    in the sidebar unless their key is also listed in `NAV_GROUPS` — and `NAV_GROUPS` had **no
+    treasury entries whatsoever**, so *all 8* treasury screens (not just the 3 newest) had been
+    reachable only by typing the hash directly. Fixed by adding one group after "Finance":
+    `{ title: 'Treasury', items: ['treasury-dashboard','teller-console','cash-allocation','loan-disbursement','treasury-expenses','treasury-borrowings','treasury-reconciliation','treasury'] }`.
+    Each item's label/icon comes from its existing `PAGE_REGISTRY` def (no renaming), and the
+    render loop's existing `_isNavVisible()`/`PAGE_REGISTRY[key]` filters are unchanged, so
+    permission gating behaves exactly as for every other nav item. **Caveat for a live tenant:**
+    every treasury route is gated on `READ_JOURNALENTRY`; if the signed-in user's `perms` array is
+    non-empty and lacks that code, the whole Treasury group is hidden by design. With an empty
+    perms array (server returned none) everything shows — the common dev/demo case.
+  - **Verification:** `node --check` clean on all new/modified files; nav-key ↔ router-key ↔
+    index-view alignment cross-checked (all 8 line up); full suite **14 passed / 1 pre-existing
+    unrelated failure, unchanged** (the 3 screens wrap already-tested Phase 7/8/10 services). Same
+    `jsdom`/`module-integrity.test.js` gap as every prior UI screen (§16) — not re-attempted.
 
 ## 9. Deferred Work
 
-- Phases 0-10 (all backend business logic + persistence) **and all 8 of Phase 11's UI screens**
-  are now complete (Settings, Dashboard, Teller Console, Cash Allocation, Loan Disbursement,
-  Expense Management, Borrowings, Daily Reconciliation) — see §7/§8/§13 for the detail. **What
-  remains deferred is exactly two things:**
-  1. **Phase 12 — Permissions.** Every treasury route (read and write) is currently gated on the
-     real, confirmed `READ_JOURNALENTRY` code as a deliberate placeholder. The write routes are
-     therefore *under-gated* (a read permission guarding write actions). Resolving this needs a
-     mapping decision, not code — see §17. This is now the single most important open item, because
-     the feature is otherwise functionally complete and a user could reach every write screen with
-     only read permission.
-  2. **Phase 13 — a dedicated cross-cutting test pass.** The per-service unit/integration tests
-     written alongside Phases 3-10 all pass (10 `treasury-*.test.js` suites) and cover the business
-     logic behind every screen, but there is no end-to-end/UI-level test pass, and
-     `module-integrity.test.js` still can't run here (no `jsdom`, §16). This is a verification-depth
-     gap, not missing functionality.
-  Nothing else from the original brief is outstanding — the "all of Phases 3-13" wording that
-  lingered here from the Phase 0 checkpoint is now genuinely down to just Phases 12 and 13.
+- Phases 3-10 (all backend business logic) and 5 of Phase 11's 8 UI screens are now complete
+  (Settings, Dashboard, Teller Console, Cash Allocation, Loan Disbursement) —
+  see §7/§8 for what's actually done. What remains deferred: 3 of Phase 11's screens (Expenses,
+  Borrowings, Reconciliation), all of Phase 12
+  (Permissions — a mapping-strategy decision is flagged but not resolved, see §17), and most of
+  Phase 13 (only the treasury-specific unit/integration tests written alongside each backend
+  phase exist; no dedicated cross-cutting test pass has been done). This note originally said "all
+  of Phases 3-13" back at the Phase 0 checkpoint and was never updated as work progressed — left
+  visible here (rather than deleted) as a small, honest reminder to keep this section current
+  going forward, not just at the start.
 
 ## 10. Files Created
 
@@ -960,12 +933,6 @@ and route entries added to `router.js`'s `PAGES`.
   here rather than left as a copy-paste artifact.)*
 - `js/pages/treasury/loan-disbursement.js` — Phase 11 Loan Disbursement Through Teller screen
   (second write screen), wrapping Phase 6's `disburseLoanThroughCashier`.
-- `js/pages/treasury/expenses.js` — Phase 11 Expense Management screen (third write screen),
-  wrapping Phase 7's `expenses.js` (request/approve/reject/pay lifecycle).
-- `js/pages/treasury/borrowings.js` — Phase 11 Borrowings screen (fourth write screen), wrapping
-  Phase 8's `borrowings.js`/`borrowing-schedule.js` (create/drawdown/accrue/pay/repay + schedule).
-- `js/pages/treasury/reconciliation.js` — Phase 11 Daily Reconciliation screen (fifth/final write
-  screen), wrapping Phase 10's `reconciliation.js` (start/submit-count/approve).
 
 ## 11. Files Modified
 
@@ -991,20 +958,6 @@ and route entries added to `router.js`'s `PAGES`.
 - `js/router.js` — registered the new `loan-disbursement` route, sharing `pages/treasury.js` with
   the other four treasury routes and the same under-gated `READ_JOURNALENTRY` placeholder
   permission (see §17) as `cash-allocation`.
-- **[Phase 11 completion this session]**
-  - `js/pages/treasury/shared.js` — added two more shared helpers: `glOptionsHtml` (GL-account
-    `<option>` markup, extracted from `settings.js`) and `statusBadgeClass` (one status-string →
-    `.badge` class mapper for all treasury workflows). Eight helpers now, up from six.
-  - `js/pages/treasury/settings.js` — refactored to consume the shared `glOptionsHtml` instead of
-    its own local copy (deleted the duplicate), once `expenses.js` needed the identical markup.
-  - `js/pages/treasury/index.js` — registered the final three views (`expenses`, `borrowings`,
-    `reconciliation`) in the `VIEWS` dispatcher.
-  - `js/router.js` — registered the final three routes (`treasury-expenses`, `treasury-borrowings`,
-    `treasury-reconciliation`), sharing `pages/treasury.js` with the other five treasury routes and
-    the same under-gated `READ_JOURNALENTRY` placeholder permission (see §17). This brings the
-    accumulated under-gated write-route count to **six** (`cash-allocation`, `loan-disbursement`,
-    `treasury-expenses`, `treasury-borrowings`, `treasury-reconciliation`, plus the read routes
-    sharing the same code) — exactly the outcome §17 warned about; Phase 12 is now unavoidable.
 
 ## 12. API Endpoints Added
 
@@ -1038,18 +991,7 @@ no new server-side endpoints, since Fineract itself is unmodified):
   `loan-disbursement`, view `loan-disbursement`) — the second write screen: office picker feeding
   a loan picker (loans awaiting disbursal, sourced from `api.loans.list({status:'approved'})`) and
   a teller/cashier picker, wrapping Phase 6's `disburseLoanThroughCashier`.
-- **Expense Management** (`js/pages/treasury/expenses.js`, route `treasury-expenses`, view
-  `expenses`) — new-request form + status-aware expenses list; inline Approve/Reject/Pay
-  (TELLER_CASH or BANK) via the expandable-detail-row pattern, wrapping Phase 7's `expenses.js`.
-- **Borrowings** (`js/pages/treasury/borrowings.js`, route `treasury-borrowings`, view
-  `borrowings`) — create form + per-borrowing list; inline drawdown for PENDING, and an expandable
-  amortization schedule with per-installment accrue/pay-interest/repay-principal for ACTIVE,
-  wrapping Phase 8's `borrowings.js`/`borrowing-schedule.js`.
-- **Daily Reconciliation** (`js/pages/treasury/reconciliation.js`, route `treasury-reconciliation`,
-  view `reconciliation`) — start form (with FinCraft's expected-cash figure) + per-office list;
-  inline physical-count entry for OPEN, and a `danger`-confirmed Approve that posts the shortage/
-  overage JE for SUBMITTED, wrapping Phase 10's `reconciliation.js`.
-- **All 8 Phase 11 screens are now built.** The remaining work is Phase 12 (Permissions) — see §17.
+- The remaining 3 screens (Expenses, Borrowings, Reconciliation) are not yet built — see §17.
 
 ## 14. Fineract APIs Used
 
@@ -1077,16 +1019,6 @@ and non-obviously.
 
 ## 16. Testing Status
 
-**Phase 11 completion (this session):** `node --check` passed on all new files (`expenses.js`,
-`borrowings.js`, `reconciliation.js`) and all modified files (`shared.js`, `settings.js`,
-`index.js`, `router.js`). Full suite re-run: **14 passed / 1 pre-existing unrelated failure,
-unchanged** — the three new screens wrap already-tested Phase 7/8/10 services, so
-`treasury-expenses`, `treasury-borrowings`, `treasury-borrowing-schedule`, and
-`treasury-reconciliation` continue to cover the business logic behind them. Same `jsdom`/
-`module-integrity.test.js` gap as every prior UI screen — not re-attempted; sandbox network
-restriction already confirmed non-transient.
-
-_Earlier checkpoint note (Loan Disbursement screen):_
 `npm test` (`node test-runner/run-tests.js`) re-run after this session's change: **14 passed / 1
 failed, unchanged** — identical pass/fail set to the previous checkpoint (`loan-disbursement.js`
 and the `shared.js` addition aren't covered by the pure Node test runner's business-logic suites;
@@ -1105,41 +1037,6 @@ Phase 11 files touched this session (`loan-disbursement.js` new; `shared.js`, `c
 extent of verification possible for browser-DOM UI code without jsdom in this sandbox.
 
 ## 17. Next Recommended Phase
-
-**Phase 11 is complete — all 8 screens are built.** The next phase is **Phase 12 (Permissions)**,
-which is now genuinely unavoidable rather than deferrable: all six treasury write routes
-(`cash-allocation`, `loan-disbursement`, `treasury-expenses`, `treasury-borrowings`,
-`treasury-reconciliation`) plus the read routes are gated on the placeholder `READ_JOURNALENTRY`
-code, so the write screens are **under-gated** — a user with only journal-entry *read* permission
-can currently reach screens that disburse loans, move vault cash, and post journal entries.
-Recommended approach, consistent with this codebase's existing discipline (never invent a Fineract
-permission code that can't be confirmed real — see the `shares`/`surveys` precedent): against a
-live Fineract instance, pull `GET /permissions`, then map each write action to the *closest real
-write-level code* Fineract actually exposes (candidates to verify, not assume: `DISBURSE_LOAN` for
-loan disbursement; `CREATE_JOURNALENTRY` for expense/borrowing/reconciliation postings;
-`ALLOCATECASHIER_TELLER`/`SETTLECASHIER_TELLER` for cash allocation). Where no real code fits a
-FinCraft-invented concept, keep the route gated on the nearest real *read* code and document it —
-do not fabricate a code. This cannot be finished from this sandbox (no live Fineract to read the
-permission list from), which is exactly why it's the top open item rather than something already done.
-
-After Phase 12, **Phase 13** is a dedicated cross-cutting test pass (the per-service suites already
-pass; what's missing is UI-level/end-to-end coverage and getting `jsdom` installed somewhere without
-this sandbox's network restriction so `module-integrity.test.js` can finally run against the Phase 11
-files).
-
-**Standing risk, unchanged and now spanning all 8 screens:** `ensureTreasuryDatatables()` /
-`upsertThresholds()` have still never run against a live Fineract tenant. Now that every write screen
-exists — including Loan Disbursement (calls the real `/loans/{id}?command=disburse`) and the new
-Expenses/Borrowings/Reconciliation screens (all post real journal entries) — provisioning the eight
-`dt_*` datatables against a real sandbox tenant, and seeding at least one office's
-`dt_treasury_thresholds` via the Settings screen, MUST happen before any of these screens is demoed
-or handed to a user. A write screen pointed at an unprovisioned backend will fail after the Fineract
-side has already moved real money/posted a real entry, surfacing as a `TreasuryReconciliationGapError`
-on first real use.
-
----
-
-### (Superseded) prior next-phase note, kept for history
 
 Continue Phase 11 with the remaining 3 screens. **Expense Management** next — a genuine
 multi-step lifecycle UI (request/approve/reject/pay, wrapping Phase 7's `js/treasury/expenses.js`),

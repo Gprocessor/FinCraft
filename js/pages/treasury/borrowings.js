@@ -97,8 +97,7 @@ async function toggleSchedule(c, officeId, borrowingId) {
 /** Fetches this borrowing's schedule installments and (re)renders them into the already-open
  *  detail cell, wiring up each installment's accrue/pay/repay action. Kept separate from
  *  toggleSchedule so a post-action refresh can re-render the schedule in place, without the
- *  collapse-then-reopen flicker a double-toggle would cause. Also refreshes the parent list's
- *  outstanding/status figures (they change when principal is repaid) via reloadList. */
+ *  collapse-then-reopen flicker a double-toggle would cause. */
 async function renderScheduleInto(c, officeId, borrowingId) {
   const cell = detailCell(c, borrowingId);
   cell.innerHTML = '<div class="empty-state-row">Loading schedule…</div>';
