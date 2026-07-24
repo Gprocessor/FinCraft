@@ -61,7 +61,9 @@ export async function render(c, params = {}) {
       row: p => [p.name, p.shortName, fmt(p.unitPrice || 0)],
       newFn: () => openShareProductModal(null, () => reload(4)),
       editFn: (id) => openShareProductModal(id, () => reload(4)),
-      deleteFn: (id) => api.shareProducts.delete(id)
+      // AUDIT FIX (Products PR-01): Fineract has no share-product DELETE endpoint, so the
+      // delete action is disabled (null) — mirrors loan products / rates which also lack delete.
+      deleteFn: null
     },
     {
       key: 5, label: 'Product Mix', perm: 'LOANPRODUCT', icon: 'fa-shuffle', desc: 'Restricted loan product combinations',

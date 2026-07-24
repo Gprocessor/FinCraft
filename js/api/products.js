@@ -29,8 +29,10 @@ export function makeShareProductsAPI(self) {
     get:      (id)     => self._g(`/products/share/${id}`),
     template: (params) => self._g('/products/share/template', params),
     create:   (b)      => self._p('/products/share', b),
-    update:   (id, b)  => self._u(`/products/share/${id}`, b),
-    delete:   (id)     => self._d(`/products/share/${id}`)
+    update:   (id, b)  => self._u(`/products/share/${id}`, b)
+    // AUDIT FIX (Products PR-01): no delete() — Fineract's ShareProductApiResource
+    // (/products/{type}/{productId}) exposes GET/POST/PUT only, no DELETE. The previous
+    // delete() hit a non-existent endpoint (405). Removed to match the loanProducts pattern.
   };
 }
 
