@@ -52,15 +52,22 @@ export function openSimpleLoanCmdModal({ id, command, label, dateField = 'transa
     const note = el.querySelector('#cmd-note').value.trim();
     if (note) payload.note = note;
     try {
-      if (isTransaction) {
-        // Transaction-style endpoint: /loans/{id}/transactions?command=…
- const apiMethodMap = { recoverypayment: 'recoverPayment' };
-const methodName = apiMethodMap[command];
-if (methodName && typeof api.loans[methodName] === 'function') {
-  await api.loans[methodName](id, payload);
-} else {
-  await api.loans.command(id, command, payload);
-}
+      // AUDIT FIX (Loans LU-1, UI-contract sweep): map UI command tokens to their corrected
+      // API-layer methods so the terminal-status buttons do NOT bypass the audited routing/
+      // token via the generic escape hatch. Previously chargeOff/foreclosure/close fell
+      // through to api.loans.command() -> POST /loans/{id}?command=..., re-introducing the
+      // L-01/L-04/L-05 bugs (wrong resource + 'chargeOff' token) at the UI layer and silently
+      // undoing the API-method fixes. Now they route through the fixed methods, which target
+      // /loans/{id}/transactions with the correct tokens (charge-off, foreclosure, close).
+      const apiMethodMap = {
+        recoverypayment: 'recoverPayment',
+        chargeOff:       'chargeOff',   // -> /loans/{id}/transactions?command=charge-off
+        foreclosure:     'foreclose',   // -> /loans/{id}/transactions?command=foreclosure
+        close:           'close',       // -> /loans/{id}/transactions?command=close
+      };
+      const methodName = apiMethodMap[command];
+      if (methodName && typeof api.loans[methodName] === 'function') {
+        await api.loans[methodName](id, payload);
       } else {
         await api.loans.command(id, command, payload);
       }
