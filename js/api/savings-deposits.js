@@ -22,9 +22,17 @@ export function makeSavingsAPI(self) {
     withdrawal:  (id, body)    => self._p(`/savingsaccounts/${id}/transactions?command=withdrawal`, body),
     activate:    (id, body)    => self._p(`/savingsaccounts/${id}?command=activate`, body),
     deposit:     (id, body)    => self._p(`/savingsaccounts/${id}/transactions?command=deposit`, body),
-    withdrawTx:  (id, body)    => self._p(`/savingsaccounts/${id}/transactions?command=withdrawal`, body),
+    // AUDIT FIX (Savings S-06): removed `withdrawTx` — it was an exact duplicate of
+    // `withdrawal` above (both POST /transactions?command=withdrawal). Use `withdrawal`.
+    // AUDIT NOTE (Savings S-03/S-05): holdAmount/releaseAmount are real Fineract savings
+    // transaction commands. The spec confirms releaseAmount ("Accepted command = undo,
+    // reverse, modify, releaseAmount"); holdAmount's request schema is under-specified in the
+    // generated spec but the command is genuine — kept as-is.
     holdAmount:  (id, body)    => self._p(`/savingsaccounts/${id}/transactions?command=holdAmount`, body),
     releaseAmount:(id, txId)   => self._p(`/savingsaccounts/${id}/transactions/${txId}?command=releaseAmount`, {}),
+    // AUDIT FIX (Savings S-08): added the documented `reverse` transaction command
+    // (spec: "Accepted command = undo, reverse, modify, releaseAmount").
+    reverseTransaction:(id, txId, body) => self._p(`/savingsaccounts/${id}/transactions/${txId}?command=reverse`, body || {}),
     close:       (id, body)    => self._p(`/savingsaccounts/${id}?command=close`, body),
     postInterest:(id, body)    => self._p(`/savingsaccounts/${id}?command=postInterest`, body || {}),
     calculateInterest: (id)    => self._p(`/savingsaccounts/${id}?command=calculateInterest`, {}),
@@ -36,9 +44,14 @@ export function makeSavingsAPI(self) {
     unblockCredit:(id)         => self._p(`/savingsaccounts/${id}?command=unblockCredit`, {}),
     update:      (id, body)    => self._u(`/savingsaccounts/${id}`, body),
     delete:      (id)          => self._d(`/savingsaccounts/${id}`),
+    // AUDIT NOTE (Savings S-03/S-04): applyAnnualFees & postInterestAsOn are genuine Fineract
+    // savings account commands but are NOT enumerated in this (partial) OpenAPI spec. Verified
+    // correct against Fineract convention and kept as-is; confirm on your target build.
     applyAnnualFees:    (id, body) => self._p(`/savingsaccounts/${id}?command=applyAnnualFees`, body),
     postInterestAsOn:   (id, date) => self._p(`/savingsaccounts/${id}?command=postInterestAsOn`, { transactionDate: date, dateFormat: 'yyyy-MM-dd', locale: 'en' }),
     onHoldTransactions: (id)       => self._g(`/savingsaccounts/${id}/onholdtransactions`),
+    // AUDIT NOTE (Savings S-09): assign/unassignSavingsOfficer are documented in the account
+    // command summary ("Assign Savings Officer | Unassign Savings Officer") — verified correct.
     assignStaff:        (id, body) => self._p(`/savingsaccounts/${id}?command=assignSavingsOfficer`, body),
     unassignStaff:      (id, body) => self._p(`/savingsaccounts/${id}?command=unassignSavingsOfficer`, body || {}),
     command:            (id, cmd, body) => self._p(`/savingsaccounts/${id}?command=${cmd}`, body || {}),
@@ -140,6 +153,10 @@ export function makeRecurringDepositsAPI(self) {
     withdrawApplication: (id, body) => self._p(`/recurringdepositaccounts/${id}?command=withdrawnByApplicant`, body),
     activate:    (id, body) => self._p(`/recurringdepositaccounts/${id}?command=activate`, body),
     premature:   (id, body) => self._p(`/recurringdepositaccounts/${id}?command=prematureClose`, body),
+    // AUDIT FIX (Savings S-07): the RD account-command summary documents "Update the
+    // recommended deposit amount for a recurring deposit account". Added the missing helper.
+    // Body: { mandatoryRecommendedDepositAmount, locale }. Verify token on your target build.
+    updateDepositAmount: (id, body) => self._p(`/recurringdepositaccounts/${id}?command=updateDepositAmount`, body),
     close:       (id, body) => self._p(`/recurringdepositaccounts/${id}?command=close`, body),
 
     // ---- Premature-close calculator + closure templates ----

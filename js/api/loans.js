@@ -29,14 +29,20 @@ export function makeLoansAPI(self) {
     close:          (id, body)           => self._p(`/loans/${id}/transactions?command=close`, body),
     closeAsRescheduled: (id, body)       => self._p(`/loans/${id}/transactions?command=close-rescheduled`, body),
     foreclose:      (id, body)           => self._p(`/loans/${id}/transactions?command=foreclosure`, body),
-    reage:          (id, body)           => self._p(`/loans/${id}?command=reAge`, body),
+    // AUDIT FIX (Loans L-08/L-09): reAge/reAmortize (and their undos) are TRANSACTION
+    // commands — their request fields live in PostLoansLoanIdTransactionsRequest and the
+    // preview routes sit under /transactions/. Moved off /loans/{id} onto /transactions.
+    reage:          (id, body)           => self._p(`/loans/${id}/transactions?command=reAge`, body),
     reagePreview:   (id, params)         => self._g(`/loans/${id}/transactions/reage-preview`, params),
-    undoReAge:      (id)                 => self._p(`/loans/${id}?command=undoReAge`, {}),
-    reamortize:     (id, body)           => self._p(`/loans/${id}?command=reAmortize`, body),
+    undoReAge:      (id)                 => self._p(`/loans/${id}/transactions?command=undoReAge`, {}),
+    reamortize:     (id, body)           => self._p(`/loans/${id}/transactions?command=reAmortize`, body),
     reamortizePreview: (id, params)      => self._g(`/loans/${id}/transactions/reamortization-preview`, params),
-    undoReAmortize: (id)                 => self._p(`/loans/${id}?command=undoReAmortize`, {}),
+    undoReAmortize: (id)                 => self._p(`/loans/${id}/transactions?command=undoReAmortize`, {}),
     transactionTemplate: (id, params)    => self._g(`/loans/${id}/transactions/template`, params),
-    markAsFraud:    (id, body)           => self._p(`/loans/${id}?command=markAsFraud`, body || { fraud: true }),
+    // AUDIT FIX (Loans L-10): marking a loan as fraud is a PUT with a `fraud` boolean body
+    // field (spec: PutLoansLoanIdRequest.fraud), dispatched via ?command=markAsFraud — not a
+    // POST state-transition command. Changed _p (POST) -> _u (PUT).
+    markAsFraud:    (id, body)           => self._u(`/loans/${id}?command=markAsFraud`, body || { fraud: true }),
     recoverGuarantees: (id, body)        => self._p(`/loans/${id}?command=recoverGuarantees`, body || {}),
     assignOfficer:  (id, body)           => self._p(`/loans/${id}?command=assignLoanOfficer`, body),
     // AUDIT FIX (Loans L-07): the /loans/{id} operation documents this as "Unassign a Loan
@@ -63,7 +69,12 @@ export function makeLoansAPI(self) {
     reverseTransaction: (id, txId, body) => self._p(`/loans/${id}/transactions/${txId}?command=reverse`, body || {}),
     undoTransaction: (id, txId, body)    => self._p(`/loans/${id}/transactions/${txId}?command=undo`, body || {}),
     adjustTransaction: (id, txId, body)  => self._p(`/loans/${id}/transactions/${txId}?command=adjust`, body),
-    modifyTransaction: (id, txId, body)  => self._u(`/loans/${id}/transactions/${txId}`, body),
+    // AUDIT FIX (Loans L-11): this PUT maps to operationId 'undoWaiveChargeLoanTransaction'
+    // in the spec — it reverses a charge waiver, it does NOT modify an arbitrary transaction.
+    // Added the accurately-named `undoWaiveCharge` alias; `modifyTransaction` is kept as a
+    // deprecated alias for backward compatibility.
+    undoWaiveCharge:   (id, txId, body)  => self._u(`/loans/${id}/transactions/${txId}`, body),
+    modifyTransaction: (id, txId, body)  => self._u(`/loans/${id}/transactions/${txId}`, body), // @deprecated → use undoWaiveCharge
 
     // ---- Schedule ----
     schedule:       (id)                 => self._g(`/loans/${id}`, { associations: 'repaymentSchedule' }),
@@ -172,6 +183,11 @@ export function makeLoansAPI(self) {
     // asserting it's correct. Body/query shape here should be verified against a live server
     // before this feature is trusted in production.
     eaoList:        (id)                 => self._g('/external-asset-owners/transfers', { loanId: id }),
+    // AUDIT FIX (Loans L-12): both helpers target the same real route
+    // (POST /external-asset-owners/transfers/loans/{loanId}) — sale vs. buy-back is
+    // distinguished by the request BODY, not the path. Callers must set the appropriate
+    // settlementDate/transferExternalId/purchasePriceRatio fields; the two aliases are kept
+    // for call-site readability. Verify the exact body shape against your target server.
     eaoTransfer:    (id, body)           => self._p(`/external-asset-owners/transfers/loans/${id}`, body),
     eaoBuyBack:     (id, body)           => self._p(`/external-asset-owners/transfers/loans/${id}`, body),
 
