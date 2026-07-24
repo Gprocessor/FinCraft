@@ -613,9 +613,28 @@ and route entries added to `router.js`'s `PAGES`.
       e.g. `ALLOCATE_CASH`, `DISBURSE_LOAN_THROUGH_TELLER`, are FinCraft-invented concepts with no
       Fineract-native equivalent and will need a mapping decision, not a 1:1 code creation, since
       FinCraft cannot add permission codes to Fineract itself)
-### Phase 13 - Tests — not started (would extend the existing custom `test-runner/run-tests.js`
-      suite style, e.g. new `tests/treasury-*.test.js` files, consistent with current
-      `accounting-fixes.test.js` / `business-logic.test.js`)
+### Phase 13 - Tenant Bootstrap / Self-Provisioning — **COMPLETE (this session)**
+- [x] `js/treasury/bootstrap.js` — `initializeTreasuryTenant()`, `ensureTreasuryDatatables()`
+      (per-tenant, per-session memoized wrapper over the real `api.treasury.ensureTreasuryDatatables()`),
+      `seedTreasuryThresholds()` (safe no-op unless real GL ids are supplied), `validateTreasuryConfiguration()`.
+- [x] `js/treasury/health.js` — `getTreasuryHealth()` → `READY | CONFIG_REQUIRED | BROKEN` from a
+      read-only probe of registered datatables + the office's thresholds row.
+- [x] Wired into `js/auth.js#showApp()` — every login path (fresh login, restored session, 2FA,
+      forced password change) fires a guarded, non-blocking `initializeTreasuryTenant()` so a brand-new
+      tenant's eight `dt_*` treasury tables are auto-registered on first sign-in. A bootstrap failure
+      never blocks login and is logged, not thrown.
+- [x] `tests/treasury-bootstrap.test.js` — 5 scenarios (ensure-memoization + force, provision +
+      requiresSetup detection, already-configured detection, provisioning-failure is non-throwing,
+      seed no-op safety). Uses a minimal browser shim so it runs in the bare Node runner.
+- [x] **Honored a real constraint rather than faking it:** `dt_treasury_thresholds` GL columns are
+      mandatory, so a blank config row *cannot* be auto-seeded (`upsertThresholds` throws by design).
+      Bootstrap therefore auto-provisions the tables (the genuinely automatable part) and reports
+      `requiresSetup` so the UI routes to Treasury Settings, instead of fabricating GL mappings.
+- [x] Full suite: **16 passed / 0 failed** (new bootstrap test included; no regressions).
+
+### Phase 13 (original) - Cross-cutting test pass — still open (see note above; the per-service
+      `treasury-*.test.js` suites plus the new bootstrap suite all pass, but a dedicated end-to-end/
+      UI test pass and getting `jsdom` installable remain outstanding).
 
 ## 8. Completed Work
 

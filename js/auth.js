@@ -345,6 +345,22 @@ function showApp() {
       r.initRouter();
     });
   });
+  // Phase 13 — Treasury tenant bootstrap. Fineract datatables are per-tenant, so a new tenant has
+  // none of the eight `dt_*` treasury tables until they're registered. Auto-provision them at
+  // login (idempotent, per-tenant memoized) so treasury screens work without any manual setup.
+  // Fire-and-forget and fully guarded: a bootstrap failure must never block sign-in, and the
+  // treasury screens surface their own health/config state independently (see treasury/health.js).
+  import('./treasury/bootstrap.js')
+    .then(b => b.initializeTreasuryTenant())
+    .then(res => {
+      if (res && res.provisioning && res.provisioning.created && res.provisioning.created.length) {
+        console.log('[treasury-bootstrap] provisioned datatables:', res.provisioning.created.join(', '));
+      }
+      if (res && res.requiresSetup) {
+        console.log('[treasury-bootstrap] office', res.office, 'needs treasury configuration (Settings)');
+      }
+    })
+    .catch(err => console.warn('[treasury-bootstrap] skipped:', err && err.message ? err.message : err));
 }
 
 function renderLogin(container, banner) {
