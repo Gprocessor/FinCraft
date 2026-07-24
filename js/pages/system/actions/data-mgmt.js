@@ -22,7 +22,9 @@ export async function openAccountNumberPrefModal(prefId, onSuccess) {
     return;
   }
 
-  const entityOptions = tpl.accountNumberTypeOptions || tpl.accountTypeOptions || [
+  // AUDIT FIX (Admin AD-01): the template response key is `accountTypeOptions`
+  // (GetAccountNumberFormatsResponseTemplate); use it as the primary source.
+  const entityOptions = tpl.accountTypeOptions || tpl.accountNumberTypeOptions || [
     { id: 1, value: 'Clients' },
     { id: 2, value: 'Loans' },
     { id: 3, value: 'Savings' },
@@ -37,7 +39,9 @@ export async function openAccountNumberPrefModal(prefId, onSuccess) {
     { id: 'NONE',                   value: 'No prefix (sequential only)' }
   ];
 
-  const currentEntityId = existing.accountNumberType?.id || existing.accountTypeId;
+  // AUDIT FIX (Admin AD-01): the response field is `accountType` (GetAccountNumberFormatsIdResponse),
+  // not `accountNumberType`. Aligned so the (disabled) entity dropdown pre-selects correctly on edit.
+  const currentEntityId = existing.accountType?.id || existing.accountTypeId;
   const currentPrefixType = existing.prefixType?.id || existing.prefixType;
 
   const mid = 'anp-' + Date.now();
@@ -90,7 +94,11 @@ export async function openAccountNumberPrefModal(prefId, onSuccess) {
     if (!entityId) { toast('warn', 'Select an entity', ''); return; }
 
     const payload = {};
-    if (!isEdit) payload.accountNumberType = entityId;
+    // AUDIT FIX (Admin AD-01): the create body field is `accountType` (spec:
+    // PostAccountNumberFormatsRequest — mandatory), NOT `accountNumberType`. The old field name
+    // meant the mandatory accountType was never sent, so every account-number-format creation
+    // failed. (PUT correctly accepts only prefixType — the entity type can't be changed on edit.)
+    if (!isEdit) payload.accountType = entityId;
     if (prefixType) payload.prefixType = prefixType;
 
     try {
