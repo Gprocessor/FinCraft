@@ -8,7 +8,30 @@
 import { api } from '../../api.js';
 import { toast } from '../../ui.js';
 import { getTreasuryDashboard } from '../../treasury/dashboard.js';
+import { getTreasuryHealth, TREASURY_HEALTH_STATUS } from '../../treasury/health.js';
 import { officeOptionsHtml, liquidityBadgeClass, liquidityAccentClass, fmtMoney } from './shared.js';
+
+/** Phase 13 — a compact treasury health banner (datatables provisioned? office configured?) shown
+ *  above the dashboard tiles, so an operator sees "why is this empty/broken" at a glance instead of
+ *  guessing. READY renders nothing (no noise when all is well); CONFIG_REQUIRED points to Settings;
+ *  BROKEN means datatables are missing on this tenant (bootstrap should have created them). */
+function healthBannerHtml(health) {
+  if (!health || health.status === TREASURY_HEALTH_STATUS.READY) return '';
+  if (health.status === TREASURY_HEALTH_STATUS.CONFIG_REQUIRED) {
+    return `<div class="msg-banner b-warn mb-3">
+      <i class="fa-solid fa-gear"></i>
+      This office isn't configured for treasury yet. Set its GL accounts and reserve buffer to enable the write screens.
+      <a class="btn-secondary btn-sm mt-2" href="#/treasury">Go to Treasury Settings</a>
+    </div>`;
+  }
+  // BROKEN
+  const missing = (health.missingDatatables || []).join(', ');
+  return `<div class="msg-banner b-danger mb-3">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    Treasury datatables are not fully provisioned on this tenant${missing ? ` (missing: ${missing})` : ''}.
+    Reload the app to re-run auto-provisioning, or contact an administrator if this persists.
+  </div>`;
+}
 
 function tile(accent, icon, label, value, foot = '') {
   return `
@@ -35,12 +58,19 @@ async function loadDashboardForOffice(c, officeId) {
   const body = c.querySelector('#trd-body');
   body.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><div>Loading…</div></div>';
 
+  // Phase 13 — read the treasury health first (datatables provisioned? office configured?) so a
+  // clear banner can head the page. Non-fatal: if the probe itself fails, fall through with no
+  // banner rather than blocking the dashboard.
+  const health = await getTreasuryHealth(officeId).catch(() => null);
+  const banner = healthBannerHtml(health);
+
   let dash;
   try {
     dash = await getTreasuryDashboard(officeId);
   } catch (err) {
     const notConfigured = /has no treasury configuration/i.test(err?.message || '');
     body.innerHTML = `
+      ${banner}
       <div class="empty-state">
         <i class="fa-solid ${notConfigured ? 'fa-gear' : 'fa-triangle-exclamation'}"></i>
         <div>${notConfigured
@@ -57,6 +87,7 @@ async function loadDashboardForOffice(c, officeId) {
     : `${dash.tellerGlDifference > 0 ? 'Over' : 'Under'} pooled GL by ${fmtMoney(Math.abs(dash.tellerGlDifference), dash.currencyCode)}`;
 
   body.innerHTML = `
+    ${banner}
     <div class="stat-grid kpi-grid">
       ${tile('blue',   'fa-building-columns',  'Bank Balance',            fmtMoney(dash.bankBalance, dash.currencyCode))}
       ${tile('teal',   'fa-vault',             'Vault Balance',           fmtMoney(dash.vaultBalance, dash.currencyCode))}

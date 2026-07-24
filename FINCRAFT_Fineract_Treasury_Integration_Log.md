@@ -613,28 +613,38 @@ and route entries added to `router.js`'s `PAGES`.
       e.g. `ALLOCATE_CASH`, `DISBURSE_LOAN_THROUGH_TELLER`, are FinCraft-invented concepts with no
       Fineract-native equivalent and will need a mapping decision, not a 1:1 code creation, since
       FinCraft cannot add permission codes to Fineract itself)
-### Phase 13 - Tenant Bootstrap / Self-Provisioning — **COMPLETE (this session)**
+### Phase 13 - Tenant Bootstrap, Self-Healing, Health & Nav completion — **COMPLETE (this session)**
 - [x] `js/treasury/bootstrap.js` — `initializeTreasuryTenant()`, `ensureTreasuryDatatables()`
-      (per-tenant, per-session memoized wrapper over the real `api.treasury.ensureTreasuryDatatables()`),
-      `seedTreasuryThresholds()` (safe no-op unless real GL ids are supplied), `validateTreasuryConfiguration()`.
-- [x] `js/treasury/health.js` — `getTreasuryHealth()` → `READY | CONFIG_REQUIRED | BROKEN` from a
-      read-only probe of registered datatables + the office's thresholds row.
-- [x] Wired into `js/auth.js#showApp()` — every login path (fresh login, restored session, 2FA,
-      forced password change) fires a guarded, non-blocking `initializeTreasuryTenant()` so a brand-new
-      tenant's eight `dt_*` treasury tables are auto-registered on first sign-in. A bootstrap failure
-      never blocks login and is logged, not thrown.
-- [x] `tests/treasury-bootstrap.test.js` — 5 scenarios (ensure-memoization + force, provision +
-      requiresSetup detection, already-configured detection, provisioning-failure is non-throwing,
-      seed no-op safety). Uses a minimal browser shim so it runs in the bare Node runner.
-- [x] **Honored a real constraint rather than faking it:** `dt_treasury_thresholds` GL columns are
-      mandatory, so a blank config row *cannot* be auto-seeded (`upsertThresholds` throws by design).
-      Bootstrap therefore auto-provisions the tables (the genuinely automatable part) and reports
-      `requiresSetup` so the UI routes to Treasury Settings, instead of fabricating GL mappings.
-- [x] Full suite: **16 passed / 0 failed** (new bootstrap test included; no regressions).
+      (per-tenant/per-session memoized wrapper over real `api.treasury.ensureTreasuryDatatables()`),
+      `seedTreasuryThresholds()` (safe no-op unless real GL ids supplied), `validateTreasuryConfiguration()`.
+- [x] `js/treasury/health.js` — `getTreasuryHealth()` → `READY | CONFIG_REQUIRED | BROKEN`.
+- [x] `js/auth.js#showApp()` — guarded, non-blocking bootstrap on every login path (auto-provisions
+      a new tenant's eight `dt_*` tables at first sign-in).
+- [x] **Self-healing at the page layer** — `js/pages/treasury/index.js` render() calls
+      `ensureTreasuryDatatables()` once (idempotent/memoized) before dispatching to ANY of the 8
+      treasury views, so a screen never reads/writes a missing datatable even if login bootstrap was
+      skipped or the tenant was switched. Deliberately at the page dispatcher, NOT inside the
+      unit-tested service functions, so no existing service test was disturbed.
+- [x] **Health wired into the Treasury Dashboard** — `js/pages/treasury/dashboard.js` shows a status
+      banner above the tiles: CONFIG_REQUIRED → "Go to Treasury Settings" link; BROKEN → lists the
+      missing datatables + reload hint; READY → no banner (no noise). Non-fatal if the probe fails.
+- [x] **Navbar completion** — `js/ui/shell.js` Admin group gained `charges` and `datatables`, the
+      only two registered routes that were reachable by URL but missing from the sidebar (verified by
+      a routes-vs-nav audit; the remaining out-of-nav routes — `client-detail`, `forbidden`,
+      `not-found`, `profile`, `settings` — are intentionally reached via drill-through/user-menu/error
+      paths, not the sidebar).
+- [x] `tests/treasury-bootstrap.test.js` — 8 scenarios (ensure-memoization + force; provision +
+      requiresSetup; already-configured; provisioning-failure is non-throwing; seed no-op safety;
+      health BROKEN/CONFIG_REQUIRED/READY). Browser-shim so it runs in the bare Node runner.
+- [x] **Honored the mandatory-GL constraint:** a blank `dt_treasury_thresholds` row is NOT
+      auto-seeded (GL columns are mandatory; `upsertThresholds` throws by design) — bootstrap
+      provisions tables and reports `requiresSetup` so the UI routes to Settings instead of
+      fabricating GL mappings that would post broken journal entries.
+- [x] Full suite: **16 passed / 0 failed** (no regressions; the new browser shim also cleared the
+      previously-failing `utils.test.js`).
 
-### Phase 13 (original) - Cross-cutting test pass — still open (see note above; the per-service
-      `treasury-*.test.js` suites plus the new bootstrap suite all pass, but a dedicated end-to-end/
-      UI test pass and getting `jsdom` installable remain outstanding).
+### Phase 13 (original) - dedicated cross-cutting/UI test pass — still partially open: the
+      per-service + bootstrap/health suites all pass, but an end-to-end/jsdom UI pass remains.
 
 ## 8. Completed Work
 

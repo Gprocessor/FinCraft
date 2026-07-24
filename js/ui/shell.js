@@ -15,7 +15,7 @@ const NAV_GROUPS = [
   { title: 'Clients & Accounts', items: ['clients','groups','centers','loans','savings','deposits','shares','collaterals','collections','transfers','remittances'] },
   { title: 'Finance',            items: ['accounting','reports','surveys'] },
   { title: 'Treasury',           items: ['treasury-dashboard','teller-console','cash-allocation','loan-disbursement','treasury-expenses','treasury-borrowings','treasury-reconciliation','treasury'] },
-  { title: 'Admin',              items: ['products','organization','system','users','templates','self-service','notifications'] }
+  { title: 'Admin',              items: ['products','charges','organization','system','datatables','users','templates','self-service','notifications'] }
 ];
 
 /** Permission-aware nav visibility.
