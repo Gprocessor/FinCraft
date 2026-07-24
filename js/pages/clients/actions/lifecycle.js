@@ -152,6 +152,60 @@ export async function openRejectClientModal(id) {
   });
 }
 
+// AUDIT FIX (Clients F2): the withdraw command requires a mandatory withdrawalReasonId
+// (spec: "Mandatory Fields: withdrawalDate, withdrawalReasonId"). The old inline handler
+// sent only withdrawalDate, so Fineract rejected it with a 400. This modal mirrors
+// openRejectClientModal and collects the reason. NOTE: Fineract's generated template
+// schema does not expose the reason list, so we fall back across the plausible code keys
+// (verify the exact key against your target server if the dropdown is ever empty).
+export async function openWithdrawClientModal(id) {
+  let reasons = [];
+  try {
+    const tpl = await api.clients.template();
+    reasons = tpl?.clientWithdrawReasons || tpl?.withdrawalReasons
+           || tpl?.clientRejectionReasons || tpl?.narrations || [];
+  } catch {}
+  const mid = `cl-withdraw-modal-${Date.now()}`;
+  document.getElementById('modalRoot').insertAdjacentHTML('beforeend', `
+    <div class="modal-overlay open" role="dialog" aria-modal="true" id="${mid}">
+      <div class="modal modal-sm">
+        <div class="modal-header"><h3>Withdraw Application</h3><button data-close-modal>&times;</button></div>
+        <div class="modal-body">
+          <label>Withdrawn on * <input type="date" id="wd-date" class="form-control" value="${today()}" required/></label>
+          <label class="mt-2">Withdrawal reason *
+            <select id="wd-reason" class="form-control" required>
+              <option value="">Select reason…</option>
+              ${reasons.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}
+            </select>
+          </label>
+          <label class="mt-2">Note <textarea id="wd-note" class="form-control" rows="2"></textarea></label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn-warning" id="wd-confirm">Withdraw</button>
+        </div>
+      </div>
+    </div>`);
+  const el = document.getElementById(mid);
+  el.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => el.remove()));
+  el.querySelector('#wd-confirm').addEventListener('click', async () => {
+    const withdrawalDate = el.querySelector('#wd-date').value;
+    const withdrawalReasonId = el.querySelector('#wd-reason').value;
+    const note = el.querySelector('#wd-note').value.trim();
+    if (!withdrawalReasonId) { toast('warn', 'Reason required', 'Select a withdrawal reason'); return; }
+    try {
+      await api.clients.withdraw(id, {
+        dateFormat: DATE_FORMAT, locale: LOCALE,
+        withdrawalDate, withdrawalReasonId: parseInt(withdrawalReasonId),
+        ...(note && { note })
+      });
+      el.remove();
+      toast('success', 'Application withdrawn', '');
+      import('../../../router.js').then(r => r.navigate('clients'));
+    } catch (e) { toast('error', 'Withdrawal failed', extractFineractError(e)); }
+  });
+}
+
 export async function openTransferModal(id, displayName) {
   let offices = [];
   try { offices = await api.offices.list(); } catch {}

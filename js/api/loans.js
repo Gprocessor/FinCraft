@@ -20,7 +20,7 @@ export function makeLoansAPI(self) {
     disburse:       (id, body)           => self._p(`/loans/${id}?command=disburse`, body),
     disburseToSavings: (id, body)        => self._p(`/loans/${id}?command=disburseToSavings`, body),
     undoDisbursal:  (id)                 => self._p(`/loans/${id}?command=undoDisbursal`, {}),
-    // AUDIT FIX (L-01..L-05): these are TRANSACTION commands in Fineract, not loan
+    // AUDIT FIX (Loans L-01..L-05): these are TRANSACTION commands in Fineract, not loan
     // state-transition commands — they belong on /loans/{id}/transactions, not /loans/{id}.
     // charge-off also uses the hyphenated token 'charge-off' (not 'chargeOff') per the spec.
     writeOff:       (id, body)           => self._p(`/loans/${id}/transactions?command=writeoff`, body),
@@ -39,7 +39,7 @@ export function makeLoansAPI(self) {
     markAsFraud:    (id, body)           => self._p(`/loans/${id}?command=markAsFraud`, body || { fraud: true }),
     recoverGuarantees: (id, body)        => self._p(`/loans/${id}?command=recoverGuarantees`, body || {}),
     assignOfficer:  (id, body)           => self._p(`/loans/${id}?command=assignLoanOfficer`, body),
-    // AUDIT FIX (L-07): the /loans/{id} operation documents this as "Unassign a Loan
+    // AUDIT FIX (Loans L-07): the /loans/{id} operation documents this as "Unassign a Loan
     // Officer" — the correct command token is 'unassignLoanOfficer', not 'removeLoanOfficer'.
     removeOfficer:  (id, body)           => self._p(`/loans/${id}?command=unassignLoanOfficer`, body),
 

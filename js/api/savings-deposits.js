@@ -13,9 +13,9 @@ export function makeSavingsAPI(self) {
     updateGsim:  (parentAccountId, body) => self._u(`/savingsaccounts/gsim/${parentAccountId}`, body),
     gsimCommand: (parentAccountId, command, body) => self._p(`/savingsaccounts/gsimcommands/${parentAccountId}?command=${command}`, body || {}),
     approve:     (id, body)    => self._p(`/savingsaccounts/${id}?command=approve`, body),
-    // AUDIT FIX (S-01): Fineract savings use the lowercase command 'undoapproval'
-    // (only loans use camelCase 'undoApproval'). The FD/RD helpers below already use
-    // the lowercase form — this aligns plain savings with them and with the spec.
+    // AUDIT FIX (Savings S-01): Fineract savings use the lowercase command 'undoapproval'
+    // (only loans use camelCase 'undoApproval'). The FD/RD helpers below already use the
+    // lowercase form — this aligns plain savings with them and with the spec.
     undoApproval:(id)          => self._p(`/savingsaccounts/${id}?command=undoapproval`, {}),
     reject:      (id, body)    => self._p(`/savingsaccounts/${id}?command=reject`, body),
     withdrawApplication: (id, body) => self._p(`/savingsaccounts/${id}?command=withdrawnByApplicant`, body),
@@ -96,7 +96,7 @@ export function makeFixedDepositsAPI(self) {
     postInterest:      (id) => self._p(`/fixeddepositaccounts/${id}?command=postInterest`, {}),
 
     // ---- Transactions ----
-    // AUDIT FIX (S-02): the spec DOES expose GET /fixeddepositaccounts/{id}/transactions
+    // AUDIT FIX (Savings S-02): the spec DOES expose GET /fixeddepositaccounts/{id}/transactions
     // (opId retrieveAllFixedDepositAccountTransactions) — the previous comment was wrong.
     // Use the real list endpoint. (Recurring deposits genuinely lack this GET, so the RD
     // helper below correctly keeps the associations=transactions expansion.)

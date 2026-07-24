@@ -8,7 +8,7 @@ import { api } from '../../../api.js';
 import { DATE_FORMAT, LOCALE, today } from '../../../config.js';
 import { confirm, openModal, toast } from '../../../ui.js';
 import { escapeHtml, fmtDate } from '../../../utils.js';
-import { openAddAddressModal, openAddClientCollateralModal, openAddFamilyModal, openAddIdentifierModal, openApplyChargeModal, openAssignStaffModal, openCloseClientModal, openEditClientModal, openRejectClientModal, openTransferModal } from '../actions.js';
+import { openAddAddressModal, openAddClientCollateralModal, openAddFamilyModal, openAddIdentifierModal, openApplyChargeModal, openAssignStaffModal, openCloseClientModal, openEditClientModal, openRejectClientModal, openTransferModal, openWithdrawClientModal } from '../actions.js';
 import { can, cvAvatar, cvClientType, cvPill, cvStatusTone } from '../shared.js';
 import { enhanceScrollableTabs } from '../../../ui/scrollable-tabs.js';
 import { loadClientAccounts, loadClientCharges, loadClientLoansOnly, loadClientOverviewStats, loadClientStandingInstructions, loadClientTransactions } from './accounts.js';
@@ -331,16 +331,9 @@ export async function renderDetail(c, id, initialTab = 'overview') {
 
     c.querySelector('#btn-reject-client')?.addEventListener('click', () => openRejectClientModal(id));
 
-    c.querySelector('#btn-withdraw-client')?.addEventListener('click', async () => {
-      if (!await confirm({ title: 'Withdraw application?', message: 'Mark this application as withdrawn by the client?', confirmText: 'Withdraw', danger: true })) return;
-      try {
-        await api.clients.withdraw(id, {
-          withdrawalDate: today(), dateFormat: DATE_FORMAT, locale: LOCALE
-        });
-        toast('success', 'Application withdrawn', '');
-        import('../../../router.js').then(r => r.navigate('clients'));
-      } catch (e) { toast('error', 'Withdrawal failed', extractFineractError(e)); }
-    });
+    // AUDIT FIX (Clients F2): withdraw now opens a modal that collects the mandatory
+    // withdrawalReasonId (previously only withdrawalDate was sent, which Fineract 400s).
+    c.querySelector('#btn-withdraw-client')?.addEventListener('click', () => openWithdrawClientModal(id));
 
     c.querySelector('#btn-transfer-client')?.addEventListener('click', () => openTransferModal(id, cl.displayName));
 

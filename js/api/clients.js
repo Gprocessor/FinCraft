@@ -35,7 +35,10 @@ export function makeClientsAPI(self) {
     deleteCollateral: (id, ccId)      => self._d(`/clients/${id}/collaterals/${ccId}`),
     transactions:     (id, params)    => self._g(`/clients/${id}/transactions`, params),
     getTransaction:   (id, txId)      => self._g(`/clients/${id}/transactions/${txId}`),
-    undoTransaction:  (id, txId, body)=> self._p(`/clients/${id}/transactions/${txId}`, body || {}),
+    // AUDIT FIX (Clients F1): the undo endpoint requires ?command=undo. Without it Fineract
+    // cannot route the action ("unknown command") and the transaction is never undone. This
+    // aligns clients with every sibling (savings/FD/RD/loans all append ?command=undo).
+    undoTransaction:  (id, txId, body)=> self._p(`/clients/${id}/transactions/${txId}?command=undo`, body || {}),
     waiveCharge:      (id, chargeId)  => self._p(`/clients/${id}/charges/${chargeId}?command=waive`, {}),
     payCharge:        (id, chargeId, body) => self._p(`/clients/${id}/charges/${chargeId}?command=paycharge`, body),
     deleteCharge:     (id, chargeId)  => self._d(`/clients/${id}/charges/${chargeId}`),
