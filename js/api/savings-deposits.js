@@ -123,14 +123,21 @@ export function makeFixedDepositsAPI(self) {
     adjustTransaction: (id, txId, body) => self._p(`/fixeddepositaccounts/${id}/transactions/${txId}?command=adjust`, body),
     undoTransaction:   (id, txId)       => self._p(`/fixeddepositaccounts/${id}/transactions/${txId}?command=undo`, {}),
 
-    // NOTE: charges/, addCharge/, updateCharge/, payCharge/, waiveCharge/,
-    // inactivateCharge/, deleteCharge/ were removed — neither
-    // FixedDepositAccountsApiResource nor RecurringDepositAccountsApiResource
-    // expose a /charges sub-path in Fineract (unlike plain savings accounts,
-    // which do via SavingsAccountChargesApiResource). If your Fineract
-    // instance shares the underlying savings-account table for FD/RD, route
-    // through /savingsaccounts/{id}/charges with that shared accountId
-    // instead — verify against your target server first.
+    // AUDIT FIX (Savings SD-D1, deep re-pass): FD/RD share Fineract's savings-account table,
+    // so their charges live at /savingsaccounts/{id}/charges (the spec has NO fixed/recurring
+    // charge paths). These methods were previously removed, but the deposits UI still calls
+    // apiObj.charges/addCharge/payCharge/waiveCharge/inactivateCharge/deleteCharge — which
+    // threw "is not a function" at runtime. Re-added as delegations to the savings charge
+    // endpoints using the shared account id.
+    charges:         (id)          => self._g(`/savingsaccounts/${id}/charges`),
+    chargeTemplate:  (id)          => self._g(`/savingsaccounts/${id}/charges/template`),
+    getCharge:       (id, cid)     => self._g(`/savingsaccounts/${id}/charges/${cid}`),
+    addCharge:       (id, body)    => self._p(`/savingsaccounts/${id}/charges`, body),
+    updateCharge:    (id, cid, b)  => self._u(`/savingsaccounts/${id}/charges/${cid}`, b),
+    payCharge:       (id, cid, b)  => self._p(`/savingsaccounts/${id}/charges/${cid}?command=paycharge`, b),
+    waiveCharge:     (id, cid)     => self._p(`/savingsaccounts/${id}/charges/${cid}?command=waive`, {}),
+    inactivateCharge:(id, cid)     => self._p(`/savingsaccounts/${id}/charges/${cid}?command=inactivate`, {}),
+    deleteCharge:    (id, cid)     => self._d(`/savingsaccounts/${id}/charges/${cid}`),
 
     // ---- Generic command escape hatch ----
     command:      (id, cmd, body) => self._p(`/fixeddepositaccounts/${id}?command=${cmd}`, body || {})
@@ -183,9 +190,21 @@ export function makeRecurringDepositsAPI(self) {
     adjustTransaction: (id, txId, body) => self._p(`/recurringdepositaccounts/${id}/transactions/${txId}?command=adjust`, body),
     undoTransaction:   (id, txId)       => self._p(`/recurringdepositaccounts/${id}/transactions/${txId}?command=undo`, {}),
 
-    // NOTE: charges/, addCharge/, updateCharge/, payCharge/, waiveCharge/,
-    // inactivateCharge/, deleteCharge/ were removed — see the matching note
-    // in makeFixedDepositsAPI above; same non-existent sub-resource problem.
+    // AUDIT FIX (Savings SD-D1, deep re-pass): FD/RD share Fineract's savings-account table,
+    // so their charges live at /savingsaccounts/{id}/charges (the spec has NO fixed/recurring
+    // charge paths). These methods were previously removed, but the deposits UI still calls
+    // apiObj.charges/addCharge/payCharge/waiveCharge/inactivateCharge/deleteCharge — which
+    // threw "is not a function" at runtime. Re-added as delegations to the savings charge
+    // endpoints using the shared account id.
+    charges:         (id)          => self._g(`/savingsaccounts/${id}/charges`),
+    chargeTemplate:  (id)          => self._g(`/savingsaccounts/${id}/charges/template`),
+    getCharge:       (id, cid)     => self._g(`/savingsaccounts/${id}/charges/${cid}`),
+    addCharge:       (id, body)    => self._p(`/savingsaccounts/${id}/charges`, body),
+    updateCharge:    (id, cid, b)  => self._u(`/savingsaccounts/${id}/charges/${cid}`, b),
+    payCharge:       (id, cid, b)  => self._p(`/savingsaccounts/${id}/charges/${cid}?command=paycharge`, b),
+    waiveCharge:     (id, cid)     => self._p(`/savingsaccounts/${id}/charges/${cid}?command=waive`, {}),
+    inactivateCharge:(id, cid)     => self._p(`/savingsaccounts/${id}/charges/${cid}?command=inactivate`, {}),
+    deleteCharge:    (id, cid)     => self._d(`/savingsaccounts/${id}/charges/${cid}`),
 
     // ---- Generic command escape hatch ----
     command:      (id, cmd, body) => self._p(`/recurringdepositaccounts/${id}?command=${cmd}`, body || {})
