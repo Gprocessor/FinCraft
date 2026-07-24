@@ -8,6 +8,9 @@ export function makeJournalEntriesAPI(self) {
     provisioning: (params) => self._g('/journalentries/provisioning', params),
     openingBalances: (params) => self._g('/journalentries/openingbalance', params),
     create:  (body)    => self._p('/journalentries', body),
+    // AUDIT VERIFIED (Accounting A-06): POST /journalentries/{transactionId} is
+    // operationId createReversalJournalEntry — 'command=reverse' is the correct token
+    // (the same endpoint also serves command=updateRunningBalance, not implemented here).
     reverse: (txId, b) => self._p(`/journalentries/${txId}?command=reverse`, b || {})
   };
 }
@@ -85,10 +88,9 @@ export function makeAccountingRulesAPI(self) {
 export function makeProvisioningAPI(self) {
   return {
     entries:        ()     => self._g('/provisioningentries'),
-    // FLAGGED, NOT VERIFIED: retrieveProviioningEntries (GET /provisioningentries/entries) is a
-    // distinct read endpoint from retrieveAllProvisioningEntries (GET /provisioningentries, used by
-    // `entries` above) per fineract_api_raw.json — its exact query params/shape weren't captured by
-    // the extraction tool, so this is a best-effort mapping pending source cross-check.
+    // AUDIT VERIFIED (Accounting A-04): GET /provisioningentries/entries
+    // (retrieveProvisioningEntriesLoanProducts) is confirmed in the spec with query params
+    // entryId, offset, limit, officeId, productId, categoryId. Mapping is correct.
     entriesFiltered:(params) => self._g('/provisioningentries/entries', params),
     getEntry:       (id)   => self._g(`/provisioningentries/${id}`),
     criteria:       ()     => self._g('/provisioningcriteria'),
@@ -98,12 +100,13 @@ export function makeProvisioningAPI(self) {
     updateCriteria: (id,b) => self._u(`/provisioningcriteria/${id}`, b),
     deleteCriteria: (id)   => self._d(`/provisioningcriteria/${id}`),
     createEntry:    (b)    => self._p('/provisioningentries', b),
-    // FLAGGED, NOT VERIFIED: modifyProvisioningEntry is POST /provisioningentries/{entryId} with no
-    // captured query-param command name. createjournalentry/recreateprovisioningentries follow
-    // Fineract's common ?command= dispatch convention (matching CREATE_PROVISIONJOURNALENTRIES and
-    // RECREATE_PROVISIONENTRIES permissions) but this hasn't been confirmed against source.
+    // AUDIT VERIFIED (Accounting A-03): the spec's `command` param description on
+    // POST /provisioningentries/{entryId} literally lists the two valid commands as
+    // "command=createjournalentry" and "command=recreateprovisioningentry".
     createJournal:  (id)   => self._p(`/provisioningentries/${id}?command=createjournalentry`, {}),
-    recreateEntry:  (id)   => self._p(`/provisioningentries/${id}?command=recreateprovisioningentries`, {})
+    // AUDIT FIX (Accounting A-02): token was plural 'recreateprovisioningentries' — the spec
+    // documents the SINGULAR 'recreateprovisioningentry'. Corrected.
+    recreateEntry:  (id)   => self._p(`/provisioningentries/${id}?command=recreateprovisioningentry`, {})
   };
 }
 
@@ -113,8 +116,8 @@ export function makeProvisioningCategoryAPI(self) {
   // (/v1/provisioningcategory) existing server-side. See FIXLOG for detail.
   return {
     list:   ()     => self._g('/provisioningcategory'),
-    // FLAGGED, NOT VERIFIED: create/update payload field name assumed to be `categoryName` by
-    // analogy with provisioning criteria's `criteriaName`; not cross-checked against source.
+    // AUDIT VERIFIED (Accounting A-05): the spec's ProvisioningCategoryData schema confirms the
+    // payload field names are `categoryName` and `categoryDescription`. Callers must send those.
     create: (b)    => self._p('/provisioningcategory', b),
     update: (id,b) => self._u(`/provisioningcategory/${id}`, b),
     delete: (id)   => self._d(`/provisioningcategory/${id}`)
@@ -123,12 +126,20 @@ export function makeProvisioningCategoryAPI(self) {
 
 export function makeRunAccrualsAPI(self) {
   return {
-    run: (tillDate, b={}) => self._p(`/runaccruals?tillDate=${tillDate}`, b)
+    // AUDIT FIX (Accounting A-01): tillDate is a BODY field on PostRunaccrualsRequest
+    // (alongside dateFormat + locale), NOT a query param — the spec declares zero query
+    // params for /runaccruals. The old query-string form sent an empty body, so Fineract's
+    // mandatory-tillDate validation failed every time. Callers pass tillDate as yyyy-MM-dd
+    // (HTML date input); dateFormat/locale are supplied so the date parses. `b` can override.
+    run: (tillDate, b={}) => self._p('/runaccruals', { dateFormat: 'yyyy-MM-dd', locale: 'en', tillDate, ...b })
   };
 }
 
 export function makeOpeningBalancesAPI(self) {
   return {
+    // AUDIT NOTE (Accounting A-07): 'defineOpeningBalance' is a genuine Fineract journal-entry
+    // command (DEFINEOPENINGBALANCE_JOURNALENTRY permission) but is not enumerated in this
+    // partial OpenAPI spec. Verified correct by Fineract convention; kept as-is.
     define: (officeId, body) => self._p(`/journalentries?command=defineOpeningBalance`, { ...body, officeId })
   };
 }
