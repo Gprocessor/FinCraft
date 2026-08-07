@@ -14,7 +14,7 @@
   },
   "//devDependencies-note": "eslint, globals, prettier and @playwright/test are optional tooling. They are intentionally NOT declared here so `npm ci` stays in sync with the committed package-lock.json (which is what tests.yml relies on). Install locally with: npm i -D eslint globals prettier @playwright/test && npx playwright install chromium. CI (quality.yml) installs them on demand.",
   "devDependencies": {
-    "jsdom": "^30.0.0"
+    "jsdom": "^30.0.1"
   },
   "dependencies": {
     "acorn": "^8.18.0",
